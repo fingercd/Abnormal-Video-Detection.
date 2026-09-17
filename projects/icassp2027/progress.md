@@ -2,6 +2,27 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；尚无经确认的正常—异常规律或插件有效性结论。**
 
+## 最近核验（UTC 2026-09-17 20:45）
+
+- 主探索 CUDA 两批均退出 0：`probe-20260917T193541117630Z-ef589e03` 完成 127×8，
+  原唯一缺项 Normal_Videos533 的补充批完成 1×8。冻结完整候选为正常/异常各64视频；
+  正在审核 union、采样和环境身份，再做视频级统计。CPU复测单独保存，不能增加独立样本数。
+- 本地真实权重 GPU observer/identity 已覆盖四 encoder，features 与 pooled 最大差值全部0。
+  最新 TimeSformer、VideoMAE、V-JEPA2 run 分别为
+  `observer-validation-20260917T204241101526Z-5367fe39`、
+  `observer-validation-20260917T204306840733Z-9e72f1a4`、
+  `observer-validation-20260917T204341966395Z-1c81ced0`；V-JEPA2 实际网格32×16×16。
+  它们在本地冻结 `4a2a3bb`、torch2.8.0+cu126 overlay 顺序执行，CUDA allocator 上限70%，
+  未更改原profile精度或已有CPU环境。这不是检测质量或压缩加速结论。
+- 服务器 V-JEPA2 CPU verification、旧VideoMAEv2 debug64和TimeSformer/VideoMAE debug128
+  均完成。旧GPU守候任务曾取得空闲GPU3后退出2，错误原因正在核验，不标成成功。
+- node2 官方UCF verified根的最近快照为1172个final、35,837,614,767字节，仍在下载；
+  XD第一卷完成并有SHA，后续卷仍在下载，CRC/展开未完成。时间化状态见
+  `outputs/icassp2027/runtime-status/20260917T204000Z/status.json`。
+- 检测head工程QA已经确认真实非零有限梯度、参数更新、同seed重复训练权重一致，以及3999帧
+  完整预测覆盖。5epoch训练loss下降而validation loss上升，应视为小样本过拟合证据，
+  不能作为主检测质量或可训练压缩插件的结论。
+
 ## 当前持续执行记录
 
 用户要求上传服务器、维护本地 Git，并在完成正常—异常观察、四 encoder 复核、免训练与可训练

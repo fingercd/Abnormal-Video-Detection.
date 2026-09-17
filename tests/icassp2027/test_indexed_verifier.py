@@ -37,7 +37,7 @@ def _native_case(encoder_id: str):
             )
         )
         pixels = torch.randn(1, 2, 3, 4, 4)
-        return model, lambda: model(pixel_values=pixels), [[0, 1]]
+        return model, lambda: model(pixel_values=pixels), [[0, 1]], {"pixel_values": pixels}
     if encoder_id == "videomae":
         model = transformers.VideoMAEModel(
             transformers.VideoMAEConfig(
@@ -52,7 +52,12 @@ def _native_case(encoder_id: str):
             )
         )
         pixels = torch.randn(1, 4, 3, 4, 4)
-        return model, lambda: model(pixel_values=pixels), [[0, 1, 2, 3]]
+        return (
+            model,
+            lambda: model(pixel_values=pixels),
+            [[0, 1, 2, 3]],
+            {"pixel_values": pixels},
+        )
     model = transformers.VJEPA2Model(
         transformers.VJEPA2Config(
             crop_size=4,
@@ -68,13 +73,18 @@ def _native_case(encoder_id: str):
         )
     )
     pixels = torch.randn(1, 4, 3, 4, 4)
-    return model, lambda: model.get_vision_features(pixel_values_videos=pixels), [[0, 1, 2, 3]]
+    return (
+        model,
+        lambda: model.get_vision_features(pixel_values_videos=pixels),
+        [[0, 1, 2, 3]],
+        {"pixel_values_videos": pixels},
+    )
 
 
 @pytest.mark.parametrize("encoder_id", ["timesformer", "videomae", "vjepa2"])
 def test_verify_native_uses_four_real_forwards_identity_shape_and_leaf_gradient(encoder_id: str):
     verifier = _script_module()
-    model, forward, frames = _native_case(encoder_id)
+    model, forward, frames, inputs = _native_case(encoder_id)
     receipt = verifier._verify_native(
         model=model,
         forward=forward,
@@ -82,12 +92,16 @@ def test_verify_native_uses_four_real_forwards_identity_shape_and_leaf_gradient(
         frame_indices=frames,
         valid_mask=[[True] * len(frames[0])],
         depth=0,
+        inputs=inputs,
     )
     assert receipt["identity_max_abs"] <= 1e-6
     assert receipt["identity_mean_pooled_max_abs"] <= 1e-6
     assert receipt["reduced_shape"][1] < receipt["dense_shape"][1]
     assert receipt["leaf_bias_grad_l1"] > 0
     assert receipt["initial_hook_counts"] == receipt["final_hook_counts"]
+    assert receipt["actual_parameter"]["device"] == "cpu"
+    assert receipt["actual_dense"]["device"] == "cpu"
+    assert receipt["leaf_bias"]["device"] == receipt["actual_dense"]["device"]
     if encoder_id == "timesformer":
         assert receipt["reduced_shape"][1] == 5
 
@@ -122,7 +136,8 @@ def test_vjepa_components_uses_worker_mapping_and_get_vision_features():
         valid_mask=np.ones((1, 4), dtype=bool),
         video_ids=("fixture",),
     )
-    model, forward = verifier._components(adapter, "vjepa2", batch)
+    model, forward, inputs = verifier._components(adapter, "vjepa2", batch)
     assert model is worker.model
     torch.testing.assert_close(forward(), pixels)
+    assert inputs["pixel_values_videos"] is pixels
     assert worker.model.seen == {"pixel_values_videos": pixels}

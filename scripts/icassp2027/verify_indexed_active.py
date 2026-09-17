@@ -59,10 +59,11 @@ def _fixed_indices(encoder: str, layout: Any) -> torch.Tensor:
 
 def _components(
     adapter: Any, encoder: str, batch: Any
-) -> tuple[torch.nn.Module, Callable[[], Any]]:
+) -> tuple[torch.nn.Module, Callable[[], Any], Mapping[str, Any]]:
     if encoder in {"timesformer", "videomae"}:
         inputs, _ = adapter._prepare_inputs(batch)
-        return adapter.model, lambda: adapter.model(**dict(inputs))
+        prepared = dict(inputs)
+        return adapter.model, lambda: adapter.model(**prepared), prepared
     # The published V-JEPA adapter's worker intentionally uses no_grad.  The
     # verification route calls the same loaded native model directly so an
     # external leaf-bias gradient can be checked without claiming adapter
@@ -73,7 +74,7 @@ def _components(
     if not isinstance(inputs, Mapping):
         raise RuntimeError("V-JEPA worker preprocessing must return a mapping for get_vision_features")
     prepared = dict(inputs)
-    return model, lambda: model.get_vision_features(**prepared)
+    return model, lambda: model.get_vision_features(**prepared), prepared
 
 
 def _geometry_verified(geometry: Any) -> bool:
@@ -83,9 +84,17 @@ def _geometry_verified(geometry: Any) -> bool:
     )
 
 
+def _tensor_details(value: Any) -> dict[str, Any]:
+    if isinstance(value, torch.Tensor):
+        return {"shape": list(value.shape), "dtype": str(value.dtype), "device": str(value.device)}
+    if isinstance(value, Mapping):
+        return {str(key): _tensor_details(item) for key, item in value.items()}
+    return {"type": f"{type(value).__module__}.{type(value).__qualname__}"}
+
+
 def _verify_native(
     *, model: torch.nn.Module, forward: Callable[[], Any], encoder: str, frame_indices: Any,
-    valid_mask: Any, depth: int,
+    valid_mask: Any, depth: int, inputs: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Run exactly four native forwards and return identity/shape/gradient evidence."""
 
@@ -114,7 +123,9 @@ def _verify_native(
 
     for parameter in model.parameters():
         parameter.requires_grad_(False)
-    bias = torch.zeros(dense.shape[-1], dtype=dense.dtype, requires_grad=True)
+    bias = torch.zeros(
+        dense.shape[-1], device=dense.device, dtype=dense.dtype, requires_grad=True
+    )
 
     def add_external_bias(_module: Any, _inputs: Any, output: Any) -> Any:
         hidden = bridge.block_output_tensor(depth, output)
@@ -140,7 +151,13 @@ def _verify_native(
     ]
     if final_hooks != initial_hooks:
         raise RuntimeError("indexed contexts did not restore the initial hook counts")
+    parameter = next(model.parameters(), None)
     return {
+        "actual_inputs": _tensor_details(inputs),
+        "actual_parameter": None
+        if parameter is None
+        else {"dtype": str(parameter.dtype), "device": str(parameter.device)},
+        "actual_dense": {"dtype": str(dense.dtype), "device": str(dense.device)},
         "bridge": bridge.architecture(),
         "geometry": geometry.receipt,
         "dense_shape": list(dense.shape),
@@ -151,7 +168,9 @@ def _verify_native(
         "fixed_indices": kept[0, : min(16, kept.shape[1])].tolist(),
         "reduced_shape": list(reduced.shape),
         "reduced_receipt": reduced_receipt,
-        "leaf_bias_shape": list(bias.shape),
+        "leaf_bias": {
+            "shape": list(bias.shape), "dtype": str(bias.dtype), "device": str(bias.device)
+        },
         "leaf_bias_grad_l1": float(bias.grad.abs().sum().cpu()),
         "pooled_first_dimension_loss": float(loss.detach().cpu()),
         "gradient_receipt": gradient_receipt,
@@ -168,6 +187,9 @@ def parse_args() -> argparse.Namespace:
         "--video", type=Path, default=ROOT / "data/ucf-debug-mirror/Abuse/Abuse005_x264.mp4"
     )
     parser.add_argument("--depth", type=int, default=3)
+    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--cuda-memory-fraction", type=float)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
@@ -175,6 +197,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.threads <= 0:
+        raise ValueError("--threads must be positive")
+    requested_device = torch.device(args.device)
+    if args.cuda_memory_fraction is not None:
+        if not 0 < args.cuda_memory_fraction <= 1:
+            raise ValueError("--cuda-memory-fraction must be in (0, 1]")
+        if requested_device.type != "cuda":
+            raise ValueError("--cuda-memory-fraction requires --device cuda[:index]")
     project = load_project(args.profile)
     definition = project.encoder(args.encoder)["definition"]
     constructor = dict(definition["constructor"])
@@ -192,6 +222,9 @@ def main() -> int:
         "frame_stride": 2,
         "position": "center",
         "depth": args.depth,
+        "requested_device": str(requested_device),
+        "requested_threads": args.threads,
+        "requested_cuda_memory_fraction": args.cuda_memory_fraction,
         "execution": bool(args.execute),
         "scope": "identity/external-index/leaf-bias engineering verification only",
     }
@@ -200,35 +233,52 @@ def main() -> int:
         return 0
     if not video.is_file() or not weight_path.exists():
         raise FileNotFoundError(json.dumps(plan, ensure_ascii=False))
+    if args.cuda_memory_fraction is not None:
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA was requested but is unavailable")
+        torch.cuda.set_per_process_memory_fraction(args.cuda_memory_fraction, requested_device)
 
-    torch.set_num_threads(1)
+    torch.set_num_threads(args.threads)
     torch.set_num_interop_threads(1)
     info = probe_video(video)
     sample = sample_fixed_clip(info.num_frames, clip_frames=frames, frame_stride=2, position="center")
     batch = build_clip_batch(video, "indexed-active", [sample])
-    constructor["device"] = "cpu"
-    adapter = ENCODER_REGISTRY.create(args.encoder, **constructor)
-    model, forward = _components(adapter, args.encoder, batch)
-    verification = _verify_native(
-        model=model,
-        forward=forward,
-        encoder=args.encoder,
-        frame_indices=batch.frame_indices,
-        valid_mask=batch.valid_mask,
-        depth=args.depth,
-    )
-
     output = (
         args.output
         if args.output is not None
-        else ROOT / "outputs/icassp2027/verify-indexed-active" / f"{args.encoder}.json"
+        else project.root / "outputs/icassp2027/verify-indexed-active" / f"{args.encoder}.json"
     )
+    constructor["device"] = str(requested_device)
+    try:
+        adapter = ENCODER_REGISTRY.create(args.encoder, **constructor)
+        model, forward, inputs = _components(adapter, args.encoder, batch)
+        verification = _verify_native(
+            model=model,
+            forward=forward,
+            encoder=args.encoder,
+            frame_indices=batch.frame_indices,
+            valid_mask=batch.valid_mask,
+            depth=args.depth,
+            inputs=inputs,
+        )
+    except Exception as error:
+        is_oom = requested_device.type == "cuda" and (
+            isinstance(error, torch.cuda.OutOfMemoryError) or "out of memory" in str(error).lower()
+        )
+        if is_oom:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(
+                json.dumps({**plan, "status": "failed", "failure": "cuda_oom", "detail": str(error)}, ensure_ascii=False, indent=2)
+                + "\n",
+                encoding="utf-8",
+            )
+        raise
     receipt = {
         **plan,
         "python_executable": sys.executable,
         "vadbench_file": vadbench.__file__,
         "torch": torch.__version__,
-        "device": "cpu",
+        "requested_device": str(requested_device),
         "torch_threads": torch.get_num_threads(),
         "verified_encoder_identity": encoder_identity(definition, project_root=project.root),
         "video_info": {"frames": info.num_frames, "fps": info.fps, "height": info.height, "width": info.width},
