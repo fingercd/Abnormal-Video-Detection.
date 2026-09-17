@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from vadbench.checkpoints import sha256_file
+from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.manifest import DatasetSplit, VideoManifestRecord, validate_manifest
 from vadbench.engine.evaluate import UCFEvaluationResult, evaluate_manifest_predictions
 from vadbench.engine.predict import predict_feature_head
@@ -55,21 +56,17 @@ def _metadata(path: str | Path) -> dict[str, Any]:
     return dict(document["metadata"])
 
 
-def _source_checkpoint_identity(
-    declaration: CompatibilityDeclaration, receipt: Mapping[str, str]
-) -> dict[str, Any]:
+def _source_checkpoint_identity(declaration: CompatibilityDeclaration) -> dict[str, Any]:
     """The immutable paper provenance that must be embedded in a new head checkpoint."""
 
     return {
         "schema_version": 1,
-        "mode": declaration.mode,
         "training_representation_fingerprint": declaration.training_representation.fingerprint,
         "training_sampling_fingerprint": declaration.training_sampling.fingerprint,
         "training_feature_cache_fingerprint": feature_cache_key(
             declaration.training_representation, declaration.training_sampling
         ),
         "training_identity_fingerprint": declaration.training_identity.fingerprint,
-        "compatibility_receipt": dict(receipt),
     }
 
 
@@ -139,7 +136,7 @@ class PredictionCompatibilityPermit:
             raise ValueError(
                 "checkpoint feature_dim does not match declared training representation"
             )
-        if metadata.get("paper_detector") != _source_checkpoint_identity(declaration, receipt):
+        if metadata.get("paper_detector") != _source_checkpoint_identity(declaration):
             raise ValueError(
                 "checkpoint lacks the verified paper detector training/representation/sampling identity"
             )
@@ -176,9 +173,7 @@ class PredictionCompatibilityPermit:
         # nested mapping after issuance.
         if validate_compatibility(self.declaration) != dict(self.compatibility_receipt):
             raise ValueError("compatibility declaration changed after permit issuance")
-        if checkpoint_metadata.get("paper_detector") != _source_checkpoint_identity(
-            self.declaration, self.compatibility_receipt
-        ):
+        if checkpoint_metadata.get("paper_detector") != _source_checkpoint_identity(self.declaration):
             raise ValueError(
                 "checkpoint paper detector identity does not match compatibility permit"
             )
@@ -373,7 +368,9 @@ def train_detector(
         raise TypeError("config must be a DetectionConfig")
     train_records = _train_records(train_manifest)
     validation_records = _validation_records(validation_manifest)
-    receipt = validate_compatibility(config.declaration)
+    actual_fit_digest = "sha256:" + compute_manifest_sha256(train_records)
+    if config.declaration.training_identity.fit_split_digest != actual_fit_digest:
+        raise ValueError("TrainingIdentity.fit_split_digest does not match the actual train manifest")
     _verify_feature_identity(
         feature_store,
         train_records,
@@ -398,7 +395,7 @@ def train_detector(
         encoder_fingerprint=config.training_encoder_fingerprint,
         device=device,
         checkpoint_metadata={
-            "paper_detector": _source_checkpoint_identity(config.declaration, receipt),
+            "paper_detector": _source_checkpoint_identity(config.declaration),
         },
     )
     if result.encoder_fingerprint != config.training_encoder_fingerprint:

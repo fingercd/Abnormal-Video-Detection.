@@ -499,7 +499,16 @@ class EncoderBridge:
                 ("patch_embed",),
             ),
         )
-        if isinstance(patch, nn.Module):
+        if self._encoder_id == "timesformer":
+            embeddings = _at_path(self._root, ("embeddings",))
+            if not isinstance(embeddings, nn.Module):
+                raise BridgeUnsupportedError("TimeSformer 未找到完整 embeddings module")
+            # PatchEmbeddings returns [B*T,P,D], which is an internal
+            # execution batch and cannot be rendered against B clip IDs.
+            # The complete embedding module has actual CLS, absolute spatial
+            # and temporal positions, and verified [B,1+P*T,D] layout.
+            sites["embedding.post_position.output"] = embeddings
+        elif isinstance(patch, nn.Module):
             sites["embedding.output"] = patch
         for depth in selected:
             self._validate_depth(depth)

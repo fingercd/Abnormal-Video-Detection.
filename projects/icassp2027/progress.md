@@ -23,6 +23,22 @@
 - 正在补齐四模型真实几何、固定数据角色与候选、输入控制量、完整窗口采样和 pooled-only
   检测链。局部测试通过不等于四模型真实实验或插件结论通过。
 
+### 2026-09-18 持续运行补记
+
+- `9e1edc9` 和 `799670a` 已通过增量 bundle 上传；服务器主工作区现为 `799670a`。
+  真实 CPU 探针使用独立冻结工作区 `/users/fotile/icassp2027-runs/code-799670ab`，
+  正在运行 8 个视频、每视频 8 个片段。最近回执为 7 个片段完成，运行尚未结束。
+- 固定 debug 视频是 Abuse005/018/025/040 与 Normal_Videos022/037/043/083。
+  四个异常视频均属于 Abuse，因此这一工程小样本不能支持异常普遍性质。
+- 本地限定镜像 8/8 下载完成，共 67,777,819 字节；大小与 SHA-256 均对应服务器冻结身份，
+  无残留分块。它不是完整 UCF 数据集，服务器原下载继续运行。
+- 本次进一步修正 TimeSformer embedding 的原始 batch 语义、分离 attention 的不可用标记、
+  P16 的分支边界，以及 head checkpoint 的不可变训练身份。训练前强制比对真实 fit manifest
+  摘要；一个已训练 checkpoint 可在严格许可下评估多个目标缓存，不回写 checkpoint。
+- 当前本地解释器 `.venv/Scripts/python.exe` 执行 `python -m pytest tests/icassp2027 -q`：
+  **134 passed**；`python -m compileall -q src tests`、受影响文件 Ruff 与 `git diff --check` 通过。
+  此结果是工程测试，不是四 encoder 的真实质量或速度结论。
+
 以下保留上一轮基础重构的已完成记录。
 
 此前基础重构范围是已确认的 M0 与 M1 工程基础：论文入口、配置、身份契约、cohort、只读 collector、

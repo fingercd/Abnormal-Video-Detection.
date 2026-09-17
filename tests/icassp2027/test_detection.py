@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from vadbench.artifacts import PredictionRecord
+from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.manifest import VideoManifestRecord
 from vadbench.engine.predict import (
     TORCH_AVAILABLE,
@@ -115,6 +116,14 @@ def _config(source: str, target: str) -> DetectionConfig:
     )
 
 
+def _with_fit_digest(config: DetectionConfig, records: list[VideoManifestRecord]) -> DetectionConfig:
+    training_identity = replace(
+        config.declaration.training_identity,
+        fit_split_digest="sha256:" + compute_manifest_sha256(records),
+    )
+    return replace(config, declaration=replace(config.declaration, training_identity=training_identity))
+
+
 def _identity(declaration: CompatibilityDeclaration, *, training: bool) -> dict[str, str]:
     representation = (
         declaration.training_representation if training else declaration.evaluation_representation
@@ -173,6 +182,7 @@ def test_direct_insert_train32_to_dense_executes_with_bound_permit(tmp_path: Pat
         _manifest("fit-normal", split="train", anomaly=False),
         _manifest("fit-abnormal", split="train", anomaly=True),
     ]
+    config = _with_fit_digest(config, train)
     test = [_manifest("test-video", split="test", anomaly=True)]
     _write_features(store, train, fingerprint=source, declaration=config.declaration, training=True)
     _write_features(store, test, fingerprint=target, declaration=config.declaration, training=False)
@@ -234,6 +244,77 @@ def test_direct_insert_train32_to_dense_executes_with_bound_permit(tmp_path: Pat
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch is an optional dependency")
+def test_one_trained_head_issues_independent_permits_for_multiple_direct_targets(
+    tmp_path: Path,
+) -> None:
+    store = FeatureStore(tmp_path / "features")
+    source = compute_encoder_fingerprint({"adapter": "source"})
+    target_one = compute_encoder_fingerprint({"adapter": "target-one"})
+    target_two = compute_encoder_fingerprint({"adapter": "target-two"})
+    train = [
+        _manifest("fit-normal", split="train", anomaly=False),
+        _manifest("fit-abnormal", split="train", anomaly=True),
+    ]
+    first = _with_fit_digest(_config(source, target_one), train)
+    second_sampling = _sampling(source="sha256:second-evaluation", regime="test_dense", clips=8)
+    second_declaration = replace(
+        first.declaration,
+        evaluation_representation=_representation(
+            reducer={"name": "uniform_keep", "calibration": "none"}
+        ),
+        evaluation_sampling=second_sampling,
+        baseline_evaluation_sampling=second_sampling,
+    )
+    second = replace(
+        first,
+        declaration=second_declaration,
+        evaluation_encoder_fingerprint=target_two,
+    )
+    evaluation_one = [_manifest("evaluation-one", split="test", anomaly=True)]
+    evaluation_two = [_manifest("evaluation-two", split="test", anomaly=False)]
+    _write_features(store, train, fingerprint=source, declaration=first.declaration, training=True)
+    _write_features(
+        store, evaluation_one, fingerprint=target_one, declaration=first.declaration, training=False
+    )
+    _write_features(
+        store, evaluation_two, fingerprint=target_two, declaration=second.declaration, training=False
+    )
+
+    training = train_detector(
+        first, feature_store=store, train_manifest=train, output_dir=tmp_path / "run", device="cpu"
+    )
+    checkpoint_before = Path(training.checkpoint_path).read_bytes()
+    sidecar = Path(training.checkpoint_path).with_suffix(".pt.json")
+    sidecar_before = sidecar.read_bytes()
+    records_one = predict_detector(
+        first,
+        feature_store=store,
+        evaluation_manifest=evaluation_one,
+        training=training,
+        output_path=tmp_path / "one.jsonl",
+        device="cpu",
+    )
+    records_two = predict_detector(
+        second,
+        feature_store=store,
+        evaluation_manifest=evaluation_two,
+        training=training,
+        output_path=tmp_path / "two.jsonl",
+        device="cpu",
+    )
+
+    assert records_one and records_two
+    assert Path(training.checkpoint_path).read_bytes() == checkpoint_before
+    assert sidecar.read_bytes() == sidecar_before
+    assert records_one[0].metadata["paper_compatibility"]["evaluation_sampling_fingerprint"] != (
+        records_two[0].metadata["paper_compatibility"]["evaluation_sampling_fingerprint"]
+    )
+    assert records_one[0].metadata["paper_compatibility"][
+        "evaluation_representation_fingerprint"
+    ] != records_two[0].metadata["paper_compatibility"]["evaluation_representation_fingerprint"]
+
+
+@pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch is an optional dependency")
 def test_permit_rejects_tampered_checkpoint_and_target_identity(tmp_path: Path) -> None:
     store = FeatureStore(tmp_path / "features")
     source = compute_encoder_fingerprint({"adapter": "source"})
@@ -243,6 +324,7 @@ def test_permit_rejects_tampered_checkpoint_and_target_identity(tmp_path: Path) 
         _manifest("fit-n", split="train", anomaly=False),
         _manifest("fit-a", split="train", anomaly=True),
     ]
+    config = _with_fit_digest(config, train)
     test = [_manifest("test", split="test", anomaly=True)]
     _write_features(store, train, fingerprint=source, declaration=config.declaration, training=True)
     _write_features(store, test, fingerprint=target, declaration=config.declaration, training=False)
@@ -351,6 +433,31 @@ def test_permit_rejects_legacy_checkpoint_without_paper_source_identity(tmp_path
             config,
             feature_store=store,
             train_manifest=[_manifest("test", split="test", anomaly=True)],
+            output_dir=tmp_path / "run",
+            device="cpu",
+        )
+
+
+def test_train_detector_rejects_manifest_not_matching_training_identity_digest(
+    tmp_path: Path,
+) -> None:
+    source = compute_encoder_fingerprint({"adapter": "source"})
+    target = compute_encoder_fingerprint({"adapter": "target"})
+    declared_fit = [
+        _manifest("fit-normal", split="train", anomaly=False),
+        _manifest("fit-abnormal", split="train", anomaly=True),
+    ]
+    actual_fit = [
+        _manifest("other-normal", split="train", anomaly=False),
+        _manifest("other-abnormal", split="train", anomaly=True),
+    ]
+    config = _with_fit_digest(_config(source, target), declared_fit)
+
+    with pytest.raises(ValueError, match="fit_split_digest"):
+        train_detector(
+            config,
+            feature_store=FeatureStore(tmp_path / "features"),
+            train_manifest=actual_fit,
             output_dir=tmp_path / "run",
             device="cpu",
         )

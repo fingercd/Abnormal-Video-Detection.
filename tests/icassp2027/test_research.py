@@ -141,6 +141,24 @@ def test_missing_geometry_is_explicit_and_limits_are_reported():
     assert all(row["statistic_value"] is None for row in observer.observations[0].rows)
 
 
+def test_qkv_projection_norm_is_not_reported_as_a_residual_branch_update():
+    block_input, qkv, update = nn.Identity(), nn.Identity(), nn.Identity()
+    observer = ProbeCollector(
+        {"block.0.input": block_input, "block.0.attn.qkv": qkv, "block.0.attn.output": update},
+        metadata(),
+    )
+    with observer:
+        block_input(torch.ones(1, 4, 2))
+        qkv(torch.ones(1, 4, 6))
+        update(torch.ones(1, 4, 2))
+    by_site = {item.site: item for item in observer.observations}
+    assert not any("update" in row["statistic_name"] for row in by_site["block.0.attn.qkv"].rows)
+    ratio = next(
+        row for row in by_site["block.0.attn.output"].rows if "update" in row["statistic_name"]
+    )
+    assert ratio["statistic_value"] == pytest.approx(1)
+
+
 def test_registered_but_nontriggering_or_tensorless_sites_emit_explicit_receipts():
     active = nn.Identity()
     dormant = nn.Identity()

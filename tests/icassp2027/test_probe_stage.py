@@ -12,6 +12,8 @@ from torch import nn
 from vadbench.contracts import ClipBatch
 from vadbench.paper.profile import PaperProject
 from vadbench.paper.stages import observe_clip, run_probe
+from vadbench.research import ProbeCollector
+from vadbench.token_reduction.bridges import create_observation_bridge
 from vadbench.token_reduction.bridges.geometry import TubeletGeometry
 
 
@@ -234,3 +236,127 @@ def test_probe_execution_reuses_manifest_video_path_and_joins_labels_only_after_
     assert rows and all(row["weak_label"] == 1 and row["video_id"] == "labelled" for row in rows)
     assert {row["probe_id"] for row in rows} == {"P01", "P10", "P13"}
     assert summary["research_conclusions"] is None
+
+
+def _real_batch(*, batch_size: int, frames: int, height: int = 8, width: int = 10) -> ClipBatch:
+    return ClipBatch(
+        frames=np.random.default_rng(7).integers(
+            0, 256, size=(batch_size, frames, height, width, 3), dtype=np.uint8
+        ),
+        timestamps_s=np.broadcast_to(np.arange(frames, dtype=np.float64), (batch_size, frames)).copy(),
+        frame_indices=np.broadcast_to(np.arange(frames, dtype=np.int64), (batch_size, frames)).copy(),
+        valid_mask=np.ones((batch_size, frames), dtype=bool),
+        video_ids=tuple(f"source-{index}" for index in range(batch_size)),
+    )
+
+
+def _assert_all_observations_render(observations, *, encoder_id: str, batch_size: int) -> None:
+    clip_ids = tuple(f"clip-{index}" for index in range(batch_size))
+    video_ids = tuple(f"video-{index}" for index in range(batch_size))
+    assert observations
+    for item in observations:
+        assert item.batch_size == batch_size
+        rows = item.to_rows(
+            run_id="fixture-run",
+            encoder_id=encoder_id,
+            checkpoint_digest="fixture",
+            clip_ids=clip_ids,
+            video_ids=video_ids,
+        )
+        assert rows
+        assert {row["video_id"] for row in rows} <= set(video_ids)
+        assert {row["clip_id"] for row in rows} <= set(clip_ids)
+
+
+def test_real_timesformer_observe_clip_renders_every_site_against_original_batch():
+    transformers = pytest.importorskip("transformers")
+    from vadbench.integrations.transformers_video import TransformersVideoAdapter
+
+    processor = transformers.VideoMAEImageProcessor(
+        size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16}
+    )
+    model = transformers.TimesformerModel(
+        transformers.TimesformerConfig(
+            image_size=16,
+            patch_size=8,
+            num_frames=2,
+            hidden_size=8,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            intermediate_size=16,
+        )
+    )
+    adapter = TransformersVideoAdapter(
+        variant="timesformer", model=model, processor=processor, clip_frames=2, image_size=16
+    )
+    result = observe_clip(
+        adapter,
+        "timesformer",
+        _real_batch(batch_size=2, frames=2),
+        {"depths": [1.0], "max_records": 64, "max_tokens": 8, "max_queries": 4},
+    )
+    assert result["architecture"]["parity"] == {
+        "observer_features_max_abs": 0.0,
+        "observer_pooled_max_abs": 0.0,
+        "identity_features_max_abs": 0.0,
+        "identity_pooled_max_abs": 0.0,
+    }
+    assert result["observations"][0].site == "embedding.post_position.output"
+    _assert_all_observations_render(result["observations"], encoder_id="timesformer", batch_size=2)
+
+
+def test_real_videomae_and_vjepa2_all_sites_render_against_original_batch():
+    transformers = pytest.importorskip("transformers")
+    from vadbench.integrations.transformers_video import TransformersVideoAdapter
+
+    processor = transformers.VideoMAEImageProcessor(
+        size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16}
+    )
+    videomae = transformers.VideoMAEModel(
+        transformers.VideoMAEConfig(
+            image_size=16,
+            patch_size=8,
+            num_frames=4,
+            tubelet_size=2,
+            hidden_size=8,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            intermediate_size=16,
+        )
+    )
+    adapter = TransformersVideoAdapter(
+        variant="videomae", model=videomae, processor=processor, clip_frames=4, image_size=16
+    )
+    result = observe_clip(
+        adapter,
+        "videomae",
+        _real_batch(batch_size=2, frames=4),
+        {"depths": [1.0], "max_records": 64, "max_tokens": 8, "max_queries": 4},
+    )
+    _assert_all_observations_render(result["observations"], encoder_id="videomae", batch_size=2)
+
+    vjepa = transformers.VJEPA2Model(
+        transformers.VJEPA2Config(
+            crop_size=16,
+            patch_size=8,
+            frames_per_clip=4,
+            tubelet_size=2,
+            hidden_size=24,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            pred_hidden_size=24,
+            pred_num_hidden_layers=1,
+            pred_num_attention_heads=2,
+        )
+    )
+    bridge = create_observation_bridge("vjepa2", vjepa)
+    batch = _real_batch(batch_size=2, frames=4, height=16, width=16)
+    geometry = bridge.geometry(batch.frame_indices, batch.valid_mask)
+    pixels = torch.as_tensor(batch.frames).permute(0, 1, 4, 2, 3).float()
+    with geometry:
+        vjepa(pixel_values_videos=pixels, skip_predictor=True)
+    sites = bridge.observation_sites([0])
+    collector = ProbeCollector(sites, bridge.probe_token_metadata(geometry, sites))
+    with collector:
+        vjepa(pixel_values_videos=pixels, skip_predictor=True)
+    _assert_all_observations_render(collector.observations, encoder_id="vjepa2", batch_size=2)

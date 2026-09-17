@@ -339,7 +339,12 @@ def _observe_and_append(
     )
     for item in result["observations"]:
         rows.extend(
-            row
+            {
+                **row,
+                "layer_depth_fraction": 0.0
+                if row["layer_index"] is None
+                else (row["layer_index"] + 1) / result["architecture"]["block_count"],
+            }
             for row in item.to_rows(
                 run_id=run_id,
                 encoder_id=name,
@@ -375,7 +380,7 @@ def verify_plan(project: PaperProject, encoder_id: str, video: str, device: str)
             "depths": [0.25, 0.5, 0.75, 1.0],
             "max_tokens": 64,
             "max_queries": 16,
-            "max_records": 64,
+            "max_records": 128,
         },
         "blockers": ([] if video_path.is_file() else ["missing input video"])
         + (

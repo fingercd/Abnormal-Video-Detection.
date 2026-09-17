@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from vadbench.contracts import EncoderCapabilities, EncoderOutput, TokenTimeline
+from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.manifest import VideoManifestRecord
 from vadbench.features import FeatureStore
 from vadbench.paper.compatibility import (
@@ -234,7 +235,7 @@ def test_pooled_uniform_and_dense_extraction_feed_detector(tmp_path: Path) -> No
         baseline_evaluation_sampling=eval_sampling,
         training_identity=TrainingIdentity(
             head={"kind": "topk_mil", "k": 1},
-            fit_split_digest="sha256:fixture-fit",
+            fit_split_digest="sha256:" + compute_manifest_sha256(train),
             seed=3,
             optimization={"epochs": 1, "lr": 0.01},
         ),

@@ -408,7 +408,13 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             sampled = value[:, :, ids.tolist(), :]
             array = _as_numpy(sampled)
             layer_index, _ = _site_parts(site)
-            self._observations.append(self._summarize_attention(site, layer_index, array, ids))
+            site_meta = self.token_metadata.site_metadata.get(site)
+            if site_meta is not None:
+                self._observations.append(
+                    self._separated_attention_unavailable(site, layer_index, array, site_meta)
+                )
+            else:
+                self._observations.append(self._summarize_attention(site, layer_index, array, ids))
             return
         array = _as_numpy(value)
         if array is None:
@@ -712,7 +718,9 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             self._input_norms[(layer_index, "mlp")] = mean_norms
         elif site.endswith(".input"):
             self._input_norms[(layer_index, "attention")] = mean_norms
-        elif sublayer_kind in {"attention", "mlp"} and ".pre_projection." not in site:
+        elif site.endswith(
+            (".attn.output", ".attn.projection.output", ".mlp.pre_residual.output", ".mlp.output")
+        ):
             incoming = self._input_norms.get((layer_index, sublayer_kind))
             if incoming is None or incoming.shape != mean_norms.shape:
                 for index in range(batch):
