@@ -4,6 +4,23 @@
 
 ## 最近核验（UTC 2026-09-17 20:45）
 
+- VideoMAEv2确认采集512/512完成，run `probe-20260917T205806968233Z-e21841be`。
+  TimeSformer正在同一冻结64视频上采集；尚未读取确认效应来改变候选。
+  V-JEPA2已排入服务器“64个final内容校验→空闲GPU租约→确认采集”的依赖队列。
+- 跨encoder输入控制校准只用64个fit正常视频，严格区分8/16/64帧；有效资产为
+  `outputs/icassp2027/control/control-calibration-cross-encoder-v2-20260917T213000Z/`。
+  先前统一16帧且误用旧sampler的资产已标superseded，未用于确认。更正路径与原16帧探索的
+  512个正常clip控制量完全一致。确认统计脚本尚在独立审查，未经审查不输出确认结论。
+- XD新增仅训练视频弱标签的专用导入，完整3954训练与800测试身份分离；固定name-derived
+  来源分组、seed202709，不随下载可用性改变角色。官方feature-grid PR梯形面积实现已有
+  合成验证，但拒绝provisional Ti metadata；800个直接NPY header核验与原视频坐标映射
+  尚未全部解决，不能写成XD原视频正式评测已接通。
+- XD第一卷1004/1004原视频已在node2完成流式解压、CRC、大小与SHA核验，11,924,807,590
+  字节、0part。其余卷下载/验证继续，非完整XD完成。
+- 新XD导入/feature-grid数学门禁/中立固定预算索引工具，本次集成检查为54 passed、1 skipped
+  （默认CPU解释器无CUDA，GPU-score/CPU-layout测试跳过）；compileall src tests、Ruff与
+  diff检查通过。中立工具不是最终插件，无检测质量或净加速主张。
+
 - 完整128探索数据已通过union gate。UTC20:55冻结两个中层候选（P16分支相对更新为正、
   P07同坐标时间变化为负），详见 [确认定义](decisions/property-confirmation-v1.md)。
   探索发现经过视频级分箱bootstrap复核，但不称为确认规律。原between-bin CI保留并纠正解释。
