@@ -15,6 +15,7 @@ constructor:
   strict_assets: true
   preprocess_profile: longvu-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: Vision-CAIR/LongVU_Qwen2_7B
   revision: 2b4ed544d651064e4c30d51cf84c5c3e65afa069

@@ -14,6 +14,7 @@ constructor:
   feature_stage: backbone_tokens
   preprocess_profile: umt-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: official
   model_id: OpenGVLab/UMT-B
   revision: planned

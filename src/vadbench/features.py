@@ -25,6 +25,8 @@ from typing import Any
 
 import numpy as np
 
+from vadbench.hashing import sha256_file as _sha256_file
+
 FEATURE_INDEX_SCHEMA_VERSION = "vadbench.feature-index.v1"
 FINGERPRINT_ALGORITHM = "sha256"
 MAX_INLINE_METADATA_ITEMS = 2048
@@ -44,14 +46,6 @@ def _canonical_json(value: Any) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
-
-
-def _sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(chunk_size), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _sha256_path(path: Path) -> str:

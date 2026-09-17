@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -9,8 +10,10 @@ import yaml
 from vadbench.environment_registry import (
     EncoderEnvironmentRegistryError,
     assert_new_environment_executable,
+    build_encoder_runtime_environment,
     load_encoder_candidates,
     load_encoder_environment_registry,
+    resolve_encoder_runtime,
 )
 from vadbench.integrations.catalog import load_integration_catalog
 
@@ -68,6 +71,24 @@ def test_new_environment_paths_never_overlap_protected_roots() -> None:
     assert assert_new_environment_executable(accepted, registry) == accepted.resolve()
     with pytest.raises(EncoderEnvironmentRegistryError, match="new environment root"):
         assert_new_environment_executable(ROOT / ".venv/bin/python", registry)
+
+
+def test_runtime_selection_builds_the_same_overlay_environment_for_launchers() -> None:
+    registry = load_encoder_environment_registry(ROOT)
+    runtime = resolve_encoder_runtime("videomamba", project_root=ROOT, registry=registry)
+    environment = build_encoder_runtime_environment(
+        runtime,
+        project_root=ROOT,
+        registry=registry,
+        base_environment={"VIRTUAL_ENV": "must-not-leak"},
+    )
+    assert runtime.group.id == "foundation-video-v2"
+    assert runtime.overlay == registry.overlay_for("videomamba")
+    assert environment["PYTHONPATH"].split(os.pathsep)[0] == str(ROOT / "src")
+    assert str(ROOT / "external-v2/videomamba/mamba") in environment["PYTHONPATH"]
+    assert "VIRTUAL_ENV" not in environment
+    assert environment["CONDA_PREFIX"] == str(runtime.python.parents[1])
+    assert environment["LD_LIBRARY_PATH"] == str(runtime.python.parents[1] / "lib")
 
 
 @pytest.mark.parametrize(

@@ -14,7 +14,6 @@ from vadbench.environment_registry import load_encoder_candidates
 from vadbench.integrations.catalog import load_integration_catalog
 from vadbench.integrations.long_video.base import (
     DEFAULT_NEUTRAL_PROMPT,
-    ExternalPythonWorker,
     LongVideoAssetError,
     LongVideoWorkerError,
 )
@@ -498,60 +497,6 @@ def test_upstream_type_error_is_not_retried(tmp_path: Path, route: str, error_co
     assert captured.value.code == error_code
     assert captured.value.__cause__ is sentinel
     assert calls == [route]
-
-
-def test_external_python_facade_can_be_injected_without_spawning_process() -> None:
-    captured: list[dict[str, Any]] = []
-
-    def runner(request: dict[str, Any]) -> dict[str, Any]:
-        captured.append(request)
-        return {"features": [[[1.0, 2.0, 3.0]]]}
-
-    worker = ExternalPythonWorker(
-        ["unused-python", "unused-worker.py"],
-        integration_id="longvu",
-        runner=runner,
-    )
-    output = LongVUAdapter(worker=worker).encode(_batch())
-
-    assert output.features.shape == (1, 1, 3)
-    assert captured[0]["protocol"] == "vadbench.external-worker.v1"
-    assert captured[0]["operation"] == "encode"
-    assert captured[0]["frames"][0][0][0][0] == [0, 1, 2]
-
-
-def test_worker_runner_alias_bypasses_asset_checks_without_network() -> None:
-    def runner(request: dict[str, Any]) -> dict[str, Any]:
-        return {"features": [[[0.0, 1.0]]]} if request["operation"] == "encode" else {}
-
-    adapter = VideoChatAdapter(worker_runner=runner)
-    result = adapter.encode(_batch())
-    assert result.features.shape == (1, 1, 2)
-    assert adapter.implementation_source == "external_python_worker"
-
-
-def test_external_worker_runner_stream_round_trip_serializes_opaque_state() -> None:
-    operations: list[str] = []
-
-    def runner(request: dict[str, Any]) -> dict[str, Any]:
-        operations.append(request["operation"])
-        if request["operation"] == "init_state":
-            return {"result": {"seen": 0}}
-        if request["operation"] == "encode_step":
-            assert request["state"]["opaque"]["seen"] in {0, 4}
-            return {
-                "result": {
-                    "features": [[[1.0, 2.0]]],
-                    "state": {"seen": request["state"]["opaque"]["seen"] + 4},
-                }
-            }
-        return {"result": None}
-
-    adapter = StreamingVLMAdapter(worker_runner=runner)
-    state = adapter.init_state("surveillance")
-    step = adapter.encode_step(_batch(), state)
-    assert step.state.opaque["seen"] == 4
-    assert operations == ["init_state", "encode_step"]
 
 
 def test_long_video_modules_remain_lightweight(monkeypatch: pytest.MonkeyPatch) -> None:

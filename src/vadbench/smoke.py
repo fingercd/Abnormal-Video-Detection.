@@ -16,9 +16,13 @@ import traceback
 import uuid
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
+from functools import lru_cache
 from itertools import islice
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from jsonschema import Draft202012Validator
 
 from vadbench.config import load_yaml
 from vadbench.contracts import (
@@ -35,6 +39,7 @@ from vadbench.data.video import (
     iter_streaming_chunk_batches,
     probe_video,
 )
+from vadbench.hashing import sha256_file as _sha256_file
 from vadbench.integrations.catalog import (
     IntegrationCatalog,
     IntegrationRecord,
@@ -44,7 +49,12 @@ from vadbench.integrations.common import (
     OutputHealthError,
     inspect_output_health,
 )
-from vadbench.orchestration import compression_from_experiment, create_encoder_from_experiment
+from vadbench.orchestration import (
+    compression_from_experiment,
+    create_encoder_from_experiment,
+    resolve_encoder_config,
+)
+from vadbench.resources import package_resource_path
 
 
 def _gpu_peak_bytes() -> int | None:
@@ -110,14 +120,6 @@ def _canonical_sha256(value: Any) -> str:
         allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def _relative_path(path: str | Path, root: Path) -> str:
@@ -281,23 +283,9 @@ def _load_definition(
     record: IntegrationRecord | None,
     project_root: Path,
 ) -> dict[str, Any]:
-    encoder = config.get("encoder", {})
-    encoder = encoder if isinstance(encoder, Mapping) else {}
-    selected = encoder.get("definition")
-    if selected is None and record is not None:
-        selected = record.definition
-    if selected is None:
+    if record is None:
         return {}
-    path = Path(str(selected))
-    if not path.is_absolute():
-        path = project_root / path
-    if not path.is_file():
-        return {}
-    try:
-        value = load_yaml(path)
-    except Exception:
-        return {}
-    return dict(value) if isinstance(value, Mapping) else {}
+    return resolve_encoder_config(config, project_root=project_root)
 
 
 def _asset_identity(
@@ -312,6 +300,9 @@ def _asset_identity(
     lock_data: Mapping[str, Any] = {}
     if record is not None:
         lock_path = project_root / record.upstream_lock
+        if not lock_path.is_file():
+            with suppress(FileNotFoundError):
+                lock_path = package_resource_path(record.upstream_lock)
         if lock_path.is_file():
             try:
                 loaded = load_yaml(lock_path)
@@ -472,7 +463,7 @@ def run_encoder_smoke_v2(
     encoder_cfg = runtime_config.get("encoder", {})
     encoder_cfg = encoder_cfg if isinstance(encoder_cfg, Mapping) else {}
     adapter_id = integration_id or str(encoder_cfg.get("adapter", "unknown"))
-    definition = _load_definition(runtime_config, record, root)
+    definition: dict[str, Any] = {}
     assets = _asset_identity(definition, record, root)
     commit, dirty = _git_identity(root)
     env_cfg = runtime_config.get("environment", {})
@@ -518,6 +509,8 @@ def run_encoder_smoke_v2(
                 assets = _asset_identity(definition, record, root)
         else:
             adapter = adapter_instance
+            definition = _load_definition(runtime_config, record, root)
+            assets = _asset_identity(definition, record, root)
         capabilities = getattr(adapter, "capabilities", None)
         if capabilities is None:
             raise TypeError("adapter.capabilities 缺失")
@@ -769,6 +762,90 @@ def _assert_contained(path: Path, root: Path) -> None:
         raise ValueError(f"输出路径越出 output_root：{resolved_path}")
 
 
+_SMOKE_SCHEMA_RELATIVE = "schemas/encoder-smoke-v2.schema.json"
+
+
+@lru_cache(maxsize=1)
+def _smoke_result_validator() -> Draft202012Validator:
+    # Load after model construction: eager jsonschema/rpds + OpenCV can crash
+    # the pinned foundation runtime while importing the model stack.
+    from jsonschema import Draft202012Validator, FormatChecker
+
+    source_schema = Path(__file__).resolve().parents[2] / _SMOKE_SCHEMA_RELATIVE
+    schema_path = (
+        source_schema if source_schema.is_file() else package_resource_path(_SMOKE_SCHEMA_RELATIVE)
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+def validate_smoke_result_v2(
+    result: Mapping[str, Any],
+    *,
+    expected_record: IntegrationRecord | None = None,
+) -> dict[str, Any]:
+    """Validate schema and, when supplied, the catalog identity for one result."""
+
+    if not isinstance(result, Mapping):
+        raise ValueError("smoke result 顶层必须是对象")
+    payload = dict(result)
+    errors = sorted(
+        _smoke_result_validator().iter_errors(payload),
+        key=lambda error: repr(list(error.absolute_path)),
+    )
+    if errors:
+        error = errors[0]
+        location = ".".join(str(item) for item in error.absolute_path) or "<root>"
+        raise ValueError(f"smoke result 不符合 v2 schema（{location}）：{error.message}")
+
+    if expected_record is not None:
+        encoder = payload["encoder"]
+        expected = {
+            "id": expected_record.id,
+            "adapter": expected_record.adapter_target,
+            "backend": expected_record.backend,
+            "run_mode": "streaming" if expected_record.run_mode == "streaming" else "fixed",
+            "feature_stage": expected_record.feature_stage,
+        }
+        mismatches = {
+            field: {"expected": value, "actual": encoder[field]}
+            for field, value in expected.items()
+            if encoder[field] != value
+        }
+        if mismatches:
+            raise ValueError(f"smoke result 与 catalog identity 不一致：{mismatches}")
+        if payload["status"] == "smoke_pass":
+            upstream = payload["assets"]["upstream"]
+            checkpoint = payload["assets"]["checkpoint"]
+            if any(
+                upstream[field] in {None, "", "unknown"}
+                for field in ("repo", "revision", "license")
+            ):
+                raise ValueError("登记路线 smoke_pass 缺少明确 upstream 身份")
+            if any(
+                checkpoint[field] in {None, "", "unknown"}
+                for field in ("repo", "revision", "license", "path", "sha256")
+            ):
+                raise ValueError("登记路线 smoke_pass 缺少明确 checkpoint 身份")
+    return payload
+
+
+def read_smoke_result_v2(
+    path: str | Path,
+    *,
+    expected_record: IntegrationRecord | None = None,
+) -> dict[str, Any]:
+    selected = Path(path)
+    try:
+        value = json.loads(selected.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"smoke result 不是合法 JSON：{selected}") from exc
+    if not isinstance(value, Mapping):
+        raise ValueError(f"smoke result 顶层必须是对象：{selected}")
+    return validate_smoke_result_v2(value, expected_record=expected_record)
+
+
 def write_smoke_result_v2(
     result: Mapping[str, Any],
     path: str | Path,
@@ -776,7 +853,7 @@ def write_smoke_result_v2(
     output_root: str | Path | None = None,
     overwrite_success: bool = False,
 ) -> Path:
-    """Atomically write a v2 result while preserving an existing successful run."""
+    """Validate and atomically write one result; overwrite requires an explicit flag."""
 
     output = Path(path).expanduser()
     root = Path(output_root).expanduser() if output_root is not None else output.parent
@@ -784,13 +861,9 @@ def write_smoke_result_v2(
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() and not overwrite_success:
-        try:
-            existing = json.loads(output.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            existing = None
-        if isinstance(existing, Mapping) and existing.get("status") == "smoke_pass":
-            return output
-    payload = json.dumps(dict(result), ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+        raise FileExistsError(f"smoke result 已存在；显式允许覆盖后才能写入：{output}")
+    payload_value = validate_smoke_result_v2(result)
+    payload = json.dumps(payload_value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
     temp_name: str | None = None
     try:
         import tempfile
@@ -818,6 +891,8 @@ def write_smoke_result_v2(
 __all__ = [
     "CATALOG_V1_VERSION",
     "SMOKE_V2_SCHEMA_VERSION",
+    "read_smoke_result_v2",
     "run_encoder_smoke_v2",
+    "validate_smoke_result_v2",
     "write_smoke_result_v2",
 ]

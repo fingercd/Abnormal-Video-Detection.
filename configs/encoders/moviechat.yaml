@@ -18,6 +18,7 @@ constructor:
   upstream_entrypoint: moviechat/models/moviechat.py:from_config
   preprocess_profile: moviechat-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: Enxin/MovieChat-vicuna
   revision: ba9bb802ea209c6d8e8b4333ec917ae3aee55b1d

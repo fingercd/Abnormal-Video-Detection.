@@ -14,6 +14,7 @@ constructor:
   feature_stage: backbone_tokens
   preprocess_profile: internvideo2-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: official
   model_id: OpenGVLab/InternVideo2-Stage2_1B-224p-f4
   revision: planned

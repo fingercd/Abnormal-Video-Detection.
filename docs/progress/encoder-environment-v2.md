@@ -1,54 +1,54 @@
-# Encoder 四组隔离环境 v2 实施记录
+# Encoder 四组隔离环境 v2 实施与复核记录
 
-> 日期：2026-09-03
-> 服务器根：/users/fotile/VAD
-> 当前视频：data/smoke/mlvu-surveil-8.mp4
-> 视频 SHA256：5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963
+> 首次实施：2026-09-03
+>
+> 只读复核：2026-09-11
+>
+> 服务器根：`/users/fotile/VAD`
 
-## 结论
+## 这份文档记录什么
 
-本次迁移建立了四个全新环境和模型覆盖层，四个旧环境保持只读且前后指纹一致。25 路研究候选被完整分类，其中 21 路进入运行 catalog，4 路只保留候选记录。
+本文记录服务器四组环境的落地事实和带日期的验证证据。环境的声明配置以 [`registry/encoder-environments-v2.yaml`](../../registry/encoder-environments-v2.yaml) 为准；25 路候选与 21 路运行目标的区别见 [`encoder-integration-matrix.md`](encoder-integration-matrix.md)；代码如何选择环境、加载 adapter 和写 smoke 产物见 [`encoder-runtime.md`](../architecture/encoder-runtime.md)。当前实现和后续验证汇总见 [`2026-09-11-implementation.md`](2026-09-11-implementation.md)。
 
-最终 native v2 状态：
+`smoke_pass` 是一次既有运行的结论，不是环境或 catalog 的永久属性；catalog 只保存 `planned`、`integrated`、`blocked` 的静态登记状态。2026-09-11 的复核检查了代码版本、路径、解释器和已有产物，并由全量测试重新校验 8 条登记权重；没有重新执行模型 forward，其余大权重没有在本轮全部重算摘要。
 
-| 状态 | 数量 |
-|---|---:|
-| smoke_pass | 14 |
-| blocked_license | 2 |
-| manual_required | 5 |
-| unregistered | 4 |
+## 四组环境的声明与 2026-09-11 实况
 
-VideoChat-Online 与 StreamingVLM 在新环境中的两 chunk 原生技术前向通过，但许可证仍未闭合，因此只记为 blocked_license，不进入 14 路 PASS。
-
-## 四组环境
-
-| 组 | 新路径 | 核心版本 | 新环境验证 |
+| 组 | 服务器路径 | registry 固定版本 | 2026-09-11 只读复核 |
 |---|---|---|---|
-| classic-video-v2 | .encoder-envs/v2/classic-video-v2 | Python 3.10.20；Torch 2.3.0+cu121；TorchVision 0.18；Transformers 4.37.2；PyTorchVideo 0.1.5 | 8 路 CPU smoke 通过；R(2+1)D 另有 GPU 1 smoke |
-| foundation-video-v2 | .encoder-envs/v2/foundation-video-v2 | Python 3.10.20；Torch 2.8.0/CUDA 12.9；TorchVision 0.23；Transformers 4.57.3 | VideoMAE V2、VideoMamba、V-JEPA2 通过 |
-| visual-vlm-v2 | .encoder-envs/v2/visual-vlm-v2 | Python 3.11.15；Torch 2.5.1+cu124；TorchVision 0.20.1；模型覆盖层 | LongVU、VideoChat-Flash 通过；VideoChat-Online 技术通过但许可 blocked |
-| stream-kv-v2 | .encoder-envs/v2/stream-kv-v2 | Python 3.11.15；Torch 2.5.1+cu124；模型覆盖层 | HERMES 通过；StreamingVLM 技术通过但许可 blocked |
+| `classic-video-v2` | `.encoder-envs/v2/classic-video-v2` | Python 3.10.20；Torch 2.3.0+cu121；TorchVision 0.18.0；Transformers 4.37.2；PyTorchVideo 0.1.5 | Python 3.10.20、Torch 2.3.0+cu121、CUDA 12.1 可导入 |
+| `foundation-video-v2` | `.encoder-envs/v2/foundation-video-v2` | Python 3.10.20；Torch 2.8.0；TorchVision 0.23.0；Transformers 4.57.3 | Python 3.10.20、Torch 2.8.0、CUDA 12.9 可导入 |
+| `visual-vlm-v2` | `.encoder-envs/v2/visual-vlm-v2` | Python 3.11.15；Torch 2.5.1+cu124；TorchVision 0.20.1+cu124 | Python 3.11.15、Torch 2.5.1+cu124、CUDA 12.4 可导入 |
+| `stream-kv-v2` | `.encoder-envs/v2/stream-kv-v2` | Python 3.11.15；Torch 2.5.1+cu124；TorchVision 0.20.1+cu124 | Python 3.11.15、Torch 2.5.1+cu124、CUDA 12.4 可导入 |
 
-foundation clone 需要恢复原种子中的 28 个 CUDA 动态库软链，原因是 Conda clone 会把原环境的兼容覆盖恢复成需要更高 GLIBC 的包版本。visual/stream 两组补入 OpenCV 和 Transformers 间接需要的 libsndfile/FLAC/opus/vorbis/mpg123/lame；所有修复均只发生在新环境并写入环境 marker。
+七个模型还使用独立 overlay：`videomaev2`、`videomamba`、`longvu`、`videochat_online`、`videochat_flash`、`streaming_vlm`、`hermes_llava_ov`。overlay 的包版本和路径只在 environment registry 维护，本文不复制完整清单。
 
-classic 的 pip check 仍报告 decord wheel 平台元数据警告；foundation 继承了 InternNav/Habitat 的无关依赖冲突。四组核心 Torch/CUDA/import 均通过，且所有 14 路真实模型 smoke 通过；这些 pip check 偏差保留在 outputs/environment-migration-v2/pip-check，不伪称 clean。
+服务器 runner [`scripts/server/run_native_encoder_matrix_v2.py`](../../scripts/server/run_native_encoder_matrix_v2.py) 才负责按目标选择组内 Python、拼接 overlay `PYTHONPATH`、设置离线 cache 目录并启动子进程。catalog 中的 `environment.runtime` 本身不会切换解释器；通用 integration matrix 的默认 runner 也不会自动选择这里的四组环境。
 
-## 资产与代码
+## 2026-09-03 迁移结果
 
-- 16 路现有 checkpoint 共约 54 GB，重新计算 SHA256 后全部匹配；未复制、未覆盖。
-- 现有 external checkout 只读复制到 external-v2，adapter 不再修改旧 external。
-- node2 在执行下载阶段无法连接跳板机，因此没有重复尝试；缺失资产按规则转入人工清单。
-- 人工下载 5 路：C3D、InternVideo2、VideoChat、MA-LMM、MovieChat。
-- 不注册 4 路：UniFormerV2、UMT、InfiniPot-V、MuKV。
-- VideoChat、InternVideo2、MovieChat 的 external-v2 checkout 尚缺，已与 checkpoint 一同列入人工交接信息。
+迁移建立四个新环境与 `external-v2`/`weights-v2` 写入边界，保留旧环境只读。Conda clone 后对 foundation 环境恢复 28 个 CUDA 动态库软链；visual/stream 组补齐 OpenCV 和音频动态库依赖。classic 的 decord wheel 元数据警告、foundation 从种子环境继承的 InternNav/Habitat 无关依赖冲突均保留在当次 `pip-check` 产物中，因此不能把四组环境表述为 `pip check` 全绿。
 
-## 可追溯产物
+当次 native smoke 使用 `data/smoke/mlvu-surveil-8.mp4`（SHA256 `5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963`）在 CPU 跑得：
 
-- 环境矩阵：outputs/environment-migration-v2/environment-matrix.json
-- 旧环境基线：outputs/environment-migration-v2/old-envs-before.json
-- 资产矩阵：outputs/environment-migration-v2/asset-matrix.json
-- 人工下载清单：outputs/environment-migration-v2/manual-download-manifest.json
-- 覆盖层矩阵：outputs/environment-migration-v2/overlay-matrix.json
-- 最终 smoke 矩阵：outputs/environment-migration-v2/native-smoke-matrix.json
+| 结果类别 | 数量 | 含义 |
+|---|---:|---|
+| `smoke_pass` | 14 | 目标自己的代码、权重和真实视频 forward 通过 |
+| `blocked_license` | 2 | VideoChat-Online、StreamingVLM 技术前向通过，但许可状态未闭合 |
+| `manual_required` | 5 | C3D、InternVideo2、VideoChat、MA-LMM、MovieChat 缺人工资产或完整依赖链 |
+| `unregistered` | 4 | UniFormerV2、UMT、InfiniPot-V、MuKV 只在候选表中 |
 
-根卷当前仍高于 400 GiB 剩余空间门禁。下载器使用 .cache-v2 和 weights-v2，不覆盖现有权重。
+重构后的历史矩阵 `outputs/refactor/final-native-72faada/matrix-v2.json` 仍保存 14 个 `smoke_pass` 和 7 个 `skipped`（5 个 `manual_asset_missing`、2 个 `license_blocked`），文件 SHA256 为 `6f550410dc14bbe487143366f2af8638200b0babed39d4feed55d312e38dfea1`。原迁移矩阵 `outputs/environment-migration-v2/native-smoke-matrix.json` 的 SHA256 为 `0c5b6ae5e3bd50c07badaff0b574dfa04269f3b4fc428e6056c793ea67b27a47`。两者都是历史证据，不替代新运行。
+
+## 2026-09-11 服务器复核边界
+
+服务器位于分支 `qzt/refactor-vadbench-simplification`、commit `0badc3435e734a841110e29d497940bfda7cc707`，检查时工作树干净。四组 Python/Torch 均可导入，磁盘可用约 495.6 GB，高于 registry 的 400 GiB 门禁。Windows 全量测试为 366 passed、9 skipped；node3 全量测试为 374 passed、1 skipped。服务器测试重新计算并匹配 R(2+1)D、MViTv2、Video Swin、I3D、X3D、SlowFast、VideoMAE V2 和 HERMES 共 8 条权重摘要，但没有执行这些模型的 forward。
+
+UCF-Crime 软链解析到 `/users/fotile/datasets/UCF-Crime`，但目标目录文件数为 0，标准 train/test manifest 也不存在，因此不能开始真实 UCF benchmark，也不能从本次文档复核推导任何 AUC/AP 结论。精简后的复核证据见 [`server-doc-audit-2026-09-11.json`](../evidence/server-doc-audit-2026-09-11.json)。
+
+## 复现和更新要求
+
+1. 用 `manage_encoder_envs_v2.py verify` 核对路径、marker、保护目录和磁盘门禁。
+2. 用 `fetch_encoder_assets_v2.py` 与 `prepare_encoder_overlays_v2.py` 准备本地资产；不得让 adapter 隐式联网。
+3. 用 `run_native_encoder_matrix_v2.py` 执行真权重 smoke。流式目标至少两 chunk；许可未闭合的目标只有显式传入 `--include-license-blocked` 才运行，结果仍降级为 `blocked_license`。
+4. 每次新运行保存 commit、dirty 状态、环境 marker、overlay marker、视频身份、结果和 launcher log。只有这次新产物可以更新历史运行证据；不得把它写回 catalog 的静态状态。

@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from vadbench.config import load_yaml
+from vadbench.environment_registry import resolve_encoder_runtime
 from vadbench.integrations.catalog import (
     IntegrationCatalog,
     IntegrationRecord,
@@ -33,7 +34,9 @@ from vadbench.integrations.catalog import (
 from vadbench.smoke import (
     CATALOG_V1_VERSION,
     SMOKE_V2_SCHEMA_VERSION,
+    read_smoke_result_v2,
     run_encoder_smoke_v2,
+    validate_smoke_result_v2,
     write_smoke_result_v2,
 )
 
@@ -339,36 +342,14 @@ def _item_config(base: Mapping[str, Any], record: IntegrationRecord) -> dict[str
 
 def build_experiment_config(
     record: IntegrationRecord,
-    definition: Mapping[str, Any] | str | Path | None = None,
     *,
     base_config: Mapping[str, Any] | None = None,
-    project_root: str | Path = ".",
 ) -> dict[str, Any]:
-    """由 integration 记录构造一个可交给 smoke/worker 的最小 experiment。
-
-    definition 仅用于补充 constructor 参数；默认 adapter 会再次按
-    catalog 路径惰性加载 definition，因此这里不会导入模型或权重。
-    """
+    """由 integration 记录构造一个可交给统一 resolver 的最小 experiment。"""
 
     if not isinstance(record, IntegrationRecord):
         raise TypeError("record 必须是 IntegrationRecord")
     config = _item_config(dict(base_config or {}), record)
-    if isinstance(definition, (str, Path)):
-        definition_path = Path(definition)
-        if not definition_path.is_absolute():
-            definition_path = Path(project_root).expanduser().resolve() / definition_path
-        loaded = load_yaml(definition_path)
-        definition = loaded if isinstance(loaded, Mapping) else None
-    if isinstance(definition, Mapping):
-        constructor = definition.get("constructor")
-        if isinstance(constructor, Mapping):
-            encoder = dict(config.get("encoder", {}))
-            params = dict(encoder.get("params", {}))
-            for key, value in constructor.items():
-                params.setdefault(str(key), value)
-            if params:
-                encoder["params"] = params
-            config["encoder"] = encoder
     sampler = dict(config.get("sampler", {}))
     sampler.setdefault("clip_frames", record.smoke_profile.clip_frames)
     sampler.setdefault("frame_stride", record.smoke_profile.frame_stride)
@@ -386,18 +367,6 @@ def _path_inside(path: Path, root: Path) -> Path:
     if resolved == resolved_root or resolved_root not in resolved.parents:
         raise ValueError(f"输出路径越出 output_root：{resolved}")
     return resolved
-
-
-def _read_existing_success(path: Path) -> dict[str, Any] | None:
-    if not path.is_file():
-        return None
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if isinstance(value, Mapping) and value.get("status") == "smoke_pass":
-        return dict(value)
-    return None
 
 
 def _failure_document(
@@ -521,24 +490,22 @@ def _failure_document(
     }
 
 
-def _coerce_runner_result(value: Any, output_path: Path) -> dict[str, Any]:
+def _coerce_runner_result(
+    value: Any,
+    record: IntegrationRecord,
+    output_path: Path,
+) -> tuple[dict[str, Any], bool]:
     if isinstance(value, Mapping):
-        result = dict(value)
-    elif isinstance(value, (str, Path)):
+        return validate_smoke_result_v2(value, expected_record=record), False
+    if isinstance(value, (str, Path)):
         selected = Path(value)
         if not selected.is_file():
             raise FileNotFoundError(selected)
-        loaded = json.loads(selected.read_text(encoding="utf-8"))
-        if not isinstance(loaded, Mapping):
-            raise ValueError("runner result JSON 必须是对象")
-        result = dict(loaded)
-    elif value is None:
+        result = read_smoke_result_v2(selected, expected_record=record)
+        return result, selected.resolve() == output_path.resolve()
+    if value is None:
         raise ValueError("runner 未返回 smoke result")
-    else:
-        raise TypeError(f"runner 返回不支持的类型：{type(value).__name__}")
-    result.setdefault("run_id", output_path.stem)
-    result.setdefault("status", "smoke_pass")
-    return result
+    raise TypeError(f"runner 返回不支持的类型：{type(value).__name__}")
 
 
 def run_integration_matrix(
@@ -586,6 +553,24 @@ def run_integration_matrix(
     if output_dir == root or root not in output_dir.parents:
         raise ValueError(f"output_root 必须位于 project_root 内：{output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
+    if matrix_path is None:
+        resolved_matrix_path = output_dir / "matrix.json"
+    else:
+        resolved_matrix_path = Path(matrix_path)
+        if not resolved_matrix_path.is_absolute():
+            resolved_matrix_path = root / resolved_matrix_path
+    resolved_matrix_path = _path_inside(resolved_matrix_path, output_dir)
+    if write_results:
+        existing_paths = [
+            output_dir / record.id / "result.json"
+            for record in selected
+            if (output_dir / record.id / "result.json").exists()
+        ]
+        if resolved_matrix_path.exists():
+            existing_paths.append(resolved_matrix_path)
+        if existing_paths:
+            listed = ", ".join(str(path) for path in existing_paths)
+            raise FileExistsError(f"matrix 输出已存在；请使用新的 output_root：{listed}")
     run_id = run_id or (
         f"matrix-{_datetime.datetime.now(_datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
         f"-{uuid.uuid4().hex[:8]}"
@@ -607,15 +592,9 @@ def run_integration_matrix(
             "log_path": log_path.relative_to(root).as_posix()
             if root in log_path.parents
             else log_path.as_posix(),
-            "reused": False,
             "preflight": None,
             "error": None,
         }
-        existing = _read_existing_success(result_path)
-        if existing is not None:
-            item.update(status="smoke_pass", reused=True)
-            items.append(item)
-            continue
         preflight_result = None
         if not skip_preflight:
             try:
@@ -660,7 +639,7 @@ def run_integration_matrix(
             )
             items.append(item)
             continue
-        item_config = build_experiment_config(record, base_config=base_config, project_root=root)
+        item_config = build_experiment_config(record, base_config=base_config)
         context: dict[str, Any] = {
             "record": record,
             "integration": record,
@@ -680,6 +659,45 @@ def run_integration_matrix(
                 if record.environment.runtime == "in_process"
                 else external_python_runner
             )
+        if runner is None and record.environment.runtime == "external_python":
+            current_prefix = Path(sys.prefix).resolve()
+            try:
+                expected_prefix = resolve_encoder_runtime(
+                    record.id, project_root=root
+                ).group.prefix.resolve()
+                runtime_error = None
+            except Exception as exc:
+                expected_prefix = None
+                runtime_error = str(exc) or type(exc).__name__
+            if runtime_error is not None or current_prefix != expected_prefix:
+                result = _failure_document(
+                    record,
+                    status="blocked",
+                    message=(
+                        f"external_python 目标必须在声明环境中执行：current={current_prefix}，"
+                        f"expected={expected_prefix or 'unresolved'}；"
+                        "请使用 server native runner"
+                    ),
+                    stage="runtime_environment",
+                    root=root,
+                    video_path=video_path,
+                    config=item_config,
+                    run_id=context["run_id"],
+                    log_path=log_path,
+                    exit_code=None,
+                    evidence={
+                        "current_prefix": str(current_prefix),
+                        "expected_prefix": None
+                        if expected_prefix is None
+                        else str(expected_prefix),
+                        "runtime_error": runtime_error,
+                    },
+                )
+                if write_results:
+                    write_smoke_result_v2(result, result_path, output_root=output_dir)
+                item.update(status="blocked", error=result["error"])
+                items.append(item)
+                continue
         try:
             if runner is None:
                 value = run_encoder_smoke_v2(
@@ -693,8 +711,8 @@ def run_integration_matrix(
                 )
             else:
                 value = _invoke_hook(runner, record, context)
-            result = _coerce_runner_result(value, result_path)
-            if write_results:
+            result, written_by_runner = _coerce_runner_result(value, record, result_path)
+            if write_results and not written_by_runner:
                 write_smoke_result_v2(result, result_path, output_root=output_dir)
             item_status = str(result.get("status", "failed"))
             item_error = result.get("error")
@@ -714,7 +732,15 @@ def run_integration_matrix(
                 evidence={"runtime": record.environment.runtime},
             )
             if write_results:
-                write_smoke_result_v2(result, result_path, output_root=output_dir)
+                failure_path = result_path
+                if result_path.exists():
+                    failure_path = _path_inside(item_dir / "failure.json", output_dir)
+                    item["result_path"] = (
+                        failure_path.relative_to(root).as_posix()
+                        if root in failure_path.parents
+                        else failure_path.as_posix()
+                    )
+                write_smoke_result_v2(result, failure_path, output_root=output_dir)
             item_status = "failed"
             item_error = result["error"]
         item.update(status=item_status, error=item_error)
@@ -742,19 +768,12 @@ def run_integration_matrix(
             "catalog_version": CATALOG_V1_VERSION,
         },
     }
-    if matrix_path is None:
-        matrix_path = output_dir / "matrix.json"
-    else:
-        matrix_path = Path(matrix_path)
-        if not matrix_path.is_absolute():
-            matrix_path = root / matrix_path
-    matrix_path = _path_inside(Path(matrix_path), output_dir)
     if write_results:
-        write_matrix_result(matrix, matrix_path, output_root=output_dir)
+        write_matrix_result(matrix, resolved_matrix_path, output_root=output_dir)
     matrix["matrix_path"] = (
-        matrix_path.relative_to(root).as_posix()
-        if root in matrix_path.parents
-        else matrix_path.as_posix()
+        resolved_matrix_path.relative_to(root).as_posix()
+        if root in resolved_matrix_path.parents
+        else resolved_matrix_path.as_posix()
     )
     return matrix
 
@@ -766,7 +785,7 @@ def write_matrix_result(
     output_root: str | Path | None = None,
     overwrite_success: bool = False,
 ) -> Path:
-    """以临时文件 + replace 原子写入矩阵汇总，不覆盖已完成结果。"""
+    """以临时文件 + replace 原子写入矩阵汇总；覆盖必须显式授权。"""
 
     output = Path(path).expanduser()
     root = Path(output_root).expanduser() if output_root is not None else output.parent
@@ -774,12 +793,7 @@ def write_matrix_result(
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() and not overwrite_success:
-        try:
-            old = json.loads(output.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            old = None
-        if isinstance(old, Mapping) and old.get("status") == "completed":
-            return output
+        raise FileExistsError(f"matrix result 已存在；显式允许覆盖后才能写入：{output}")
     payload = json.dumps(dict(result), ensure_ascii=False, indent=2, allow_nan=False) + "\n"
     temp_name: str | None = None
     try:

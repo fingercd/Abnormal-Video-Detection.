@@ -16,6 +16,7 @@ constructor:
   strict_assets: true
   preprocess_profile: videochat-flash-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: OpenGVLab/VideoChat-Flash-Qwen2_5-2B_res448
   revision: 878b4d86ab382a83b9353c33db89210aa459a735

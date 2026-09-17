@@ -13,6 +13,7 @@ constructor:
   strict_checkpoint: false
 
 checkpoint:
+  constructor_key: checkpoint_path
   source: torchvision
   model_id: torchvision.models.video.swin3d_t
   revision: v0.20.1

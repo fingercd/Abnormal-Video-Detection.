@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import random
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
@@ -11,7 +10,9 @@ from typing import Any
 
 import numpy as np
 
+from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.features_dataset import FeatureDataset, build_feature_dataloader
+from vadbench.data.manifest import DatasetSplit, validate_manifest
 from vadbench.engine.train import move_to_device, save_checkpoint, train_one_step
 from vadbench.features import FeatureStore, atomic_write_json
 from vadbench.tasks import build_task
@@ -48,17 +49,6 @@ def _float_metric(value: Any) -> float:
     if size != 1:
         raise ValueError("runner metrics must be scalar")
     return float(value.item())
-
-
-def _manifest_identity(value: Any) -> dict[str, Any]:
-    if isinstance(value, (str, Path)):
-        path = Path(value).expanduser().resolve()
-        digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
-        return {"path": str(path), "sha256": digest}
-    try:
-        return {"records": len(value)}
-    except TypeError:
-        return {"kind": type(value).__name__}
 
 
 @dataclass(frozen=True)
@@ -316,6 +306,8 @@ def train_feature_head(
         "assume_unannotated_is_normal": settings.assume_unannotated_is_normal,
     }
     train_dataset = FeatureDataset(store, train_manifest, **dataset_options)
+    if any(item.split != DatasetSplit.TRAIN for item in train_dataset.manifest_records):
+        raise ValueError("training manifest must contain only train videos")
     validation_dataset = None
     if validation_manifest is not None:
         validation_dataset = FeatureDataset(
@@ -323,6 +315,9 @@ def train_feature_head(
             validation_manifest,
             **{**dataset_options, "encoder_fingerprint": train_dataset.encoder_fingerprint},
         )
+        if any(item.split == DatasetSplit.TEST for item in validation_dataset.manifest_records):
+            raise ValueError("official test videos cannot be used for validation/model selection")
+        validate_manifest((*train_dataset.manifest_records, *validation_dataset.manifest_records))
     if (
         validation_dataset is not None
         and validation_dataset.feature_dim != train_dataset.feature_dim
@@ -422,10 +417,16 @@ def train_feature_head(
         "epochs_completed": len(epoch_history),
         "global_step": global_step,
         "max_steps": settings.max_steps,
-        "train_manifest": _manifest_identity(train_manifest),
+        "train_manifest": {
+            "records": len(train_dataset),
+            "sha256": compute_manifest_sha256(train_dataset.manifest_records),
+        },
         "validation_manifest": None
-        if validation_manifest is None
-        else _manifest_identity(validation_manifest),
+        if validation_dataset is None
+        else {
+            "records": len(validation_dataset),
+            "sha256": compute_manifest_sha256(validation_dataset.manifest_records),
+        },
         "config": _config_metadata(settings),
         "epochs": epoch_history,
     }

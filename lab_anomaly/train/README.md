@@ -1,99 +1,37 @@
-# train — 训练目录
+# `lab_anomaly/train`
 
-> 负责 Vit 当前主线的模型训练。
+当前训练入口只有 `train_end2end.py`。它以预切 RGB 帧训练 `VideoMAE v2 + MIL` 二分类模型：normal 标签为 0，其余标签全部压为 anomaly 标签 1；可选的 ranking 分支仍只使用视频级弱标签。
 
----
+## 运行条件与命令
 
-## 当前核心文件
+训练只接受已预切的 `preclip_root/manifest.json`，不会回退到原始视频现读。先完成 `data/index_build.py` 和 `tool/precompute_clips.py`，并保证 manifest 参数与 `configs/train_end2end.yaml` 一致，然后在仓库根运行：
 
-### `train_end2end.py`
-
-**当前最新、最完整的训练入口。**
-
-它做的事情：
-1. 读取已经预切好的 clip（`.npz`）
-2. 用 `VideoMAE v2` 编码这些 clip
-3. 用 `MIL` 把多个 clip 的结果汇总
-4. 输出正常/异常的分类模型
-
----
-
-## 训练前置条件
-
-在运行之前，先确认：
-- [ ] `lab_dataset/labels/video_labels.csv` 已准备好
-- [ ] `tool/precompute_clips.py` 已跑完
-- [ ] `lab_dataset/derived/preclips/` 里已有切好的 clip
-
----
-
-## 关键参数
-
-建议优先看 `train_end2end.py` 顶部配置区和 `configs/train_end2end.yaml`：
-
-| 参数 | 说明 |
-|------|------|
-| `preclip_root` | 预切 clip 目录 |
-| `out_dir` | 训练输出目录 |
-| `frames_per_clip` | 每片段帧数（与预切阶段对齐）|
-| `encoder_model_name` | 编码器名称（如 `OpenGVLab/VideoMAEv2-Base`）|
-| `batch_size` | 训练批次大小 |
-| `stages` | 多阶段训练配置（解冻策略、学习率、epoch 数）|
-| `val_ratio` | 验证集比例 |
-
----
-
-## 三阶段渐进解冻训练
-
-```
-阶段 1：head_only
-  - 30 epochs，lr=1e-3
-  - 冻结全部 backbone，只训练 MIL 头
-
-阶段 2：unfreeze_2
-  - 20 epochs，lr=5e-5
-  - 解冻最后 2 个 Transformer block
-
-阶段 3：unfreeze_4
-  - 15 epochs，lr=2e-5
-  - 解冻最后 4 个 Transformer block
+```powershell
+.venv\Scripts\python.exe -m lab_anomaly.train.train_end2end
+# 或：.\lab_anomaly\train\run_train_end2end.ps1
 ```
 
-**损失函数**：`CE Loss + lambda_rank * MIL Ranking Loss`
+入口没有训练参数 CLI；修改 `configs/train_end2end.yaml` 或文件内默认配置。脚本以视频行随机切训练/验证集，非 normal/normal 两类都存在时才使用平衡 batch sampler，使每个常规 batch 含一条各类视频。最后一个不足 batch 可能只有一个类别，此时 ranking loss 为 0。
 
-**数据采样**：`BalancedVideoBatchSampler` — 保证每个 batch 至少包含 1 个 normal + 1 个 anomaly 视频
+## 阶段与产物
 
-**混合精度**：支持 `torch.amp.autocast` + `GradScaler`
+每个 stage 先冻结 backbone，再解冻最后 `unfreeze_blocks` 个识别出的 Transformer block；优化器在每个 stage 重新创建。冻结阶段可把 backbone 置为 eval 模式，并以 `torch.no_grad()` 编码；CUDA 且 `encoder_use_half` 为真时使用 AMP + GradScaler。
 
----
+`out_dir` 下会写：
 
-## 输出产物
-
-训练完成后，结果输出到 `lab_dataset/derived/end2end_classifier/`：
-
-| 文件 | 说明 |
-|------|------|
-| `checkpoint_best.pt` | 验证集最优 checkpoint |
-| `checkpoint_last.pt` | 最后一个 epoch |
-| `labels.json` | 标签映射 |
-| `history.json` | 训练历史（loss、acc、auc）|
-| `plot_loss_curves.png` | 损失曲线图 |
-| `plot_acc.png` | 准确率曲线图 |
-| `eval_report/` | 评估报告（混淆矩阵、ROC 曲线等）|
-
----
-
-## 运行方式
-
-```bash
-python Vit/lab_anomaly/train/train_end2end.py
+```text
+checkpoint_best.pt       按验证 accuracy 选择，不按 AUC
+checkpoint_last.pt
+labels.json              固定 normal/anomaly 映射
+history.json
+plot_loss_curves.png, plot_acc.png          仅 matplotlib 可用时
+confusion_matrix_val.png                    仅 matplotlib 可用且验证集非空时
 ```
 
-在文件顶部配置区修改参数后直接运行。
+checkpoint 同时包含 encoder 和 MIL 的 state/config，供 `infer/scoring.py` 和 `infer/rtsp_service.py` 加载。它不包含数据集版本、CSV hash、代码 revision、采样 provenance 或可复现实验 run 信息，不能当作 VADBench 产物。
 
----
+`plot_training_log.py` 只解析旧的文本日志格式；当前训练应直接使用 `history.json`。`run_train_known_classifier.*` 已明确弃用，不能运行。
 
-## 注意事项
+## 评测边界
 
-- 如果在其它文档里看到 embedding、光流、开放集那类说法，请优先以当前真实存在的 `train_end2end.py` 为准
-- `clip_len`、`encoder_model_name` 等参数在训练、预切、推理三阶段必须保持一致
+验证 accuracy/AUC 是视频级随机 holdout 指标。没有官方 split、按摄像头分组、分层、帧级标签投影或测试集覆盖校验；它不适合用于 UCF-Crime 的正式 frame ROC-AUC/AP 报告。

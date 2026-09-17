@@ -62,23 +62,6 @@ EXPECTED_FIXED_SMOKE_PROFILES = {
     "video_swin": ("video-swin-32x224", 32, 2, 224),
 }
 
-EXPECTED_INTEGRATED_IDS = {
-    "r2plus1d_18",
-    "x3d",
-    "mvitv2",
-    "slowfast",
-    "i3d",
-    "video_swin",
-    "videomaev2",
-    "hermes_llava_ov",
-    "timesformer",
-    "videomae",
-    "videomamba",
-    "videochat_flash",
-    "vjepa2",
-    "longvu",
-}
-
 
 def _raw_catalog() -> dict[str, Any]:
     with CATALOG_PATH.open("r", encoding="utf-8") as handle:
@@ -101,21 +84,13 @@ def test_catalog_contains_only_the_21_runtime_targets() -> None:
     assert set(catalog.ids) == EXPECTED_IDS
     assert set(BUILTIN_ENCODER_CONFIGS) == EXPECTED_IDS
     assert set(ENCODER_REGISTRY.names()) == EXPECTED_IDS
-    assert {
-        record.id
-        for record in catalog.integrations
-        if record.status in {"integrated", "smoke_pass"}
-    } == EXPECTED_INTEGRATED_IDS
     assert all(
-        record.status == "smoke_pass"
-        for record in catalog.integrations
-        if record.id in EXPECTED_INTEGRATED_IDS
+        record.status in {"planned", "integrated", "blocked"} for record in catalog.integrations
     )
-    assert sum(record.status == "planned" for record in catalog.integrations) == 0
     assert all(
         record.checkpoint.status == "verified"
         for record in catalog.integrations
-        if record.id in EXPECTED_INTEGRATED_IDS
+        if record.status == "integrated"
     )
 
     definitions = [record.definition for record in catalog.integrations]
@@ -135,33 +110,32 @@ def test_catalog_matches_draft_2020_12_schema() -> None:
     jsonschema.Draft202012Validator(schema).validate(data)
 
 
-def test_wheel_force_includes_packaged_catalog() -> None:
+def test_wheel_force_includes_all_catalog_resources() -> None:
     pyproject = PYPROJECT_PATH.read_text(encoding="utf-8")
     assert "[tool.hatch.build.targets.wheel.force-include]" in pyproject
-    assert (
-        '"registry/encoder-integrations.yaml" = "vadbench/resources/encoder-integrations.yaml"'
-    ) in pyproject
+    for source in ("configs", "registry", "schemas", "integrations"):
+        assert f'"{source}" = "vadbench/resources/{source}"' in pyproject
 
 
 def test_default_catalog_prefers_source_checkout(monkeypatch) -> None:
-    def fail_if_called(package: str) -> Any:
-        raise AssertionError(f"checkout catalog exists; resources.files({package!r}) was called")
+    def fail_if_called(relative: str) -> Path:
+        raise AssertionError(f"checkout catalog exists; package resource {relative!r} was called")
 
-    monkeypatch.setattr(catalog_module.resources, "files", fail_if_called)
+    monkeypatch.setattr(catalog_module, "package_resource_path", fail_if_called)
     assert default_catalog_path(PROJECT_ROOT) == CATALOG_PATH.resolve()
 
 
 def test_default_catalog_falls_back_to_packaged_resource(tmp_path: Path, monkeypatch) -> None:
-    package_root = tmp_path / "installed" / "vadbench"
-    packaged_catalog = package_root / "resources" / "encoder-integrations.yaml"
-    packaged_catalog.parent.mkdir(parents=True)
-    shutil.copyfile(CATALOG_PATH, packaged_catalog)
+    resource_root = tmp_path / "installed" / "vadbench" / "resources"
+    for source in ("configs", "registry", "integrations"):
+        shutil.copytree(PROJECT_ROOT / source, resource_root / source)
+    packaged_catalog = resource_root / "registry" / "encoder-integrations.yaml"
 
-    def fake_files(package: str) -> Path:
-        assert package == "vadbench"
-        return package_root
+    def fake_package_resource(relative: str) -> Path:
+        assert relative == "registry/encoder-integrations.yaml"
+        return packaged_catalog
 
-    monkeypatch.setattr(catalog_module.resources, "files", fake_files)
+    monkeypatch.setattr(catalog_module, "package_resource_path", fake_package_resource)
     missing_checkout = tmp_path / "checkout-without-registry"
 
     assert default_catalog_path(missing_checkout) == packaged_catalog.resolve()
@@ -182,6 +156,21 @@ def test_schema_and_loader_require_two_streaming_chunks(tmp_path: Path) -> None:
     path = _write_catalog(tmp_path, data)
     with pytest.raises(IntegrationCatalogError, match="至少需要 2 个 chunks"):
         load_integration_catalog(path, project_root=PROJECT_ROOT)
+
+
+@pytest.mark.parametrize("status", ["smoke_pass", "failed", "preflight_pass", "acquiring"])
+def test_schema_and_loader_reject_run_history_as_catalog_status(
+    tmp_path: Path,
+    status: str,
+) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    data = _raw_catalog()
+    data["integrations"][0]["status"] = status
+
+    assert not jsonschema.Draft202012Validator(schema).is_valid(data)
+    with pytest.raises(IntegrationCatalogError, match="不在"):
+        load_integration_catalog(_write_catalog(tmp_path, data), project_root=PROJECT_ROOT)
 
 
 @pytest.mark.parametrize(
@@ -252,12 +241,10 @@ def test_existing_integrations_keep_targets_capabilities_and_references() -> Non
     assert hermes_spec.metadata["cache_owner"] == "language_model_decoder"
 
 
-def test_all_targets_have_definitions_but_only_native_routes_are_smoke_pass() -> None:
+def test_all_targets_have_definitions_and_static_registration_status() -> None:
     catalog = DEFAULT_INTEGRATION_CATALOG
-    assert sum(record.status == "smoke_pass" for record in catalog.integrations) == 14
-    assert sum(record.status == "planned" for record in catalog.integrations) == 0
-    assert sum(record.status == "blocked" for record in catalog.integrations) == 7
     for record in catalog.integrations:
+        assert record.status in {"planned", "integrated", "blocked"}
         definition = load_encoder_definition(record.id, project_root=PROJECT_ROOT)
         assert definition["adapter"] == record.id
         assert (PROJECT_ROOT / record.definition).is_file()
@@ -313,7 +300,7 @@ def test_loader_rejects_structural_errors(
         load_integration_catalog(path, project_root=PROJECT_ROOT)
 
 
-def test_nonplanned_target_must_have_real_definition_and_lock(tmp_path: Path) -> None:
+def test_integrated_target_must_have_real_definition_and_lock(tmp_path: Path) -> None:
     data = _raw_catalog()
     record = data["integrations"][0]
     record["status"] = "integrated"

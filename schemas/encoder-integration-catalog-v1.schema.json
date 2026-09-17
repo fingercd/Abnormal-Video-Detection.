@@ -191,11 +191,7 @@
         "status": {
           "enum": [
             "planned",
-            "preflight_pass",
-            "acquiring",
             "integrated",
-            "smoke_pass",
-            "failed",
             "blocked"
           ]
         },

@@ -24,6 +24,7 @@ constructor:
     Summarize the video timeline, recurring entities, locations, and interactions.
 
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: llava-hf/llava-onevision-qwen2-0.5b-ov-hf
   revision: 74dd0bf867a4cda7950c17663794267c60cf4b40

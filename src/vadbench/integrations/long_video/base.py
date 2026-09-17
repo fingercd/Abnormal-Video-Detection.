@@ -20,10 +20,8 @@ import importlib.util
 import inspect
 import json
 import os
-import shlex
-import subprocess
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -163,9 +161,6 @@ def _jsonable(value: Any) -> Any:
         return [_jsonable(item) for item in value]
     if isinstance(value, Path):
         return value.as_posix()
-    # Opaque stream state is intentionally not sent to a subprocess unless the
-    # upstream worker makes it JSON-safe.  Raising here prevents silent state
-    # loss between chunks.
     raise TypeError(f"worker metadata 含不可序列化类型 {type(value).__name__}")
 
 
@@ -507,184 +502,6 @@ def _unpack_loaded_worker(loaded: Any, processor: Any | None) -> tuple[Any, Any 
     return worker, processor if processor is not None else loaded_processor
 
 
-class ExternalPythonWorker:
-    """Small no-network subprocess facade for an isolated upstream runtime.
-
-    The command receives one JSON request on stdin and returns one JSON object
-    on stdout.  Frames are represented as lists only for the small smoke chunks;
-    production callers can provide a custom ``runner`` that exchanges NPY/NPZ
-    sidecars through the project's worker protocol.  No shell is involved and
-    no package/model download is attempted.
-    """
-
-    protocol_version = "vadbench.external-worker.v1"
-
-    def __init__(
-        self,
-        command: str | Sequence[str],
-        *,
-        integration_id: str,
-        cwd: str | os.PathLike[str] | None = None,
-        env: Mapping[str, str] | None = None,
-        timeout_s: float = 300.0,
-        runner: Callable[[Mapping[str, Any]], Any] | None = None,
-    ) -> None:
-        if isinstance(command, str):
-            command_parts = tuple(shlex.split(command))
-        else:
-            command_parts = tuple(str(item) for item in command)
-        if not command_parts and runner is None:
-            raise LongVideoAssetError(
-                integration_id=integration_id,
-                code="worker_unconfigured",
-                message=f"{integration_id} 未配置 external worker command",
-            )
-        if timeout_s <= 0:
-            raise ValueError("timeout_s 必须大于 0")
-        self.command = command_parts
-        self.integration_id = integration_id
-        self.cwd = None if cwd is None else str(Path(cwd).expanduser())
-        self.env = dict(env or {})
-        self.timeout_s = float(timeout_s)
-        self.runner = runner
-
-    def _request(self, operation: str, **payload: Any) -> Any:
-        request = {
-            "schema_version": 1,
-            "protocol": self.protocol_version,
-            "integration_id": self.integration_id,
-            "operation": operation,
-            **payload,
-        }
-        if self.runner is not None:
-            try:
-                response = self.runner(request)
-            except Exception as exc:
-                raise LongVideoWorkerError(
-                    f"external runner 执行失败: {exc}",
-                    integration_id=self.integration_id,
-                    code="worker_execution_failed",
-                ) from exc
-            if isinstance(response, Mapping):
-                if response.get("status", "ok") in {"failed", "error"}:
-                    raise LongVideoWorkerError(
-                        str(response.get("message", "external runner 报告失败")),
-                        integration_id=self.integration_id,
-                        code=str(response.get("code", "worker_execution_failed")),
-                        details=response,
-                    )
-                return response.get("result", response)
-            return response
-        try:
-            encoded = json.dumps(_jsonable(request), ensure_ascii=False)
-            environment = os.environ.copy()
-            environment.update(self.env)
-            completed = subprocess.run(
-                self.command,
-                input=encoded,
-                text=True,
-                capture_output=True,
-                cwd=self.cwd,
-                env=environment,
-                timeout=self.timeout_s,
-                check=False,
-                shell=False,
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            raise LongVideoWorkerError(
-                f"external worker 启动/执行失败: {exc}",
-                integration_id=self.integration_id,
-                code="worker_execution_failed",
-            ) from exc
-        if completed.returncode != 0:
-            raise LongVideoWorkerError(
-                f"external worker 退出码 {completed.returncode}: "
-                f"{completed.stderr.strip()[-1024:]}",
-                integration_id=self.integration_id,
-                code="worker_execution_failed",
-                details={"returncode": completed.returncode},
-            )
-        try:
-            response = json.loads(completed.stdout)
-        except json.JSONDecodeError as exc:
-            raise LongVideoWorkerError(
-                "external worker stdout 不是合法 JSON",
-                integration_id=self.integration_id,
-                code="worker_protocol_error",
-            ) from exc
-        if not isinstance(response, Mapping):
-            raise LongVideoWorkerError(
-                "external worker response 必须是 JSON object",
-                integration_id=self.integration_id,
-                code="worker_protocol_error",
-            )
-        if response.get("status", "ok") in {"failed", "error"}:
-            raise LongVideoWorkerError(
-                str(response.get("message", "external worker 报告失败")),
-                integration_id=self.integration_id,
-                code=str(response.get("code", "worker_execution_failed")),
-                details=response,
-            )
-        return response.get("result", response)
-
-    def run(self, operation: str, **payload: Any) -> Any:
-        """Public generic operation hook for custom matrix/worker runners."""
-
-        return self._request(operation, **payload)
-
-    def encode(self, batch: ClipBatch, *, prompt: str, feature_stage: str) -> Any:
-        return self._request(
-            "encode",
-            prompt=prompt,
-            feature_stage=feature_stage,
-            frames=_jsonable(batch.frames),
-            timestamps_s=_jsonable(batch.timestamps_s),
-            frame_indices=None if batch.frame_indices is None else _jsonable(batch.frame_indices),
-            video_ids=list(batch.video_ids),
-            valid_mask=None if batch.valid_mask is None else _jsonable(batch.valid_mask),
-            metadata=_jsonable(batch.metadata),
-        )
-
-    def init_state(self, video_id: str, *, prompt: str, feature_stage: str) -> Any:
-        return self._request(
-            "init_state",
-            video_id=video_id,
-            prompt=prompt,
-            feature_stage=feature_stage,
-        )
-
-    def encode_step(
-        self,
-        chunk: ClipBatch,
-        state: Any,
-        *,
-        prompt: str,
-        feature_stage: str,
-        compression: Any = None,
-    ) -> Any:
-        return self._request(
-            "encode_step",
-            prompt=prompt,
-            feature_stage=feature_stage,
-            compression=("identity" if compression is not None else "off"),
-            state=_jsonable(state),
-            frames=_jsonable(chunk.frames),
-            timestamps_s=_jsonable(chunk.timestamps_s),
-            frame_indices=None if chunk.frame_indices is None else _jsonable(chunk.frame_indices),
-            video_ids=list(chunk.video_ids),
-            valid_mask=None if chunk.valid_mask is None else _jsonable(chunk.valid_mask),
-            metadata=_jsonable(chunk.metadata),
-        )
-
-    def finalize(self, state: Any, *, prompt: str, feature_stage: str) -> Any:
-        return self._request(
-            "finalize",
-            state=_jsonable(state),
-            prompt=prompt,
-            feature_stage=feature_stage,
-        )
-
-
 class _ExternalAdapterBase:
     """Shared constructor, asset checks, and output metadata."""
 
@@ -725,12 +542,6 @@ class _ExternalAdapterBase:
         worker_factory: Callable[..., Any] | None = None,
         entrypoint: str | None = None,
         upstream_entrypoint: str | None = None,
-        worker_command: str | Sequence[str] | None = None,
-        external_command: str | Sequence[str] | None = None,
-        worker_cwd: str | os.PathLike[str] | None = None,
-        worker_env: Mapping[str, str] | None = None,
-        worker_timeout_s: float = 300.0,
-        worker_runner: Callable[[Mapping[str, Any]], Any] | None = None,
         strict_assets: bool = True,
         **_: Any,
     ) -> None:
@@ -774,21 +585,9 @@ class _ExternalAdapterBase:
             load_model_fn = model_loader or worker_factory
         if entrypoint is None:
             entrypoint = upstream_entrypoint
-        if worker_command is None:
-            worker_command = external_command
         self.implementation_source = "external_worker_facade"
 
-        if self.worker is None and (worker_command is not None or worker_runner is not None):
-            self.worker = ExternalPythonWorker(
-                worker_command or (),
-                integration_id=self.integration_id,
-                cwd=worker_cwd,
-                env=worker_env,
-                timeout_s=worker_timeout_s,
-                runner=worker_runner,
-            )
-            self.implementation_source = "external_python_worker"
-        elif self.worker is None and load_model_fn is not None:
+        if self.worker is None and load_model_fn is not None:
             if strict_assets:
                 self._require_assets(require_checkout=False)
             try:
@@ -854,7 +653,7 @@ class _ExternalAdapterBase:
                 code="worker_unconfigured",
                 message=(
                     f"{self.integration_id} 没有可运行的 worker/model；请提供显式 worker、"
-                    "worker_command 或 load_model_fn（不会隐式联网）"
+                    "load_model_fn 或受固定 checkout 约束的 entrypoint（不会隐式联网）"
                 ),
                 details={
                     "checkout_path": _path_text(checkout_value, self.project_root),
@@ -1390,7 +1189,6 @@ __all__ = [
     "DEFAULT_NEUTRAL_PROMPT",
     "ExternalFixedVideoAdapter",
     "ExternalAssetError",
-    "ExternalPythonWorker",
     "ExternalStreamingVideoAdapter",
     "ExternalWorkerError",
     "LongVideoAssetError",

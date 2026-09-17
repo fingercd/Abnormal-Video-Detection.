@@ -10,12 +10,14 @@ from typing import Any
 import numpy as np
 
 from vadbench.artifacts import PredictionRecord
+from vadbench.checkpoints import sha256_file
 from vadbench.data.features_dataset import FeatureDataset, build_feature_dataloader
 from vadbench.data.manifest import (
     VideoManifestRecord,
     load_manifest_jsonl,
     validate_manifest,
 )
+from vadbench.engine.coverage import validate_frame_coverage
 from vadbench.engine.runner import HeadOnlyTrainingConfig, normalize_task_name
 from vadbench.engine.train import load_checkpoint, move_to_device
 from vadbench.features import FeatureStore, atomic_write_jsonl
@@ -129,41 +131,6 @@ def _scores(step_output: Any, task_name: str) -> np.ndarray:
     return result.astype(np.float64, copy=False)
 
 
-def _strict_video_coverage(
-    *,
-    video_id: str,
-    clip_indices: np.ndarray,
-    frame_starts: np.ndarray,
-    frame_ends: np.ndarray,
-    manifest: VideoManifestRecord,
-) -> None:
-    if manifest.num_frames is None:
-        raise ValueError(f"{video_id}: strict coverage requires manifest num_frames")
-    if manifest.fps is None:
-        raise ValueError(f"{video_id}: strict coverage requires manifest fps")
-    if len(set(int(item) for item in clip_indices)) != clip_indices.size:
-        raise ValueError(f"{video_id}: strict coverage requires unique clip_index values")
-    if np.any(frame_starts < 0) or np.any(frame_ends <= frame_starts):
-        raise ValueError(f"{video_id}: prediction frame ranges must satisfy 0 <= start < end")
-    if np.any(frame_ends > manifest.num_frames):
-        raise ValueError(
-            f"{video_id}: prediction frame range exceeds num_frames={manifest.num_frames}"
-        )
-    if frame_starts[0] != 0:
-        raise ValueError(f"{video_id}: frame coverage has a leading gap before frame 0")
-    for previous_end, current_start in zip(frame_ends[:-1], frame_starts[1:], strict=True):
-        if current_start > previous_end:
-            raise ValueError(
-                f"{video_id}: frame coverage has a gap [{previous_end}, {current_start})"
-            )
-        if current_start < previous_end:
-            raise ValueError(f"{video_id}: frame coverage overlaps at frame {current_start}")
-    if frame_ends[-1] != manifest.num_frames:
-        raise ValueError(
-            f"{video_id}: frame coverage ends at {frame_ends[-1]}, expected {manifest.num_frames}"
-        )
-
-
 def predict_feature_head(
     config: HeadOnlyTrainingConfig | Mapping[str, Any],
     feature_store: FeatureStore | str | Path,
@@ -242,6 +209,7 @@ def predict_feature_head(
         strict=True,
         verify=True,
     )
+    checkpoint_digest = sha256_file(checkpoint_path)
     model.to(resolved_device)
     model.eval()
     loader = build_feature_dataloader(
@@ -293,12 +261,14 @@ def predict_feature_head(
                 row_frame_ends = frame_ends[row, positions]
                 manifest_record = manifest_by_id[video_id]
                 if strict_coverage:
-                    _strict_video_coverage(
+                    validate_frame_coverage(
                         video_id=video_id,
                         clip_indices=row_indices,
                         frame_starts=row_frame_starts,
                         frame_ends=row_frame_ends,
-                        manifest=manifest_record,
+                        num_frames=manifest_record.num_frames,
+                        fps=manifest_record.fps,
+                        require_fps=True,
                     )
                 elif manifest_record.num_frames is not None and (
                     np.any(row_frame_starts < 0)
@@ -342,8 +312,10 @@ def predict_feature_head(
                             metadata={
                                 "task": task_name,
                                 "score_level": ("clip" if one_score_per_clip else "snippet"),
+                                "ground_truth_scope": "video",
                                 "source_clip_index": source_clip_index,
                                 "checkpoint": Path(checkpoint_path).name,
+                                "checkpoint_sha256": checkpoint_digest,
                             },
                         )
                     )

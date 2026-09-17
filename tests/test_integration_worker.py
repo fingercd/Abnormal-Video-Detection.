@@ -388,6 +388,29 @@ def test_fixed_worker_loopback_reconstructs_encoder_output(tmp_path: Path) -> No
     assert result.timeline.source_frame_end.tolist() == [[2]]
 
 
+def test_worker_constructs_the_adapter_once_per_request(tmp_path: Path) -> None:
+    calls: list[float] = []
+
+    def factory(*, value: float = 2.0) -> _FixedAdapter:
+        calls.append(value)
+        return _FixedAdapter(value=value)
+
+    registry = EncoderRegistry()
+    registry.register_factory("fixed", factory, capabilities=FIXED_CAPABILITIES)
+    write_worker_request(
+        tmp_path,
+        "request.json",
+        request_id="one-construction",
+        encoder_id="fixed",
+        operation="encode",
+        clips=[_batch()],
+        adapter_kwargs={"value": 7.0},
+    )
+
+    assert run_worker_once(tmp_path, "request.json", "response.json", registry=registry) == 0
+    assert calls == [7.0]
+
+
 def test_stream_worker_keeps_opaque_in_process_and_returns_step_records(tmp_path: Path) -> None:
     registry = _registry("stream", _StreamingAdapter, STREAM_CAPABILITIES)
     write_worker_request(

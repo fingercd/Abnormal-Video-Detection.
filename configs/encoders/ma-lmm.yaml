@@ -18,6 +18,7 @@ constructor:
   upstream_entrypoint: lavis/models/blip2_models/blip2.py:load_model
   preprocess_profile: ma-lmm-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: local_upstream
   model_id: boheumd/MA-LMM
   revision: ffe9fa9e89757e4433012029f19286c3c280ab1d

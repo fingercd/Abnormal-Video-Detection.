@@ -14,6 +14,7 @@ constructor:
   revision: 62e4dad07e65ec02438eb99391efd4836ec563bb
   local_files_only: true
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: facebook/timesformer-base-finetuned-k400
   revision: 62e4dad07e65ec02438eb99391efd4836ec563bb

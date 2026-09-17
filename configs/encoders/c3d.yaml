@@ -22,6 +22,7 @@ constructor:
   device: cuda
   strict_assets: true
 checkpoint:
+  constructor_key: checkpoint_path
   source: github
   model_id: facebookarchive/C3D
   revision: master

@@ -5,14 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from vadbench import __version__
-from vadbench.artifacts import ArtifactStore, PredictionRecord, RunProvenance
+from vadbench.artifacts import ArtifactStore, PredictionRecord, file_identity, record_stage
 from vadbench.benchmark_plan import run_benchmark_plan
 from vadbench.checkpoints import (
     CheckpointError,
@@ -23,7 +23,7 @@ from vadbench.checkpoints import (
 from vadbench.config import ConfigError, load_experiment, load_yaml
 from vadbench.data.audit import audit_ucf_crime_dataset
 from vadbench.data.enrich import enrich_video_info
-from vadbench.data.labels import LabelProjectionError, frame_labels_from_manifest
+from vadbench.data.labels import LabelProjectionError
 from vadbench.data.manifest import ManifestError, load_manifest_jsonl
 from vadbench.data.ucf_crime import (
     UCFCrimeImportResult,
@@ -36,6 +36,7 @@ from vadbench.features import FeatureStore, atomic_write_json
 from vadbench.orchestration import (
     compression_from_experiment,
     create_encoder_from_experiment,
+    encoder_identity,
     iter_microbatches,
 )
 from vadbench.registry import ENCODER_REGISTRY, RegistryError
@@ -44,10 +45,10 @@ from vadbench.smoke import run_encoder_smoke_v2, write_smoke_result_v2
 DEFAULT_REGISTRY = Path("registry/checkpoints.yaml")
 
 
-def evaluate_ucf_prediction_records(*args: Any, **kwargs: Any) -> Any:
+def evaluate_manifest_predictions(*args: Any, **kwargs: Any) -> Any:
     """Load frame-level evaluation code only when the command needs it."""
 
-    from vadbench.engine.evaluate import evaluate_ucf_prediction_records as implementation
+    from vadbench.engine.evaluate import evaluate_manifest_predictions as implementation
 
     return implementation(*args, **kwargs)
 
@@ -218,6 +219,10 @@ def _parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--predictions", required=True)
     evaluate.add_argument("--manifest")
     evaluate.add_argument("--output")
+    evaluate.add_argument(
+        "--protocol", choices=("official", "subset", "generic"), default="official"
+    )
+    evaluate.add_argument("--dataset-audit", help="official 模式所需的已通过数据审计 JSON")
     evaluate.set_defaults(handler=_evaluate)
 
     extract = sub.add_parser("extract", help="从 manifest 抽取标准化 encoder 特征")
@@ -581,129 +586,127 @@ def _load_prediction_jsonl(path: str | Path) -> tuple[PredictionRecord, ...]:
 def _evaluate(args: argparse.Namespace) -> int:
     config = load_experiment(args.config)
     manifest_path = args.manifest or config["dataset"]["test_manifest"]
-    manifest = load_manifest_jsonl(manifest_path)
-    frame_labels = frame_labels_from_manifest(manifest)
-    fps = {record.video_id: record.fps for record in manifest if record.fps is not None}
-    result = evaluate_ucf_prediction_records(
-        _load_prediction_jsonl(args.predictions),
-        frame_labels,
-        fps=fps or None,
-    )
-    metrics = result.to_dict()
-    output_value = args.output
-    if output_value is None:
-        output_value = (
+    output_path = Path(
+        args.output
+        or (
             Path(config["output"]["root"])
             / config["output"]["run_name"]
-            / "evaluation"
-            / "metrics.json"
+            / "evaluation/metrics.json"
         )
-    output_path = Path(output_value)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(metrics, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
     )
-    np.savez_compressed(
-        output_path.with_name("frame_scores.npz"),
-        **{video_id: scores for video_id, scores in result.frame_scores.items()},
-    )
+    with record_stage(
+        output_path.parent,
+        "evaluate",
+        config={**config, "protocol": args.protocol},
+        inputs={
+            "manifest": manifest_path,
+            "predictions": args.predictions,
+            "audit": args.dataset_audit,
+        },
+    ) as stage:
+        result = evaluate_manifest_predictions(
+            _load_prediction_jsonl(args.predictions),
+            manifest_path,
+            protocol=args.protocol,
+            audit_report=args.dataset_audit,
+        )
+        metrics = result.to_dict()
+        atomic_write_json(output_path, metrics)
+        np.savez_compressed(output_path.with_name("frame_scores.npz"), **result.frame_scores)
+        stage["outputs"] = {"metrics": file_identity(output_path)}
     print(
         json.dumps({"metrics": metrics, "output": str(output_path)}, ensure_ascii=False, indent=2)
     )
     return 0
 
 
+def _extraction_batches(records, config):
+    """Use the same sampling implementation for fixed clips and streamed MIL segments."""
+    sampler = config.get("sampler", {})
+    streaming = config.get("streaming", {})
+    if sampler.get("kind", "uniform_segments") == "chronological_stream":
+        if not streaming.get("enabled"):
+            raise ValueError("chronological_stream requires streaming.enabled=true")
+        return iter_streaming_chunk_batches(
+            records,
+            config["dataset"]["root"],
+            chunk_frames=int(streaming["chunk_frames"]),
+            sample_fps=streaming.get("sample_fps"),
+        )
+    if sampler.get("kind", "uniform_segments") != "uniform_segments":
+        raise ValueError("sampler.kind must be uniform_segments or chronological_stream")
+    return iter_fixed_segment_batches(
+        records,
+        config["dataset"]["root"],
+        num_segments=int(sampler.get("segments_per_video", 32)),
+        clip_frames=int(sampler.get("clip_frames", 16)),
+        frame_stride=int(sampler.get("frame_stride", 2)),
+        position=str(sampler.get("position", "center")),
+        seed=sampler.get("seed"),
+    )
+
+
 def _extract(args: argparse.Namespace) -> int:
     config = load_experiment(args.config)
     manifest_path = args.manifest or config["dataset"][f"{args.split}_manifest"]
-    records = load_manifest_jsonl(manifest_path)
-    if args.limit_videos is not None:
-        if args.limit_videos <= 0:
-            raise ValueError("--limit-videos 必须大于 0")
-        records = records[: args.limit_videos]
-    if not records:
-        raise ValueError("没有可抽取的视频")
-
     project_root = Path.cwd().resolve()
-    adapter, encoder_definition = create_encoder_from_experiment(
-        config,
-        project_root=project_root,
-    )
-    output_root = Path(args.output or config["output"]["root"])
     run_name = str(config["output"]["run_name"])
-    run_dir = (output_root / run_name).resolve()
-    artifact_store = ArtifactStore(run_dir, run_id=run_name)
-    feature_store = FeatureStore(run_dir / "features")
-    checkpoint = encoder_definition.get("checkpoint", {})
-    checkpoint_path = checkpoint.get("local_path") if isinstance(checkpoint, Mapping) else None
-    if checkpoint_path is not None:
-        checkpoint_path = str((project_root / str(checkpoint_path)).resolve())
-    fingerprint_manifest = {
-        "encoder": encoder_definition,
-        "experiment_encoder": config["encoder"],
-        "sampler": config.get("sampler", {}),
-        "streaming": config.get("streaming", {}),
-    }
-    engine = _feature_extraction_engine(
-        adapter=adapter,
-        manifest=fingerprint_manifest,
-        feature_store=feature_store,
-        artifact_store=artifact_store,
-        checkpoint=checkpoint_path,
-        checkpoint_id=config["encoder"].get("checkpoint"),
-        train=False,
-    )
-    artifact_store.write_provenance(
-        RunProvenance(
-            run_id=run_name,
-            config=config,
-            dataset={"manifest": str(Path(manifest_path).resolve()), "videos": len(records)},
-            encoder_fingerprint=engine.encoder_fingerprint,
-            inputs={"checkpoint": checkpoint_path},
+    run_dir = (Path(args.output or config["output"]["root"]) / run_name).resolve()
+    with record_stage(
+        run_dir, "extract", config=config, inputs={"manifest": manifest_path}
+    ) as stage:
+        records = load_manifest_jsonl(manifest_path)
+        if args.limit_videos is not None:
+            if args.limit_videos <= 0:
+                raise ValueError("--limit-videos 必须大于 0")
+            records = records[: args.limit_videos]
+        if not records:
+            raise ValueError("没有可抽取的视频")
+        adapter, definition = create_encoder_from_experiment(config, project_root=project_root)
+        resolved_identity = definition.get("identity") or encoder_identity(
+            definition, project_root=project_root
         )
-    )
-
-    streaming = config.get("streaming", {})
-    extracted = []
-    if streaming.get("enabled", False):
-        compression = compression_from_experiment(config)
-        for record in records:
-            chunks = iter_streaming_chunk_batches(
-                (record,),
-                config["dataset"]["root"],
-                chunk_frames=int(streaming["chunk_frames"]),
-                sample_fps=(
-                    float(streaming["sample_fps"])
-                    if streaming.get("sample_fps") is not None
-                    else None
-                ),
-            )
-            extracted.extend(
-                engine.extract_stream(chunks, video_id=record.video_id, compression=compression)
-            )
-    else:
-        sampler = config.get("sampler", {})
-        batches = iter_fixed_segment_batches(
-            records,
-            config["dataset"]["root"],
-            num_segments=int(sampler.get("segments_per_video", 32)),
-            clip_frames=int(sampler.get("clip_frames", 16)),
-            frame_stride=int(sampler.get("frame_stride", 2)),
-            position=str(sampler.get("position", "center")),
-            seed=sampler.get("seed"),
+        fingerprint_manifest = {
+            "encoder": resolved_identity,
+            "sampler": config.get("sampler", {}),
+            "streaming": config.get("streaming", {}),
+        }
+        artifact_store = ArtifactStore(run_dir, run_id=stage["run_id"])
+        feature_store = FeatureStore(run_dir / "features")
+        engine = _feature_extraction_engine(
+            adapter=adapter,
+            manifest=fingerprint_manifest,
+            feature_store=feature_store,
+            artifact_store=artifact_store,
+            train=False,
         )
-        micro_batch_size = int(config["encoder"].get("micro_batch_size", 4))
-        extracted = engine.extract(iter_microbatches(iter(batches), micro_batch_size))
-
-    payload = {
-        "run_dir": str(run_dir),
-        "videos": len(records),
-        "feature_records": len(extracted),
-        "encoder_fingerprint": engine.encoder_fingerprint,
-        "feature_index": str(feature_store.index_path),
-        "cache_telemetry": str(artifact_store.cache_telemetry_path),
-    }
+        stage["encoder_fingerprint"] = engine.encoder_fingerprint
+        stage["resolved_encoder"] = definition
+        if config.get("streaming", {}).get("enabled", False):
+            compression = compression_from_experiment(config)
+            extracted = []
+            for record in records:
+                chunks = iter_microbatches(iter(_extraction_batches((record,), config)), 1)
+                extracted.extend(
+                    engine.extract_stream(
+                        chunks,
+                        video_id=record.video_id,
+                        compression=compression,
+                    )
+                )
+        else:
+            batches = _extraction_batches(records, config)
+            batch_size = int(config["encoder"].get("micro_batch_size", 4))
+            extracted = engine.extract(iter_microbatches(iter(batches), batch_size))
+        payload = {
+            "run_dir": str(run_dir),
+            "videos": len(records),
+            "feature_records": len(extracted),
+            "encoder_fingerprint": engine.encoder_fingerprint,
+            "feature_index": str(feature_store.index_path),
+            "cache_telemetry": str(artifact_store.cache_telemetry_path),
+        }
+        stage["outputs"] = {"feature_index": file_identity(feature_store.index_path)}
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
 
@@ -714,26 +717,32 @@ def _train(args: argparse.Namespace) -> int:
         if args.max_steps <= 0:
             raise ValueError("--max-steps 必须大于 0")
         config = {**config, "training": {**config.get("training", {}), "max_steps": args.max_steps}}
-    train_manifest_path = args.train_manifest or config["dataset"]["train_manifest"]
-    validation_manifest_path = args.validation_manifest or config["dataset"].get(
-        "validation_manifest"
-    )
-    train_manifest = load_manifest_jsonl(train_manifest_path)
-    validation_manifest = (
-        None if validation_manifest_path is None else load_manifest_jsonl(validation_manifest_path)
-    )
+    train_path = args.train_manifest or config["dataset"]["train_manifest"]
+    validation_path = args.validation_manifest or config["dataset"].get("validation_manifest")
     output_dir = Path(
         args.output or (Path(config["output"]["root"]) / config["output"]["run_name"] / "training")
     )
-    result = train_feature_head(
-        config,
-        feature_store=args.features,
-        train_manifest=train_manifest,
-        validation_manifest=validation_manifest,
-        output_dir=output_dir,
-        device=args.device,
-    )
-    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    with record_stage(
+        output_dir,
+        "train",
+        config=config,
+        inputs={
+            "train_manifest": train_path,
+            "validation_manifest": validation_path,
+            "feature_index": Path(args.features) / "index.jsonl",
+        },
+    ) as stage:
+        result = train_feature_head(
+            config,
+            feature_store=args.features,
+            train_manifest=train_path,
+            validation_manifest=validation_path,
+            output_dir=output_dir,
+            device=args.device,
+        )
+        payload = result.to_dict()
+        stage["outputs"] = payload
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -745,19 +754,29 @@ def _predict(args: argparse.Namespace) -> int:
         or (
             Path(config["output"]["root"])
             / config["output"]["run_name"]
-            / "predictions"
-            / "predictions.jsonl"
+            / "predictions/predictions.jsonl"
         )
     )
-    records = predict_feature_head(
-        config,
-        args.features,
-        manifest_path,
-        args.checkpoint,
-        output,
-        device=args.device,
-        strict_coverage=not args.allow_incomplete_coverage,
-    )
+    with record_stage(
+        output.parent,
+        "predict",
+        config=config,
+        inputs={
+            "manifest": manifest_path,
+            "checkpoint": args.checkpoint,
+            "feature_index": Path(args.features) / "index.jsonl",
+        },
+    ) as stage:
+        records = predict_feature_head(
+            config,
+            args.features,
+            manifest_path,
+            args.checkpoint,
+            output,
+            device=args.device,
+            strict_coverage=not args.allow_incomplete_coverage,
+        )
+        stage["outputs"] = {"predictions": file_identity(output)}
     print(
         json.dumps(
             {
@@ -807,7 +826,7 @@ def _smoke(args: argparse.Namespace) -> int:
         / "smoke"
         / f"{config['encoder']['adapter']}.json"
     )
-    output_path = write_smoke_result_v2(result, output, overwrite_success=True)
+    output_path = write_smoke_result_v2(result, output)
     print(json.dumps({**result, "output": str(output_path)}, ensure_ascii=False, indent=2))
     return {"smoke_pass": 0, "blocked": 2}.get(result.get("status"), 1)
 

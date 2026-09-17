@@ -17,6 +17,7 @@ constructor:
   strict_assets: true
   preprocess_profile: videochat-online-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: MCG-NJU/VideoChatOnline-4B
   revision: 7373f325b9265527b9363f231b168a14523ac875

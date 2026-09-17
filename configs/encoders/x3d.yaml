@@ -20,6 +20,7 @@ constructor:
   strict_checkpoint: false
 
 checkpoint:
+  constructor_key: checkpoint_path
   source: pytorchvideo
   model_id: pytorchvideo/X3D_S
   url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D_S.pyth

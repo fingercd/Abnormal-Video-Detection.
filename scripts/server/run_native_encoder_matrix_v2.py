@@ -7,7 +7,6 @@ import argparse
 import datetime as dt
 import hashlib
 import json
-import os
 import subprocess
 import sys
 import uuid
@@ -18,50 +17,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from vadbench.environment_registry import (  # noqa: E402
-    assert_new_environment_executable,
+    build_encoder_runtime_environment,
     load_encoder_candidates,
     load_encoder_environment_registry,
+    resolve_encoder_runtime,
 )
 from vadbench.integrations.catalog import load_default_integration_catalog  # noqa: E402
+from vadbench.smoke import read_smoke_result_v2  # noqa: E402
 
 
 def file_hash(path: Path) -> str | None:
     if not path.is_file():
         return None
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def build_environment(
-    encoder_id: str,
-    python: Path,
-    overlay: Path | None,
-    cache_root: Path,
-) -> dict[str, str]:
-    env = dict(os.environ)
-    paths = [str(PROJECT_ROOT / "src")]
-    if overlay is not None:
-        paths.append(str(overlay))
-    if encoder_id == "videomamba":
-        paths.extend(
-            [
-                str(PROJECT_ROOT / "external-v2/videomamba/mamba"),
-                str(PROJECT_ROOT / "external-v2/videomamba/causal-conv1d"),
-            ]
-        )
-    env["PYTHONPATH"] = os.pathsep.join(paths)
-    env["PYTHONNOUSERSITE"] = "1"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env["HF_HOME"] = str(cache_root / "huggingface")
-    env["TORCH_HOME"] = str(cache_root / "torch")
-    env["PIP_CACHE_DIR"] = str(cache_root / "pip")
-    env["PYTHONPYCACHEPREFIX"] = str(cache_root / "pycache" / encoder_id)
-    env["TMPDIR"] = str(cache_root / "tmp" / encoder_id)
-    env["CONDA_PREFIX"] = str(python.parents[1])
-    env.pop("VIRTUAL_ENV", None)
-    env["LD_LIBRARY_PATH"] = str(python.parents[1] / "lib")
-    for key in ("HF_HOME", "TORCH_HOME", "PIP_CACHE_DIR", "PYTHONPYCACHEPREFIX", "TMPDIR"):
-        Path(env[key]).mkdir(parents=True, exist_ok=True)
-    return env
 
 
 def candidate_is_runnable(
@@ -129,15 +97,22 @@ def main(argv: list[str] | None = None) -> int:
     output_root = output_root.resolve()
     if PROJECT_ROOT not in output_root.parents:
         raise RuntimeError("output_root must remain under project root")
-    output_root.mkdir(parents=True, exist_ok=True)
+    if output_root.exists() or output_root.is_symlink():
+        raise FileExistsError(f"matrix output already exists: {output_root}")
+    output_root.mkdir(parents=True)
 
     items = []
     for encoder_id in selected:
         candidate = by_candidate[encoder_id]
         runnable, skip_reason = candidate_is_runnable(candidate, args.include_license_blocked)
-        group = environment.group_for(encoder_id)
-        python = assert_new_environment_executable(group.prefix / "bin/python", environment)
-        overlay = environment.overlay_for(encoder_id)
+        runtime = resolve_encoder_runtime(
+            encoder_id,
+            project_root=PROJECT_ROOT,
+            registry=environment,
+        )
+        group = runtime.group
+        python = runtime.python
+        overlay = runtime.overlay
         item = {
             "integration_id": encoder_id,
             "group": group.id,
@@ -174,7 +149,11 @@ def main(argv: list[str] | None = None) -> int:
             "--output-root",
             str(item_root),
         ]
-        env = build_environment(encoder_id, python, overlay, environment.cache_root)
+        env = build_encoder_runtime_environment(
+            runtime,
+            project_root=PROJECT_ROOT,
+            registry=environment,
+        )
         completed = subprocess.run(
             command,
             cwd=PROJECT_ROOT,
@@ -187,16 +166,22 @@ def main(argv: list[str] | None = None) -> int:
             completed.stdout + "\n--- stderr ---\n" + completed.stderr,
             encoding="utf-8",
         )
-        result_files = sorted(item_root.glob("**/result.json"))
+        result_path = item_root / encoder_id / "result.json"
         status = "failed"
-        result_path = None
-        if result_files:
-            result_path = result_files[-1]
+        reason = None
+        if completed.returncode != 0:
+            reason = "launcher_exit_nonzero"
+        elif not result_path.is_file():
+            reason = "result_missing"
+        else:
             try:
                 status = str(
-                    json.loads(result_path.read_text(encoding="utf-8")).get("status", "failed")
+                    read_smoke_result_v2(result_path, expected_record=catalog.get(encoder_id))[
+                        "status"
+                    ]
                 )
-            except Exception:
+            except (OSError, ValueError) as exc:
+                reason = f"result_invalid: {exc}"
                 status = "failed"
         technical_status = status
         if candidate["license_state"] != "verified" and status == "smoke_pass":
@@ -205,13 +190,13 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "status": status,
                 "technical_status": technical_status,
-                "reason": (
-                    "license_blocked_after_technical_pass" if status == "blocked_license" else None
-                ),
+                "reason": "license_blocked_after_technical_pass"
+                if status == "blocked_license"
+                else reason,
                 "exit_code": completed.returncode,
                 "result_path": (
                     result_path.relative_to(PROJECT_ROOT).as_posix()
-                    if result_path is not None
+                    if result_path.is_file()
                     else None
                 ),
                 "log_path": log_path.relative_to(PROJECT_ROOT).as_posix(),
@@ -236,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     print(json.dumps(payload, ensure_ascii=False, indent=2))
-    return 0 if not counts.get("failed") else 1
+    return 0 if counts.get("smoke_pass") and set(counts) == {"smoke_pass"} else 1
 
 
 if __name__ == "__main__":

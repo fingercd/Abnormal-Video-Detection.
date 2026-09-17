@@ -1,6 +1,6 @@
-"""Optional-dependency adapter for the legacy VideoMAEv2 implementation.
+"""Optional-dependency adapter for the shared VideoMAEv2 implementation.
 
-The legacy module owns preprocessing and weight loading.  This adapter only
+The VADBench integration owns preprocessing and weight loading. This adapter only
 normalizes the framework boundary and observes the already-running forward pass
 to expose a token sequence when the backbone makes one available.  It never
 advertises streaming or cache support: attention activations inside a ViT are
@@ -157,7 +157,7 @@ def _timeline_for_sequence(batch: ClipBatch, token_count: int) -> TokenTimeline:
 
 
 class VideoMAEv2Adapter(VideoEncoderAdapter):
-    """Adapt ``lab_anomaly`` VideoMAEv2 to the canonical BTHWC contract."""
+    """Adapt VideoMAE v2 to the canonical BTHWC contract."""
 
     capabilities = DEFAULT_CAPABILITIES
 
@@ -189,7 +189,7 @@ class VideoMAEv2Adapter(VideoEncoderAdapter):
         self.num_frames = num_frames
         if encoder is None:
             try:
-                from lab_anomaly.models.vit_video_encoder import (
+                from vadbench.integrations.videomaev2_encoder import (
                     VideoMAEv2Encoder,
                     VideoMAEv2EncoderConfig,
                 )
@@ -222,8 +222,8 @@ class VideoMAEv2Adapter(VideoEncoderAdapter):
                 modules.append(layers[-1])
         return tuple(modules)
 
-    def _sync_legacy_device(self) -> None:
-        """Keep legacy ``device_str`` aligned after an outer task calls ``.to``."""
+    def _sync_encoder_device(self) -> None:
+        """Keep the wrapped encoder device aligned after an outer ``.to`` call."""
 
         parameters = getattr(self.encoder, "parameters", None)
         if not callable(parameters):
@@ -244,7 +244,7 @@ class VideoMAEv2Adapter(VideoEncoderAdapter):
 
     def encode(self, batch: ClipBatch, train: bool = False) -> EncoderOutput:
         validate_clip_for_capabilities(batch, self.capabilities, train=train)
-        self._sync_legacy_device()
+        self._sync_encoder_device()
         observed: list[Any] = []
         handles: list[Any] = []
 
@@ -275,7 +275,7 @@ class VideoMAEv2Adapter(VideoEncoderAdapter):
 
         if not hasattr(pooled, "shape") or len(_shape(pooled)) != 2:
             raise RuntimeError(
-                "legacy VideoMAEv2Encoder 必须返回 [B,D] pooled embedding，"
+                "VideoMAEv2Encoder 必须返回 [B,D] pooled embedding，"
                 f"实际为 {getattr(pooled, 'shape', None)!r}"
             )
         sequence = None

@@ -1,0 +1,2339 @@
+{
+  "collected_at_utc": "2026-09-12T06:19:26.993780+00:00",
+  "host": "ibnode3",
+  "base_commit": "0badc3435e734a841110e29d497940bfda7cc707",
+  "cpu_matrix": {
+    "path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/matrix-v2.json",
+    "sha256": "afcf6d985922b922b66bc08c0c8cdb2f504c49ee208aa084eb2331548797d6c6",
+    "counts": {
+      "smoke_pass": 14
+    },
+    "run_id": "20260912T054142Z-e9b39f25",
+    "items": [
+      {
+        "id": "r2plus1d_18",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/r2plus1d_18/r2plus1d_18/result.json",
+        "result_sha256": "320ca0ab6f2c63db78f371de20c34595eef36af1dbf24bf6bf231195f10683cc",
+        "encoder": {
+          "id": "r2plus1d_18",
+          "display_name": "R(2+1)D-18",
+          "adapter": "vadbench.integrations.torchvision_video:TorchvisionVideoAdapter",
+          "backend": "torchvision",
+          "run_mode": "fixed",
+          "feature_stage": "pooled"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                16,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372
+              ],
+              "timestamps_seconds": [
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1,
+                512
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                512
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "pooled",
+            "sequence_source": "hook:fc"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "r2plus1d_18",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/r2plus1d_18"
+          ],
+          "started_at_utc": "2026-09-12T05:41:47Z",
+          "finished_at_utc": "2026-09-12T05:41:54Z",
+          "elapsed_seconds": 7.179428284987807,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/r2plus1d_18/r2plus1d_18/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/pytorch/vision",
+            "revision": "3ac97aa9120137381ed1060f37237e44485ac2aa",
+            "license": "BSD-3-Clause",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "pytorch/vision",
+            "revision": "v0.20.1",
+            "license": "bsd-3-clause",
+            "path": "weights/r2plus1d_18/model.pth",
+            "sha256": "91a641e6c2ab531d1aca5f4321b4d802ec5c3babc15df855cdb6e39c6a1107c8",
+            "size_bytes": 126162996
+          }
+        }
+      },
+      {
+        "id": "x3d",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/x3d/x3d/result.json",
+        "result_sha256": "88183f88d6d84baf8e0da945d532ab20f2d194ad738622a167d9469a184022a1",
+        "encoder": {
+          "id": "x3d",
+          "display_name": "X3D",
+          "adapter": "vadbench.integrations.pytorchvideo:PytorchVideoAdapter",
+          "backend": "pytorchvideo",
+          "run_mode": "fixed",
+          "feature_stage": "pooled"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                13,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3321,
+                3327,
+                3333,
+                3339,
+                3345,
+                3351,
+                3357,
+                3363,
+                3369,
+                3375,
+                3381,
+                3387,
+                3393
+              ],
+              "timestamps_seconds": [
+                110.7,
+                110.9,
+                111.1,
+                111.3,
+                111.5,
+                111.7,
+                111.9,
+                112.1,
+                112.3,
+                112.5,
+                112.7,
+                112.9,
+                113.1
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1,
+                192
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                192
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "pooled",
+            "sequence_source": "pooled_singleton"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "x3d",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/x3d"
+          ],
+          "started_at_utc": "2026-09-12T05:42:00Z",
+          "finished_at_utc": "2026-09-12T05:42:06Z",
+          "elapsed_seconds": 5.810324288904667,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/x3d/x3d/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/facebookresearch/pytorchvideo",
+            "revision": "f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0",
+            "license": "Apache-2.0",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "facebookresearch/pytorchvideo",
+            "revision": "pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0",
+            "license": "apache-2.0",
+            "path": "weights/x3d/model.pyth",
+            "sha256": "26b95f1605d49650b54049db40ba3a56e023b86b58c3b3e0e10e0992a9c8682f",
+            "size_bytes": 30779313
+          }
+        }
+      },
+      {
+        "id": "mvitv2",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/mvitv2/mvitv2/result.json",
+        "result_sha256": "2708d5f5b985d1deffaed88b00f2b4cb05dc5df71f22d894d193f0d9e7bff299",
+        "encoder": {
+          "id": "mvitv2",
+          "display_name": "MViTv2",
+          "adapter": "vadbench.integrations.torchvision_video:TorchvisionVideoAdapter",
+          "backend": "torchvision",
+          "run_mode": "fixed",
+          "feature_stage": "pooled"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                16,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372
+              ],
+              "timestamps_seconds": [
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "pooled",
+            "sequence_source": "hook:head"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "mvitv2",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/mvitv2"
+          ],
+          "started_at_utc": "2026-09-12T05:42:12Z",
+          "finished_at_utc": "2026-09-12T05:42:20Z",
+          "elapsed_seconds": 8.418241553008556,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/mvitv2/mvitv2/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/pytorch/vision",
+            "revision": "3ac97aa9120137381ed1060f37237e44485ac2aa",
+            "license": "BSD-3-Clause",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "pytorch/vision",
+            "revision": "v0.20.1",
+            "license": "bsd-3-clause",
+            "path": "weights/mvitv2/model.pth",
+            "sha256": "ae3be16733081f6d1cd40e4ab980ca23d6df6dc6486d15ada05a5e8ab8c9b975",
+            "size_bytes": 138290087
+          }
+        }
+      },
+      {
+        "id": "slowfast",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/slowfast/slowfast/result.json",
+        "result_sha256": "8e279f2d870fdfcb4449342ed76a34fc8790aa2fda6fb20b2ae410fbaf0e86ec",
+        "encoder": {
+          "id": "slowfast",
+          "display_name": "SlowFast",
+          "adapter": "vadbench.integrations.pytorchvideo:PytorchVideoAdapter",
+          "backend": "pytorchvideo",
+          "run_mode": "fixed",
+          "feature_stage": "pooled"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                32,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3326,
+                3328,
+                3330,
+                3332,
+                3334,
+                3336,
+                3338,
+                3340,
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372,
+                3374,
+                3376,
+                3378,
+                3380,
+                3382,
+                3384,
+                3386,
+                3388
+              ],
+              "timestamps_seconds": [
+                110.86666666666666,
+                110.93333333333334,
+                111.0,
+                111.06666666666666,
+                111.13333333333334,
+                111.2,
+                111.26666666666667,
+                111.33333333333333,
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4,
+                112.46666666666667,
+                112.53333333333333,
+                112.6,
+                112.66666666666667,
+                112.73333333333333,
+                112.8,
+                112.86666666666666,
+                112.93333333333334
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1,
+                2304
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                2304
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "pooled",
+            "sequence_source": "pooled_singleton"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "slowfast",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/slowfast"
+          ],
+          "started_at_utc": "2026-09-12T05:42:26Z",
+          "finished_at_utc": "2026-09-12T05:42:35Z",
+          "elapsed_seconds": 9.143225710839033,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/slowfast/slowfast/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/facebookresearch/pytorchvideo",
+            "revision": "f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0",
+            "license": "Apache-2.0",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "facebookresearch/pytorchvideo",
+            "revision": "pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0",
+            "license": "apache-2.0",
+            "path": "weights/slowfast/model.pyth",
+            "sha256": "454f39e1c1f985df2bee2aa27887ed53ff56e74ed8b8cca11203a1a1264d7cc2",
+            "size_bytes": 277138115
+          }
+        }
+      },
+      {
+        "id": "i3d",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/i3d/i3d/result.json",
+        "result_sha256": "1e21eb0d2c9ed9d4e36151f35191626370215aeda6ea201888e0171d841bd354",
+        "encoder": {
+          "id": "i3d",
+          "display_name": "I3D",
+          "adapter": "vadbench.integrations.pytorchvideo:PytorchVideoAdapter",
+          "backend": "pytorchvideo",
+          "run_mode": "fixed",
+          "feature_stage": "pooled"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                8,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3329,
+                3337,
+                3345,
+                3353,
+                3361,
+                3369,
+                3377,
+                3385
+              ],
+              "timestamps_seconds": [
+                110.96666666666667,
+                111.23333333333333,
+                111.5,
+                111.76666666666667,
+                112.03333333333333,
+                112.3,
+                112.56666666666666,
+                112.83333333333333
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1,
+                2048
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                2048
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "pooled",
+            "sequence_source": "pooled_singleton"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "i3d",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/i3d"
+          ],
+          "started_at_utc": "2026-09-12T05:42:41Z",
+          "finished_at_utc": "2026-09-12T05:42:48Z",
+          "elapsed_seconds": 7.128634467720985,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/i3d/i3d/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/facebookresearch/pytorchvideo",
+            "revision": "f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0",
+            "license": "Apache-2.0",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "facebookresearch/pytorchvideo",
+            "revision": "pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0",
+            "license": "apache-2.0",
+            "path": "weights/i3d/model.pyth",
+            "sha256": "eabc0c8de27af9ee7aa6348fb3a18f2c53fee4e73806b26d4499748543e857d8",
+            "size_bytes": 224733497
+          }
+        }
+      },
+      {
+        "id": "timesformer",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/timesformer/timesformer/result.json",
+        "result_sha256": "8a717749b39de805f6f34a498bc44e9523e721c7fe0d98049bcfc93d2bae9e4b",
+        "encoder": {
+          "id": "timesformer",
+          "display_name": "TimeSformer",
+          "adapter": "vadbench.integrations.transformers_video:TransformersVideoAdapter",
+          "backend": "transformers-video",
+          "run_mode": "fixed",
+          "feature_stage": "last_hidden_state"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                8,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364
+              ],
+              "timestamps_seconds": [
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1569,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "last_hidden_state",
+            "sequence_source": "last_hidden_state"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "timesformer",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/timesformer"
+          ],
+          "started_at_utc": "2026-09-12T05:42:55Z",
+          "finished_at_utc": "2026-09-12T05:43:04Z",
+          "elapsed_seconds": 9.36627552472055,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/timesformer/timesformer/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/facebookresearch/TimeSformer",
+            "revision": "a5ef29a7b7264baff199a30b3306ac27de901133",
+            "license": "CC-BY-NC-4.0",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "facebook/timesformer-base-finetuned-k400",
+            "revision": "62e4dad07e65ec02438eb99391efd4836ec563bb",
+            "license": "cc-by-nc-4.0",
+            "path": "weights/timesformer-base-finetuned-k400",
+            "sha256": "968479f41eb3f2f4b1829ae06b663998dcc3782deb6a3e81746a9e51dbabd46d",
+            "size_bytes": null
+          }
+        }
+      },
+      {
+        "id": "video_swin",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/video_swin/video_swin/result.json",
+        "result_sha256": "9c7f23bc79d00ef2477e81f48f70cc1eb10676f5eda441d2a50c060f8e1f7e76",
+        "encoder": {
+          "id": "video_swin",
+          "display_name": "Video Swin",
+          "adapter": "vadbench.integrations.torchvision_video:TorchvisionVideoAdapter",
+          "backend": "torchvision",
+          "run_mode": "fixed",
+          "feature_stage": "backbone_tokens"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                32,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3326,
+                3328,
+                3330,
+                3332,
+                3334,
+                3336,
+                3338,
+                3340,
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372,
+                3374,
+                3376,
+                3378,
+                3380,
+                3382,
+                3384,
+                3386,
+                3388
+              ],
+              "timestamps_seconds": [
+                110.86666666666666,
+                110.93333333333334,
+                111.0,
+                111.06666666666666,
+                111.13333333333334,
+                111.2,
+                111.26666666666667,
+                111.33333333333333,
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4,
+                112.46666666666667,
+                112.53333333333333,
+                112.6,
+                112.66666666666667,
+                112.73333333333333,
+                112.8,
+                112.86666666666666,
+                112.93333333333334
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                784,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "backbone_tokens",
+            "sequence_source": "hook:norm"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "video_swin",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/video_swin"
+          ],
+          "started_at_utc": "2026-09-12T05:43:10Z",
+          "finished_at_utc": "2026-09-12T05:43:23Z",
+          "elapsed_seconds": 12.542181117460132,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/video_swin/video_swin/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/pytorch/vision",
+            "revision": "3ac97aa9120137381ed1060f37237e44485ac2aa",
+            "license": "BSD-3-Clause",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "pytorch/vision",
+            "revision": "v0.20.1",
+            "license": "bsd-3-clause",
+            "path": "weights/video_swin/model.pth",
+            "sha256": "7615ae035996b65eb38dad437ae533d2dfcd36f9f89d28c0f0fa7bfb8e6b3130",
+            "size_bytes": 127447114
+          }
+        }
+      },
+      {
+        "id": "videomae",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomae/videomae/result.json",
+        "result_sha256": "bef3da7cf78ed8c62224d94448ea81d534d4953de76b05ed12041c555a4382c7",
+        "encoder": {
+          "id": "videomae",
+          "display_name": "VideoMAE",
+          "adapter": "vadbench.integrations.transformers_video:TransformersVideoAdapter",
+          "backend": "transformers-video",
+          "run_mode": "fixed",
+          "feature_stage": "last_hidden_state"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                16,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372
+              ],
+              "timestamps_seconds": [
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1568,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "last_hidden_state",
+            "sequence_source": "last_hidden_state"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "videomae",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomae"
+          ],
+          "started_at_utc": "2026-09-12T05:43:29Z",
+          "finished_at_utc": "2026-09-12T05:43:43Z",
+          "elapsed_seconds": 14.059677194803953,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomae/videomae/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/MCG-NJU/VideoMAE",
+            "revision": "14ef8d856287c94ef1f985fe30f958eb4ec2c55d",
+            "license": "CC-BY-NC-4.0",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "MCG-NJU/videomae-base",
+            "revision": "dc740ceda42fce44faed2ea03c6d447db72f6af9",
+            "license": "cc-by-nc-4.0",
+            "path": "weights/videomae-base",
+            "sha256": "bc053ca2840a038b1068269a4eec06ca569689e9a1ed9376a5b2b8a111be5290",
+            "size_bytes": null
+          }
+        }
+      },
+      {
+        "id": "videomaev2",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomaev2/videomaev2/result.json",
+        "result_sha256": "50d273ceba421f88472aba99d5237bffd0e6141ceceeb471457fe853eb860823",
+        "encoder": {
+          "id": "videomaev2",
+          "display_name": "VideoMAE V2",
+          "adapter": "vadbench.integrations.videomaev2:VideoMAEv2Adapter",
+          "backend": "videomaev2",
+          "run_mode": "fixed",
+          "feature_stage": "observed_backbone"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                16,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372
+              ],
+              "timestamps_seconds": [
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1568,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                768
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "observed_backbone",
+            "sequence_source": "observed_backbone"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "videomaev2",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomaev2"
+          ],
+          "started_at_utc": "2026-09-12T05:43:49Z",
+          "finished_at_utc": "2026-09-12T05:44:11Z",
+          "elapsed_seconds": 22.372567543759942,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomaev2/videomaev2/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/OpenGVLab/VideoMAEv2",
+            "revision": "29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "license": "MIT",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "OpenGVLab/VideoMAEv2-Base",
+            "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+            "license": "cc-by-nc-4.0",
+            "path": "weights/videomaev2-base-hf",
+            "sha256": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d",
+            "size_bytes": null
+          }
+        }
+      },
+      {
+        "id": "videomamba",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomamba/videomamba/result.json",
+        "result_sha256": "cb52d5b4f5adc61599a8ac074a7542331c8ad2dea6943671cd0652a9fa770516",
+        "encoder": {
+          "id": "videomamba",
+          "display_name": "VideoMamba",
+          "adapter": "vadbench.integrations.foundation.videomamba:VideoMambaAdapter",
+          "backend": "videomamba",
+          "run_mode": "fixed",
+          "feature_stage": "backbone_tokens"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                16,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3342,
+                3344,
+                3346,
+                3348,
+                3350,
+                3352,
+                3354,
+                3356,
+                3358,
+                3360,
+                3362,
+                3364,
+                3366,
+                3368,
+                3370,
+                3372
+              ],
+              "timestamps_seconds": [
+                111.4,
+                111.46666666666667,
+                111.53333333333333,
+                111.6,
+                111.66666666666667,
+                111.73333333333333,
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0,
+                112.06666666666666,
+                112.13333333333334,
+                112.2,
+                112.26666666666667,
+                112.33333333333333,
+                112.4
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                1,
+                192
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                192
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "backbone_tokens",
+            "sequence_source": "pooled_singleton"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "videomamba",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomamba"
+          ],
+          "started_at_utc": "2026-09-12T05:44:20Z",
+          "finished_at_utc": "2026-09-12T05:44:49Z",
+          "elapsed_seconds": 29.010222675278783,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videomamba/videomamba/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/OpenGVLab/VideoMamba",
+            "revision": "37355c26d0ae99ca2459f6d4044a5f509031a79f",
+            "license": "Apache-2.0",
+            "checkout_path": "external-v2/videomamba"
+          },
+          "checkpoint": {
+            "repo": "OpenGVLab/VideoMamba",
+            "revision": "69502a732f8f69709cec9ed6c54d5345259fd825",
+            "license": "apache-2.0",
+            "path": "weights/videomamba/videomamba_t16_k400_f16_res224.pth",
+            "sha256": "a335d728ae4dbe4f49a435022f95c6cf98108d20fe084120db1f18cb73e84f4a",
+            "size_bytes": 28290634
+          }
+        }
+      },
+      {
+        "id": "vjepa2",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/vjepa2/vjepa2/result.json",
+        "result_sha256": "fbefc977835b4c79d667c7f15a04c489c515f63ec28f0d749c80547f7d8d2870",
+        "encoder": {
+          "id": "vjepa2",
+          "display_name": "V-JEPA 2",
+          "adapter": "vadbench.integrations.foundation.vjepa2:VJEPA2Adapter",
+          "backend": "vjepa2",
+          "run_mode": "fixed",
+          "feature_stage": "backbone_tokens"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                64,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3326,
+                3327,
+                3328,
+                3329,
+                3330,
+                3331,
+                3332,
+                3333,
+                3334,
+                3335,
+                3336,
+                3337,
+                3338,
+                3339,
+                3340,
+                3341,
+                3342,
+                3343,
+                3344,
+                3345,
+                3346,
+                3347,
+                3348,
+                3349,
+                3350,
+                3351,
+                3352,
+                3353,
+                3354,
+                3355,
+                3356,
+                3357,
+                3358,
+                3359,
+                3360,
+                3361,
+                3362,
+                3363,
+                3364,
+                3365,
+                3366,
+                3367,
+                3368,
+                3369,
+                3370,
+                3371,
+                3372,
+                3373,
+                3374,
+                3375,
+                3376,
+                3377,
+                3378,
+                3379,
+                3380,
+                3381,
+                3382,
+                3383,
+                3384,
+                3385,
+                3386,
+                3387,
+                3388,
+                3389
+              ],
+              "timestamps_seconds": [
+                110.86666666666666,
+                110.9,
+                110.93333333333334,
+                110.96666666666667,
+                111.0,
+                111.03333333333333,
+                111.06666666666666,
+                111.1,
+                111.13333333333334,
+                111.16666666666667,
+                111.2,
+                111.23333333333333,
+                111.26666666666667,
+                111.3,
+                111.33333333333333,
+                111.36666666666666,
+                111.4,
+                111.43333333333334,
+                111.46666666666667,
+                111.5,
+                111.53333333333333,
+                111.56666666666666,
+                111.6,
+                111.63333333333334,
+                111.66666666666667,
+                111.7,
+                111.73333333333333,
+                111.76666666666667,
+                111.8,
+                111.83333333333333,
+                111.86666666666666,
+                111.9,
+                111.93333333333334,
+                111.96666666666667,
+                112.0,
+                112.03333333333333,
+                112.06666666666666,
+                112.1,
+                112.13333333333334,
+                112.16666666666667,
+                112.2,
+                112.23333333333333,
+                112.26666666666667,
+                112.3,
+                112.33333333333333,
+                112.36666666666666,
+                112.4,
+                112.43333333333334,
+                112.46666666666667,
+                112.5,
+                112.53333333333333,
+                112.56666666666666,
+                112.6,
+                112.63333333333334,
+                112.66666666666667,
+                112.7,
+                112.73333333333333,
+                112.76666666666667,
+                112.8,
+                112.83333333333333,
+                112.86666666666666,
+                112.9,
+                112.93333333333334,
+                112.96666666666667
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                8192,
+                1024
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                1024
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "backbone_tokens",
+            "sequence_source": "tensor"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "vjepa2",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/vjepa2"
+          ],
+          "started_at_utc": "2026-09-12T05:44:56Z",
+          "finished_at_utc": "2026-09-12T05:46:32Z",
+          "elapsed_seconds": 96.64048771560192,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/vjepa2/vjepa2/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/facebookresearch/vjepa2",
+            "revision": "204698b45b3712590f06245fbfba32d3be539812",
+            "license": "MIT",
+            "checkout_path": null
+          },
+          "checkpoint": {
+            "repo": "facebook/vjepa2-vitl-fpc64-256",
+            "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+            "license": "mit",
+            "path": "weights/vjepa2",
+            "sha256": "25466aef85727d16546c6cf8c99f12fcfad9cbca8225d45f23685e2e025b786b",
+            "size_bytes": null
+          }
+        }
+      },
+      {
+        "id": "longvu",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/longvu/longvu/result.json",
+        "result_sha256": "b747f6377c874de3ff581a61ec2a49675784ac711a896bf6e008a28d7b5965dc",
+        "encoder": {
+          "id": "longvu",
+          "display_name": "LongVU",
+          "adapter": "vadbench.integrations.long_video.longvu:LongVUAdapter",
+          "backend": "longvu",
+          "run_mode": "fixed",
+          "feature_stage": "projected_visual"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                1,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3357
+              ],
+              "timestamps_seconds": [
+                111.9
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                144,
+                3584
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                3584
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "projected_visual",
+            "sequence_source": "worker_output"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "longvu",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/longvu"
+          ],
+          "started_at_utc": "2026-09-12T05:46:39Z",
+          "finished_at_utc": "2026-09-12T05:47:21Z",
+          "elapsed_seconds": 41.78699383512139,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/longvu/longvu/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/Vision-CAIR/LongVU",
+            "revision": "1b0be5cc28614b03a423bbaf129ae364750b5012",
+            "license": "Apache-2.0",
+            "checkout_path": "external-v2/longvu"
+          },
+          "checkpoint": {
+            "repo": "Vision-CAIR/LongVU_Qwen2_7B",
+            "revision": "2b4ed544d651064e4c30d51cf84c5c3e65afa069",
+            "license": "apache-2.0",
+            "path": "weights/longvu",
+            "sha256": "e846f373072ab8e42ee7963e21514d543696ee2859c30570bb1b05a88d94f3ca",
+            "size_bytes": null
+          }
+        }
+      },
+      {
+        "id": "videochat_flash",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videochat_flash/videochat_flash/result.json",
+        "result_sha256": "9cce1d9324c47d5ef3b5dafbd2ddb26afcf543a50fad74a81a825324ae42e4f8",
+        "encoder": {
+          "id": "videochat_flash",
+          "display_name": "VideoChat-Flash",
+          "adapter": "vadbench.integrations.long_video.videochat_flash:VideoChatFlashAdapter",
+          "backend": "videochat-flash",
+          "run_mode": "fixed",
+          "feature_stage": "projected_visual"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                4,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                3354,
+                3356,
+                3358,
+                3360
+              ],
+              "timestamps_seconds": [
+                111.8,
+                111.86666666666666,
+                111.93333333333334,
+                112.0
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                64,
+                1536
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                1536
+              ],
+              "dtype": "torch.float32",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "projected_visual",
+            "sequence_source": "worker_output"
+          }
+        ],
+        "streaming": null,
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "videochat_flash",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videochat_flash"
+          ],
+          "started_at_utc": "2026-09-12T05:47:27Z",
+          "finished_at_utc": "2026-09-12T05:48:25Z",
+          "elapsed_seconds": 57.6651894710958,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/videochat_flash/videochat_flash/run.log",
+          "peak_gpu_memory_bytes": 0
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/OpenGVLab/VideoChat-Flash",
+            "revision": "3d521087215c9024199b0512370a29dee1c0fee6",
+            "license": "MIT",
+            "checkout_path": "weights/videochat-flash"
+          },
+          "checkpoint": {
+            "repo": "OpenGVLab/VideoChat-Flash-Qwen2_5-2B_res448",
+            "revision": "3d521087215c9024199b0512370a29dee1c0fee6",
+            "license": "apache-2.0",
+            "path": "weights/videochat-flash",
+            "sha256": "8d7599e40867eaac136fffa154b070c71aa22bc73b3c1ceece1dcb094f70b475",
+            "size_bytes": null
+          }
+        }
+      },
+      {
+        "id": "hermes_llava_ov",
+        "status": "smoke_pass",
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/hermes_llava_ov/hermes_llava_ov/result.json",
+        "result_sha256": "6d661f4c88b9b522c5aa6b8292e0115ce7e45f222666e06ef5c91dab8696c508",
+        "encoder": {
+          "id": "hermes_llava_ov",
+          "display_name": "HERMES + LLaVA-OneVision",
+          "adapter": "vadbench.integrations.hermes:HermesLlavaOVAdapter",
+          "backend": "hermes",
+          "run_mode": "streaming",
+          "feature_stage": "projected_visual"
+        },
+        "input": {
+          "video": {
+            "path": "data/smoke/mlvu-surveil-8.mp4",
+            "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+            "num_frames": 6716,
+            "fps": 30.0,
+            "duration_seconds": 223.86666666666667,
+            "width": 320,
+            "height": 240
+          },
+          "batches": [
+            {
+              "batch_index": 0,
+              "shape": [
+                1,
+                4,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                0,
+                2,
+                4,
+                6
+              ],
+              "timestamps_seconds": [
+                0.0,
+                0.06666666666666667,
+                0.13333333333333333,
+                0.2
+              ]
+            },
+            {
+              "batch_index": 1,
+              "shape": [
+                1,
+                4,
+                240,
+                320,
+                3
+              ],
+              "dtype": "uint8",
+              "layout": "BTHWC",
+              "video_ids": [
+                "mlvu-surveil-8"
+              ],
+              "frame_indices": [
+                8,
+                10,
+                12,
+                14
+              ],
+              "timestamps_seconds": [
+                0.26666666666666666,
+                0.3333333333333333,
+                0.4,
+                0.4666666666666667
+              ]
+            }
+          ]
+        },
+        "outputs": [
+          {
+            "features": {
+              "shape": [
+                1,
+                784,
+                896
+              ],
+              "dtype": "torch.float16",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                896
+              ],
+              "dtype": "torch.float16",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "projected_visual",
+            "sequence_source": "features"
+          },
+          {
+            "features": {
+              "shape": [
+                1,
+                784,
+                896
+              ],
+              "dtype": "torch.float16",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "pooled": {
+              "shape": [
+                1,
+                896
+              ],
+              "dtype": "torch.float16",
+              "finite": true,
+              "non_finite_count": 0
+            },
+            "feature_stage": "projected_visual",
+            "sequence_source": "features"
+          }
+        ],
+        "streaming": {
+          "chunks_requested": 2,
+          "chunks_completed": 2,
+          "state_steps": [
+            1,
+            2
+          ],
+          "state_present": true,
+          "cache_kinds": [
+            "decoder_kv"
+          ]
+        },
+        "execution": {
+          "command": [
+            "/users/fotile/VAD/src/vadbench/__main__.py",
+            "integrations",
+            "smoke",
+            "--video",
+            "/users/fotile/VAD/data/smoke/mlvu-surveil-8.mp4",
+            "--id",
+            "hermes_llava_ov",
+            "--device",
+            "cpu",
+            "--output-root",
+            "/users/fotile/VAD/outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/hermes_llava_ov"
+          ],
+          "started_at_utc": "2026-09-12T05:48:32Z",
+          "finished_at_utc": "2026-09-12T05:48:58Z",
+          "elapsed_seconds": 25.529217462986708,
+          "exit_code": 0,
+          "log_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/native-cpu/hermes_llava_ov/hermes_llava_ov/run.log",
+          "peak_gpu_memory_bytes": 117266432
+        },
+        "assets": {
+          "upstream": {
+            "repo": "https://github.com/haowei-freesky/HERMES",
+            "revision": "8d699b16a6bedb9086c1b39ec4253c6a1d1ce789",
+            "license": "MIT",
+            "checkout_path": "external-v2/hermes"
+          },
+          "checkpoint": {
+            "repo": "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
+            "revision": "74dd0bf867a4cda7950c17663794267c60cf4b40",
+            "license": "apache-2.0",
+            "path": "weights/hermes-llava-ov-0.5b",
+            "sha256": "07b3362c3412de79baf2379e44e5b0b2a8f4b965ebebd11d7b5b3eb4450fe96e",
+            "size_bytes": null
+          }
+        }
+      }
+    ]
+  },
+  "extractions": [
+    {
+      "encoder": "hermes_llava_ov",
+      "exit_code": 0,
+      "elapsed_seconds": 11567.528916876763,
+      "device": "cpu",
+      "features": [
+        {
+          "shape": [
+            3136,
+            896
+          ],
+          "dtype": "float16",
+          "fingerprint": "sha256:7b716123e92f85b2e81b43363f3f198c0a5468f8e54221a0af2fb8d78282116e"
+        },
+        {
+          "shape": [
+            3136,
+            896
+          ],
+          "dtype": "float16",
+          "fingerprint": "sha256:7b716123e92f85b2e81b43363f3f198c0a5468f8e54221a0af2fb8d78282116e"
+        }
+      ],
+      "record_count": 2,
+      "result_path": "outputs/refactor-2026-09-11/validation-df206ce5/extraction-smoke/result.json",
+      "cache_event_count": 2,
+      "cache_hits": [
+        false,
+        true
+      ],
+      "cache_bytes": [
+        39299520,
+        78436800
+      ],
+      "scope": "real pixel/weight extraction only; placeholder label never used for scoring"
+    },
+    {
+      "encoder": "videomaev2",
+      "exit_code": 0,
+      "elapsed_seconds": 45.367120584473014,
+      "device": "cpu",
+      "features": [
+        {
+          "shape": [
+            1568,
+            768
+          ],
+          "dtype": "float32",
+          "fingerprint": "sha256:6c9d2034dedc951d64bc7236cf497064819bad01f5ff1424430b398b17efb626"
+        },
+        {
+          "shape": [
+            1568,
+            768
+          ],
+          "dtype": "float32",
+          "fingerprint": "sha256:6c9d2034dedc951d64bc7236cf497064819bad01f5ff1424430b398b17efb626"
+        }
+      ],
+      "record_count": 2,
+      "result_path": "outputs/refactor-2026-09-11/validation-bbbcb8f3/extraction-smoke/result.json",
+      "cache_event_count": 2,
+      "cache_hits": [
+        false,
+        false
+      ],
+      "cache_bytes": [
+        0,
+        0
+      ],
+      "scope": "real pixel/weight extraction only; placeholder label never used for scoring"
+    }
+  ],
+  "gpu_snapshot": "0, 2877, 91\n1, 2334, 11\n2, 1114, 31\n3, 27228, 21\n4, 1680, 50\n5, 2247, 70\n6, 2303, 79\n7, 0, 0",
+  "glibc": "glibc 2.17",
+  "retained_code_targeted_matrix": {
+    "schema_version": 2,
+    "run_id": "20260912T061634Z-6f6b3a8f",
+    "device": "cpu",
+    "video": "data/smoke/mlvu-surveil-8.mp4",
+    "counts": {
+      "smoke_pass": 2
+    },
+    "items": [
+      {
+        "integration_id": "videomaev2",
+        "group": "foundation-video-v2",
+        "python_executable": "/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python3.10",
+        "overlay": "/users/fotile/VAD/.encoder-envs/v2/overlays/videomaev2",
+        "base_marker_sha256": "6ca2a6746585b166896918c75a2e0c6471d28d34ec8bbdcb72688159b51e9662",
+        "overlay_marker_sha256": "5fce93504c27632e7bc82a9d3dc7836f95c0858b9a4ad38a0d0c1e08f659c488",
+        "status": "smoke_pass",
+        "technical_status": "smoke_pass",
+        "reason": null,
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-07978d20/native-cpu/videomaev2/videomaev2/result.json",
+        "log_path": "outputs/refactor-2026-09-11/validation-07978d20/native-cpu/videomaev2/launcher.log"
+      },
+      {
+        "integration_id": "videomamba",
+        "group": "foundation-video-v2",
+        "python_executable": "/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python3.10",
+        "overlay": "/users/fotile/VAD/.encoder-envs/v2/overlays/videomamba",
+        "base_marker_sha256": "6ca2a6746585b166896918c75a2e0c6471d28d34ec8bbdcb72688159b51e9662",
+        "overlay_marker_sha256": "66904cc62a62f5589a9419b76ff4ea00b873aa682c364468d9f90ea217e2ddc6",
+        "status": "smoke_pass",
+        "technical_status": "smoke_pass",
+        "reason": null,
+        "exit_code": 0,
+        "result_path": "outputs/refactor-2026-09-11/validation-07978d20/native-cpu/videomamba/videomamba/result.json",
+        "log_path": "outputs/refactor-2026-09-11/validation-07978d20/native-cpu/videomamba/launcher.log"
+      }
+    ]
+  },
+  "delivery_git": {
+    "available": true,
+    "commit": "0badc3435e734a841110e29d497940bfda7cc707",
+    "branch": "qzt/refactor-vadbench-simplification",
+    "dirty": true,
+    "source_sha256": "7d277f87b5f86a2c1a8b72b2476f757ee01c542180e0095eb6f88c869419d87e"
+  },
+  "targeted_environment": {
+    "git": {
+      "available": true,
+      "commit": "0badc3435e734a841110e29d497940bfda7cc707",
+      "branch": "qzt/refactor-vadbench-simplification",
+      "dirty": true,
+      "source_sha256": "7d277f87b5f86a2c1a8b72b2476f757ee01c542180e0095eb6f88c869419d87e"
+    },
+    "runtime": {
+      "python": "3.11.15",
+      "implementation": "CPython",
+      "platform": "Linux-3.10.0-1160.el7.x86_64-x86_64-with-glibc2.17",
+      "packages": {
+        "numpy": "1.26.4",
+        "torch": "2.5.1+cu124",
+        "transformers": "4.56.1"
+      }
+    },
+    "host": "ibnode3",
+    "disk": "Filesystem             Size  Used Avail Use% Mounted on\n/dev/mapper/rhel-root  7.2T  6.8T  455G  94% /\n",
+    "data_link": "/users/fotile/datasets/UCF-Crime"
+  },
+  "full_matrix_environment": {
+    "git": {
+      "available": true,
+      "commit": "0badc3435e734a841110e29d497940bfda7cc707",
+      "branch": "qzt/refactor-vadbench-simplification",
+      "dirty": true,
+      "source_sha256": "67da884daa48de0f1bc96125134a2af699c52535b6b582f01dd3d9eca92aaf5a"
+    },
+    "runtime": {
+      "python": "3.11.15",
+      "implementation": "CPython",
+      "platform": "Linux-3.10.0-1160.el7.x86_64-x86_64-with-glibc2.17",
+      "packages": {
+        "numpy": "1.26.4",
+        "torch": "2.5.1+cu124",
+        "transformers": "4.56.1"
+      }
+    },
+    "host": "ibnode3",
+    "disk": "Filesystem             Size  Used Avail Use% Mounted on\n/dev/mapper/rhel-root  7.2T  6.8T  456G  94% /\n",
+    "data_link": "/users/fotile/datasets/UCF-Crime"
+  },
+  "dataset": {
+    "target": "/users/fotile/datasets/UCF-Crime",
+    "file_count": 0,
+    "train_manifest_exists": false,
+    "test_manifest_exists": false
+  },
+  "record_type": "vadbench.implementation-validation.v1",
+  "documentation_date": "2026-09-12",
+  "commit_created": false,
+  "pushed": false,
+  "verification": {
+    "windows_pytest": {
+      "passed": 400,
+      "skipped": 9,
+      "seconds": 87.37
+    },
+    "node3_pytest": {
+      "passed": 408,
+      "skipped": 1,
+      "seconds": 33.45
+    },
+    "compileall": "passed on Windows and node3",
+    "ruff": "check and format passed locally; node3 environment has no ruff",
+    "wheel": "offline build and isolated install/import/resource/definition resolution passed",
+    "documentation": {
+      "documents_checked": 35,
+      "missing_links": [],
+      "bad_fences": [],
+      "command_examples_parsed": 16,
+      "bad_commands": []
+    },
+    "source_and_document_sync": {
+      "checked_files": 276,
+      "mismatches": [],
+      "git_diff_check": 0
+    }
+  },
+  "gpu_validation": {
+    "status": "not_completed",
+    "reasons": [
+      "Host glibc 2.17 lacks GLIBC_2.27 required by retained cuDNN 9.10 CNN library",
+      "All eight GPUs occupied by other users at final launch check"
+    ],
+    "forward_after_final_fix": false,
+    "ineffective_library_overrides_removed": true,
+    "absolute_library_probe": {
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 1, in <listcomp>\n  File \"/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/lib/python3.10/ctypes/__init__.py\", line 374, in __init__\n    self._handle = _dlopen(self._name, mode)\nOSError: /lib64/libm.so.6: version `GLIBC_2.27' not found (required by /users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/lib/cuda129-libs-backup/libcudnn_cnn.so.9.10.2)\n",
+      "library_paths": "/users/fotile/VAD/.cache-v2/runtime-libraries/foundation-video-v2-f4f410104fe0ee49:/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/lib/cuda129-libs-backup:/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/lib",
+      "gpu_forward_executed": false
+    },
+    "failed_benchmark_paths": [
+      "outputs/refactor-2026-09-11/validation-df206ce5/benchmark-launcher.log",
+      "outputs/refactor-2026-09-11/validation-bbbcb8f3/benchmark-launcher.log"
+    ]
+  },
+  "scope": {
+    "new_cpu_real_weight_routes": 14,
+    "real_video_extraction_routes": 2,
+    "input_video": "data/smoke/mlvu-surveil-8.mp4",
+    "extraction_ground_truth": "placeholder label required by manifest; no training/evaluation performed",
+    "ucf_crime_full_benchmark": false,
+    "legacy_rtsp_rewritten": false
+  }
+}

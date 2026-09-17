@@ -355,6 +355,10 @@ class FeatureDataset(Sequence[dict[str, Any]]):
     def video_ids(self) -> tuple[str, ...]:
         return tuple(item.manifest.video_id for item in self._entries)
 
+    @property
+    def manifest_records(self) -> tuple[VideoManifestRecord, ...]:
+        return tuple(item.manifest for item in self._entries)
+
     def _load_clip(
         self, record: FeatureRecord
     ) -> tuple[

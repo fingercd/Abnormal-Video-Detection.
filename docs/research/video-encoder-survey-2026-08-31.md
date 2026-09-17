@@ -8,6 +8,8 @@
 
 本报告采用一手来源：论文正式页/arXiv、作者项目页、官方仓库与官方模型卡。研究结论仅说明架构与可行性，不把 VQA 论文上的准确率外推为 UCF-Crime 分类效果。
 
+本报告的外部检索截止日仍是 2026-08-31。2026-09-11 只把仓内实现状态对齐到 commit `0badc3435e734a841110e29d497940bfda7cc707`，没有重新检索论文或模型卡。当前 25 路候选中有 21 路进入运行 catalog；catalog 的静态登记状态为 `planned`、`integrated` 或 `blocked`，不保存运行 `smoke_pass`。2026-09-03 的历史服务器证据仍是 14 路真权重 smoke 通过、2 路技术通过但许可阻塞、5 路等待人工资产、4 路仅保留候选。逐路状态见[接入矩阵](../progress/encoder-integration-matrix.md)，实现与后续验证汇总见[2026-09-11 实施记录](../progress/2026-09-11-implementation.md)。
+
 ## 1. 三种“压缩/缓存”必须分开
 
 设视觉编码器输出为 `V`，projector/Q-Former 输出给语言模型的视觉 token 为 `Z`，因果语言模型第 `l` 层自注意力缓存为 `(K_l, V_l)`：
@@ -28,7 +30,7 @@ VideoMAE V2 的主体是对一个给定视频 clip 做双向自注意力的 ViT 
 
 ## 2. 固定 clip 视频编码器候选
 
-下表中的“无原生跨 clip cache”不是缺点判断，而是对公开接口的准确描述。输入长度通常由配置决定；本项目首轮统一为 16 帧 clip，不把各论文不同的帧数、分辨率或多视图测试结果直接横比。
+下表中的“无原生跨 clip cache”不是缺点判断，而是对公开接口的准确描述。输入长度通常由配置决定。当前 smoke profile 为各目标固定的原生近似输入，例如 X3D 13 帧、I3D/TimeSformer 8 帧、SlowFast/Video Swin 32 帧，不能把 smoke 结果当作统一采样的模型比较；正式 UCF 编码器对照必须另行固定可比较的采样协议，或把输入差异列为显式变量。
 
 | 编码器 | 主干/表征 | 官方代码与权重状态 | 原生跨 clip 状态 | 对 UCF-Crime 的定位 |
 |---|---|---|---|---|
@@ -48,12 +50,12 @@ VideoMAE V2 的主体是对一个给定视频 clip 做双向自注意力的 ViT 
 | VideoMamba | 状态空间模型用于视频理解 | [ECCV 2024 论文](https://arxiv.org/abs/2403.06977)，[官方仓库](https://github.com/OpenGVLab/VideoMamba) | 公开分类接口未承诺跨 clip state | 线性序列建模值得比较，但“内部是 SSM”不自动等于可复用流状态 |
 | V-JEPA 2 | 自监督视频 world model/预测表征 | [论文](https://arxiv.org/abs/2506.09985)，[Meta 官方代码与模型](https://github.com/facebookresearch/vjepa2) | 官方 clip encoder 接口无本项目式 cache | 新一代表征候选；先完成基线后再评估许可证、输入成本与领域迁移 |
 
-### 固定 clip 接入优先级
+### 调研优先级在当前代码中的落点
 
-1. **P0：VideoMAE V2 Base。** 项目已有 pinned HF revision 和 SHA256；adapter 把默认 `[B,D]` 池化结果规范成 `[B,1,D]`，若 private backbone hook 成功则提供更丰富的 `[B,S,D]`。两种情况都记录 `sequence_source`。
-2. **P1：I3D 与 X3D。** 一个对齐传统 UCF-Crime 文献，一个给出轻量吞吐锚点。
-3. **P1：Video Swin 与 UniFormerV2。** 与 VideoMAE V2 构成不同注意力归纳偏置的公平比较。
-4. **P2：InternVideo2、VideoMamba、V-JEPA 2。** 研究价值高，但权重、依赖、显存或接口范围更大，应在统一协议稳定后接入。
+1. **VideoMAE V2 Base** 已作为固定 clip 主基线进入 catalog。唯一实现位于主包 `vadbench.integrations.videomaev2_encoder`，旧 `lab_anomaly` 模块只重导出；adapter 从 pinned backbone hook 选择最丰富的兼容 token 序列，hook 不可用时回退为 `[B,1,D]`，两者均记录 `sequence_source`。
+2. **I3D、X3D、Video Swin** 已进入 catalog 并有历史 smoke PASS；MViTv2、SlowFast、R(2+1)D、TimeSformer、VideoMAE 也已形成固定 clip 对照组。
+3. **VideoMamba、V-JEPA 2** 已进入 catalog 并有历史 smoke PASS；InternVideo2 因 gated 权重和 checkout 等待人工资产。
+4. **UniFormerV2、UMT** 因没有可校验目标权重只保留在候选 registry，当前不是可运行 adapter。
 
 ## 3. 长视频/VLM 压缩与缓存候选
 
@@ -101,14 +103,17 @@ VideoMAE V2 的主体是对一个给定视频 clip 做双向自注意力的 ViT 
 
 这是一项**双轨工程冒烟选型**，不是“UCF-Crime 最佳模型”判断：HERMES 的公开评测是 VideoQA/流式理解，不是 UCF-Crime MIL；真实 VAD 精度、吞吐和迁移稳定性必须由本项目实验给出。
 
+当前 HERMES 主实验配置已与固定 clip 基线统一为 32 段、16 帧、stride 2，并使用 `weak_mil`。为使缓存消融的表征真正受历史 decoder KV 影响，配置明确选择 `decoder_contextual`；`native_compression_mode: off` 加框架侧 `identity` 是 raw 对照，HERMES 原生 `predict`/`static_pseudo` 另作独立消融。`projected_visual` 仍可用于性能/状态观测，不能代替缓存—精度结论。
+
 冒烟必须连续处理至少两个真实 chunk，并证明：状态跨 chunk 增长或被预算策略更新；输出 chunk 时间范围递进，而同一 chunk 内多个 token 的近似时间戳允许相等（整体单调不减）；`identity` 与 HERMES 两次运行的采样、基座、精度和 head 配置一致；保存每步 KV token 数、淘汰/聚合数、峰值显存与耗时。仅调用一次普通 `generate(use_cache=True)` 不足以证明 HERMES 已接通。
 
-## 5. 后续优先验证 LongVU 与 VideoChat 系列
+## 5. 当前接入完成后仍需验证的机制
 
-1. **LongVU：** 先只接入 query-independent 的 DINOv2 帧去冗余与跨帧空间 token compression；再增加固定中性 query 的 selective reduction。这样能把视觉 token 压缩与 decoder KV 压缩分离。
-2. **VideoChat-Online：** 以 Pyramid Memory Bank 实现 `visual_memory` adapter，和 MA-LMM/MovieChat 归在同一层级比较；不把它注册成 `decoder_kv`。
-3. **VideoChat-Flash：** 等统一训练链路稳定后再引入 clip 压缩、LLM 内 progressive visual dropout 和 short-to-long 训练，因为它同时改变多层架构和训练数据，无法作为纯推理压缩消融。
-4. **MuKV：** 技术上与 0.5B 基座和本项目目标高度匹配；许可证澄清后应成为 HERMES 之后的第二个 decoder-KV adapter。
+1. **LongVU：** 当前 adapter 已能导出官方视觉路径的 `projected_visual` 并有历史 smoke PASS，但尚未形成 query-independent 与 query-aware 压缩的受控消融。后续应分别报告 DINOv2 去冗余、SVA 和 prompt 影响。
+2. **VideoChat-Online：** 当前已按 Pyramid Memory Bank 注册为 `visual_memory`，两 chunk 技术前向曾通过；许可证没有闭合，因此仍为 blocked，也不能升级成 `decoder_kv`。
+3. **VideoChat-Flash：** 当前只加载视觉塔与 projector、关闭 LLM 压缩并导出 `projected_visual`。HiCo、progressive visual dropout 和 short-to-long 训练仍未成为本项目可比较的压缩实验。
+4. **MA-LMM/MovieChat：** adapter facade 已存在，但真实资产链未到位；不得把 facade 单测表述为原生 visual-memory 前向通过。
+5. **StreamingVLM/MuKV/InfiniPot-V：** StreamingVLM 有历史技术前向但许可阻塞；MuKV 与 InfiniPot-V 仍是 `candidate_only`。只有许可与专用资产闭合后，才能形成 HERMES 之外的 decoder-KV 精度消融。
 
 ## 6. 建议实验矩阵
 
@@ -123,6 +128,7 @@ VideoMAE V2 的主体是对一个给定视频 clip 做双向自注意力的 ViT 
 ## 7. 风险与尚未证明的事项
 
 - **许可证：** pinned VideoMAE V2 代码是 MIT，但 Base 权重模型卡为 CC-BY-NC-4.0；pinned HERMES 代码是 MIT，LLaVA-OneVision 0.5B 权重登记为 Apache-2.0。代码与权重必须分别审查。InfiniPot-V 和 MuKV 当前根目录许可证信息不完整，不能仅凭 README badge 或论文开源声明推定可再分发。
+- **安装包边界：** 当前 `VideoMAEv2Adapter` 运行时导入仓库根目录的 `lab_anomaly.models.vit_video_encoder`，而 wheel 配置只打包 `src/vadbench`。源码 checkout 中可运行不等于安装后的 wheel 可运行；在迁移 wrapper 或调整打包并加入 wheel 安装验证前，VideoMAE V2 不能声称具备独立 wheel 部署能力。
 - **上游漂移：** 所有实际下载必须固定 commit/HF revision 和 SHA256；表中“官方仓库可用”不等于任意日期的 `main` 可复现。
 - **HERMES requirements 移植：** 官方 LLaVA 路线使用 Python 3.12、独立 requirements 和 `flash-attn --no-build-isolation`；其 transformers/FlashAttention/CUDA 组合可能与主框架环境冲突。服务器应使用 pinned checkout 和隔离环境，真实冒烟前不能用主环境单测替代依赖验证。[HERMES README](https://github.com/haowei-freesky/HERMES)
 - **硬件：** LongVU 官方 quick start 写明本地 demo 需要约 40 GB GPU，训练使用 64 张 H100-96G；不适合首批服务器低风险冒烟。[LongVU README](https://github.com/Vision-CAIR/LongVU)
@@ -132,6 +138,7 @@ VideoMAE V2 的主体是对一个给定视频 clip 做双向自注意力的 ViT 
 ## 8. 可追溯性与调研截止
 
 - 调研截止：2026-08-31（Asia/Hong_Kong）。
+- 仓内实现同步：2026-09-11；只对照本地/服务器相同 commit 和已有产物，没有重新做外网来源核验，也没有新跑模型 forward。
 - 论文接收状态以论文正式页或作者官方仓库当日信息为准；未来更新应保留本报告日期并新建修订记录。
 - 本报告未进行跨论文准确率排名，因为输入帧数、分辨率、LLM、prompt、数据与硬件均不可直接比较。
 - Agent Reach 的 Exa 免费端在检索后段触发额度限制；缺失方向改用 arXiv 官方 API、GitHub API 和作者仓库核验。此限制不影响上表关键候选的来源追溯，但不应把本表解释为所有 2026 年工作的穷尽清单。

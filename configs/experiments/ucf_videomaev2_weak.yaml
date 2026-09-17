@@ -14,10 +14,8 @@ sampler:
 
 encoder:
   adapter: videomaev2
-  model: OpenGVLab/VideoMAEv2-Base
   checkpoint: videomaev2-base-hf
   trainable: false
-  precision: fp16
 
 streaming:
   enabled: false
@@ -26,7 +24,18 @@ task:
   kind: weak_mil
   supervision: video
   pooling: attention
-  top_k: 3
+  classification_weight: 1.0
+  ranking_weight: 0.0
+
+training:
+  feature_level: clip
+  batch_size: 2
+  epochs: 1
+  learning_rate: 0.001
+  weight_decay: 0.0
+  seed: 0
+  num_workers: 0
+  assume_unannotated_is_normal: false
 
 output:
   root: outputs

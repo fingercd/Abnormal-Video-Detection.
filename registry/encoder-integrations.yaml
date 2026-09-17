@@ -3,7 +3,7 @@ integrations:
 - id: r2plus1d_18
   display_name: R(2+1)D-18
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/r2plus1d-18.yaml
   adapter_target: vadbench.integrations.torchvision_video:TorchvisionVideoAdapter
   backend: torchvision
@@ -36,7 +36,7 @@ integrations:
 - id: x3d
   display_name: X3D
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/x3d.yaml
   adapter_target: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
   backend: pytorchvideo
@@ -59,7 +59,7 @@ integrations:
 - id: mvitv2
   display_name: MViTv2
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/mvitv2.yaml
   adapter_target: vadbench.integrations.torchvision_video:TorchvisionVideoAdapter
   backend: torchvision
@@ -80,7 +80,7 @@ integrations:
 - id: slowfast
   display_name: SlowFast
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/slowfast.yaml
   adapter_target: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
   backend: pytorchvideo
@@ -124,7 +124,7 @@ integrations:
 - id: i3d
   display_name: I3D
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/i3d.yaml
   adapter_target: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
   backend: pytorchvideo
@@ -145,7 +145,7 @@ integrations:
 - id: timesformer
   display_name: TimeSformer
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/timesformer.yaml
   adapter_target: vadbench.integrations.transformers_video:TransformersVideoAdapter
   backend: transformers-video
@@ -168,7 +168,7 @@ integrations:
 - id: video_swin
   display_name: Video Swin
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/video-swin.yaml
   adapter_target: vadbench.integrations.torchvision_video:TorchvisionVideoAdapter
   backend: torchvision
@@ -189,7 +189,7 @@ integrations:
 - id: videomae
   display_name: VideoMAE
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/videomae.yaml
   adapter_target: vadbench.integrations.transformers_video:TransformersVideoAdapter
   backend: transformers-video
@@ -210,7 +210,7 @@ integrations:
 - id: videomaev2
   display_name: VideoMAE V2
   family: fixed_clip
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/videomaev2-base.yaml
   adapter_target: vadbench.integrations.videomaev2:VideoMAEv2Adapter
   backend: videomaev2
@@ -261,7 +261,7 @@ integrations:
 - id: videomamba
   display_name: VideoMamba
   family: video_foundation
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/videomamba.yaml
   adapter_target: vadbench.integrations.foundation.videomamba:VideoMambaAdapter
   backend: videomamba
@@ -279,7 +279,7 @@ integrations:
 - id: vjepa2
   display_name: V-JEPA 2
   family: video_foundation
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/vjepa2.yaml
   adapter_target: vadbench.integrations.foundation.vjepa2:VJEPA2Adapter
   backend: vjepa2
@@ -302,7 +302,7 @@ integrations:
 - id: longvu
   display_name: LongVU
   family: long_video_vlm
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/longvu.yaml
   adapter_target: vadbench.integrations.long_video.longvu:LongVUAdapter
   backend: longvu
@@ -386,7 +386,7 @@ integrations:
 - id: videochat_flash
   display_name: VideoChat-Flash
   family: long_video_vlm
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/videochat-flash.yaml
   adapter_target: vadbench.integrations.long_video.videochat_flash:VideoChatFlashAdapter
   backend: videochat-flash
@@ -478,7 +478,7 @@ integrations:
 - id: hermes_llava_ov
   display_name: HERMES + LLaVA-OneVision
   family: streaming_vlm
-  status: smoke_pass
+  status: integrated
   definition: configs/encoders/hermes-llava-ov-0.5b.yaml
   adapter_target: vadbench.integrations.hermes:HermesLlavaOVAdapter
   backend: hermes

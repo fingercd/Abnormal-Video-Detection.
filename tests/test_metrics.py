@@ -4,8 +4,16 @@ import math
 import unittest
 
 import numpy as np
+import pytest
 
+from vadbench.data.manifest import (
+    SupervisionAnnotation,
+    TemporalSpan,
+    VideoManifestRecord,
+    write_manifest_jsonl,
+)
 from vadbench.engine.evaluate import (
+    evaluate_manifest_predictions,
     evaluate_ucf_prediction_records,
     evaluate_ucf_predictions,
     prediction_records_to_temporal,
@@ -211,6 +219,195 @@ class UCFProtocolTests(unittest.TestCase):
             compute_ucf_frame_metrics({"a": [0]}, {"b": [0.1]})
         with self.assertRaises(ValueError):
             compute_ucf_frame_metrics({"a": [0, 1]}, {"a": [0.1]})
+
+
+def _protocol_manifest(video_id: str, *, anomaly: bool) -> VideoManifestRecord:
+    return VideoManifestRecord(
+        video_id=video_id,
+        path=f"{'Abuse' if anomaly else 'Normal'}/{video_id}.mp4",
+        split="test",
+        category="Abuse" if anomaly else "Normal",
+        is_anomaly=anomaly,
+        num_frames=4,
+        fps=2.0,
+        annotations=(
+            SupervisionAnnotation(
+                scope="frame",
+                label="Abuse",
+                is_anomaly=True,
+                span=TemporalSpan(2, 4, "frame"),
+            ),
+        )
+        if anomaly
+        else (),
+    )
+
+
+def _protocol_predictions(video_ids: list[str], intervals=((0, 2), (2, 4))):
+    from types import SimpleNamespace
+
+    return [
+        SimpleNamespace(
+            video_id=video_id,
+            clip_id=f"{video_id}:{index}",
+            clip_index=index,
+            frame_start=start,
+            frame_end=end,
+            start_s=start / 2,
+            end_s=end / 2,
+            anomaly_score=0.1 if index == 0 else 0.9,
+            encoder_fingerprint=None,
+        )
+        for video_id in video_ids
+        for index, (start, end) in enumerate(intervals)
+    ]
+
+
+def test_subset_protocol_marks_scope_and_requires_complete_coverage() -> None:
+    manifests = (
+        _protocol_manifest("normal", anomaly=False),
+        _protocol_manifest("abuse", anomaly=True),
+    )
+    result = evaluate_manifest_predictions(
+        _protocol_predictions(["normal", "abuse"]),
+        manifests,
+        protocol="subset",
+    )
+    payload = result.to_dict()
+    assert payload["protocol"] == "ucf-crime/subset-frameauc-v1"
+    assert payload["coverage"] == {
+        "status": "validated",
+        "num_videos": 2,
+        "total_frames": 8,
+        "covered_frames": 8,
+        "gap_frames": 0,
+        "overlap_frames": 0,
+        "coverage_ratio": 1.0,
+        "complete": True,
+        "incomplete_video_ids": [],
+    }
+    assert payload["input_identity"]["videos"] == 2
+    assert payload["input_identity"]["manifest_sha256"].startswith("sha256:")
+
+    with pytest.raises(ValueError, match="gap"):
+        evaluate_manifest_predictions(
+            _protocol_predictions(["normal", "abuse"], intervals=((0, 1), (2, 4))),
+            manifests,
+            protocol="subset",
+        )
+
+
+@pytest.mark.parametrize("field", ["run_id", "encoder_fingerprint", "checkpoint_sha256"])
+def test_subset_rejects_mixed_experiment_identity(field: str) -> None:
+    manifests = (
+        _protocol_manifest("normal", anomaly=False),
+        _protocol_manifest("abuse", anomaly=True),
+    )
+    predictions = _protocol_predictions(["normal", "abuse"])
+    for index, item in enumerate(predictions):
+        value = "run-a" if index < 2 else "run-b"
+        if field == "checkpoint_sha256":
+            item.metadata = {field: value}
+        else:
+            setattr(item, field, value)
+    with pytest.raises(ValueError, match="mix incompatible"):
+        evaluate_manifest_predictions(predictions, manifests, protocol="subset")
+
+
+def test_official_protocol_rejects_a_two_video_subset() -> None:
+    manifests = (
+        _protocol_manifest("normal", anomaly=False),
+        _protocol_manifest("abuse", anomaly=True),
+    )
+    with pytest.raises(ValueError, match="exactly 290"):
+        evaluate_manifest_predictions(
+            _protocol_predictions(["normal", "abuse"]),
+            manifests,
+            protocol="official",
+        )
+
+
+def test_official_protocol_requires_matching_ready_audit(tmp_path) -> None:
+    from test_data_audit import _fake_probe, _official_records_and_files, _official_source_registry
+
+    from vadbench.data.audit import audit_ucf_crime_dataset
+
+    train, manifests = _official_records_and_files(tmp_path)
+    source_registry = _official_source_registry(tmp_path, train, manifests)
+    train_path = write_manifest_jsonl(train, tmp_path / "train.jsonl")
+    manifest_path = write_manifest_jsonl(manifests, tmp_path / "test.jsonl")
+    predictions = _protocol_predictions(
+        [item.video_id for item in manifests], intervals=((0, 50), (50, 100))
+    )
+    audit = audit_ucf_crime_dataset(
+        tmp_path,
+        train_path,
+        manifest_path,
+        probe_fn=_fake_probe,
+        official_source_registry=source_registry,
+    )
+    assert audit["passed"]
+    result = evaluate_manifest_predictions(
+        predictions,
+        manifest_path,
+        protocol="official",
+        audit_report=audit,
+        official_source_registry=source_registry,
+    )
+    payload = result.to_dict()
+    assert payload["protocol"] == "ucf-crime/official-frameauc-v1"
+    assert payload["coverage"]["num_videos"] == 290
+    assert payload["input_identity"]["dataset_audit"]["evaluation_ready"] is True
+
+    mismatched = {**audit, "manifests": {**audit["manifests"], "test": "other.jsonl"}}
+    with pytest.raises(ValueError, match="does not match"):
+        evaluate_manifest_predictions(
+            predictions,
+            manifest_path,
+            protocol="official",
+            audit_report=mismatched,
+            official_source_registry=source_registry,
+        )
+
+    stale = {
+        **audit,
+        "manifest_sha256": {**audit["manifest_sha256"], "test": "0" * 64},
+    }
+    with pytest.raises(ValueError, match="SHA256"):
+        evaluate_manifest_predictions(
+            predictions,
+            manifest_path,
+            protocol="official",
+            audit_report=stale,
+            official_source_registry=source_registry,
+        )
+
+    partial = {
+        key: audit[key] for key in ("schema_version", "dataset", "passed", "evaluation_readiness")
+    }
+    with pytest.raises(ValueError, match="v2 schema"):
+        evaluate_manifest_predictions(
+            predictions,
+            manifest_path,
+            protocol="official",
+            audit_report=partial,
+            official_source_registry=source_registry,
+        )
+    altered = {
+        **audit,
+        "official_source_identity": {
+            **audit["official_source_identity"],
+            "source_commit": "b" * 40,
+        },
+    }
+    with pytest.raises(ValueError, match="source identity changed"):
+        evaluate_manifest_predictions(
+            predictions,
+            manifest_path,
+            protocol="official",
+            audit_report=altered,
+            official_source_registry=source_registry,
+        )
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ constructor:
   revision: dc740ceda42fce44faed2ea03c6d447db72f6af9
   local_files_only: true
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: MCG-NJU/videomae-base
   revision: dc740ceda42fce44faed2ea03c6d447db72f6af9

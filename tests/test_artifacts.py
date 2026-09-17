@@ -12,8 +12,34 @@ from vadbench.artifacts import (
     CacheTelemetryRecord,
     PredictionRecord,
     RunProvenance,
+    record_stage,
 )
 from vadbench.features import compute_encoder_fingerprint
+
+
+def test_stage_failure_keeps_input_hash_and_cache_parameters(tmp_path: Path) -> None:
+    source = tmp_path / "manifest.jsonl"
+    source.write_text("first", encoding="utf-8")
+    with (
+        pytest.raises(RuntimeError, match="model failure"),
+        record_stage(
+            tmp_path / "run",
+            "extract",
+            config={"kv_budget_tokens": 64, "api_token": "hidden"},
+            inputs={"manifest": source},
+        ),
+    ):
+        raise RuntimeError("model failure")
+    artifact = next((tmp_path / "run/provenance/stages").glob("*.json"))
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
+    assert payload["inputs"]["manifest"]["sha256"]
+    assert payload["config"]["kv_budget_tokens"] == 64
+    assert payload["config"]["api_token"] == "<redacted>"
+    from jsonschema import Draft202012Validator
+
+    schema = json.loads((Path(__file__).parents[1] / "schemas/stage-v1.schema.json").read_text())
+    Draft202012Validator(schema).validate(payload)
 
 
 def _fingerprint() -> str:

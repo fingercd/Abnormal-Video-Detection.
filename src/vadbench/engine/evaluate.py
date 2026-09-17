@@ -2,19 +2,35 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
 
+from ..data.audit import (
+    OFFICIAL_UCF_CRIME_COUNTS,
+    compute_manifest_sha256,
+    verify_official_source_identity,
+)
+from ..data.labels import frame_labels_from_manifest
+from ..data.manifest import (
+    DatasetSplit,
+    VideoManifestRecord,
+    load_manifest_jsonl,
+    validate_manifest,
+)
 from ..metrics import (
     UCFFrameMetrics,
     compute_ucf_frame_metrics,
     project_intervals_to_frames,
     resample_scores_to_frames,
 )
+from .coverage import aggregate_coverage, validate_frame_coverage
 
 try:  # Model-free artifact evaluation works without PyTorch.
     import torch
@@ -43,9 +59,19 @@ class UCFEvaluationResult:
 
     metrics: UCFFrameMetrics
     frame_scores: dict[str, np.ndarray]
+    protocol: str | None = None
+    coverage: Mapping[str, Any] | None = None
+    input_identity: Mapping[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return self.metrics.to_dict()
+        result = self.metrics.to_dict()
+        if self.protocol is not None:
+            result["protocol"] = self.protocol
+        if self.coverage is not None:
+            result["coverage"] = dict(self.coverage)
+        if self.input_identity is not None:
+            result["input_identity"] = dict(self.input_identity)
+        return result
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:
@@ -312,6 +338,279 @@ def evaluate_ucf_prediction_records(
     )
 
 
+def _canonical_digest(value: Any) -> str:
+    payload = json.dumps(
+        value,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _manifest_records(
+    manifest: str | Path | Iterable[VideoManifestRecord],
+) -> tuple[tuple[VideoManifestRecord, ...], str, str | None]:
+    if isinstance(manifest, (str, Path)):
+        path = Path(manifest).expanduser().resolve()
+        records = load_manifest_jsonl(path)
+        digest = "sha256:" + compute_manifest_sha256(records)
+        return records, digest, str(path)
+    records = validate_manifest(manifest)
+    return records, "sha256:" + compute_manifest_sha256(records), None
+
+
+def _prediction_digest(records: Iterable[Any]) -> str:
+    rows = []
+    for record in records:
+        rows.append(
+            {
+                "video_id": _field(record, "video_id"),
+                "clip_id": _field(record, "clip_id"),
+                "clip_index": _field(record, "clip_index"),
+                "frame_start": _field(record, "frame_start"),
+                "frame_end": _field(record, "frame_end"),
+                "start_s": _field(record, "start_s"),
+                "end_s": _field(record, "end_s"),
+                "anomaly_score": _field(record, "anomaly_score", _field(record, "score")),
+                "encoder_fingerprint": _field(record, "encoder_fingerprint"),
+            }
+        )
+    return _canonical_digest(rows)
+
+
+def _load_audit_report(value: str | Path | Mapping[str, Any] | None) -> dict[str, Any]:
+    if value is None:
+        raise ValueError("official protocol requires a passed dataset audit report")
+    if isinstance(value, (str, Path)):
+        path = Path(value).expanduser().resolve()
+        with path.open("r", encoding="utf-8") as handle:
+            report = json.load(handle)
+    else:
+        report = dict(value)
+    from jsonschema import Draft202012Validator, FormatChecker
+
+    from vadbench.resources import package_resource_path
+
+    schema_path = Path(__file__).resolve().parents[3] / "schemas/dataset-audit-v2.schema.json"
+    if not schema_path.is_file():
+        schema_path = package_resource_path("schemas/dataset-audit-v2.schema.json")
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    error = next(
+        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(report), None
+    )
+    if error is not None:
+        raise ValueError(f"dataset audit does not conform to v2 schema: {error.message}")
+    if report["errors"] or report["status"] not in {"passed", "passed_with_warnings"}:
+        raise ValueError("official protocol rejects a dataset audit with errors")
+    if report["passed"] is not True:
+        raise ValueError("official protocol requires dataset audit passed=true")
+    if report["evaluation_readiness"]["ready"] is not True:
+        raise ValueError("official protocol requires evaluation_readiness.ready=true")
+    source_identity = report["official_source_identity"]
+    if source_identity["status"] != "verified":
+        raise ValueError("official protocol requires verified official source identity")
+    if not source_identity.get("source_commit") or not source_identity.get("test_identity_sha256"):
+        raise ValueError("official source identity is missing commit or test identity SHA256")
+    return report
+
+
+def _validate_official_audit(
+    report: Mapping[str, Any],
+    manifests: tuple[VideoManifestRecord, ...],
+    manifest_path: str | None,
+    manifest_digest: str,
+) -> dict[str, Any]:
+    if manifest_path is None:
+        raise ValueError("official protocol requires a manifest file for audit identity")
+    audit_manifests = report.get("manifests")
+    if not isinstance(audit_manifests, Mapping) or not audit_manifests.get("test"):
+        raise ValueError("dataset audit is missing its test manifest identity")
+    audited_path = Path(str(audit_manifests["test"])).expanduser().resolve()
+    if audited_path != Path(manifest_path):
+        raise ValueError("dataset audit test manifest does not match evaluation manifest")
+    manifest_hashes = report.get("manifest_sha256")
+    if not isinstance(manifest_hashes, Mapping) or manifest_hashes.get("test") != (
+        manifest_digest.removeprefix("sha256:")
+    ):
+        raise ValueError("dataset audit test manifest SHA256 does not match evaluation manifest")
+
+    expected = OFFICIAL_UCF_CRIME_COUNTS["test"]
+    observed = report.get("observed", {}).get("test", {})
+    if any(observed.get(name) != count for name, count in expected.items()):
+        raise ValueError("dataset audit does not contain the official test counts")
+    audited_ids = {
+        str(item.get("video_id"))
+        for item in report.get("videos", [])
+        if isinstance(item, Mapping) and item.get("split") == "test"
+    }
+    manifest_ids = {item.video_id for item in manifests}
+    if audited_ids != manifest_ids:
+        raise ValueError("dataset audit test video set does not match evaluation manifest")
+    return {
+        "schema_version": report["schema_version"],
+        "generated_at": report.get("generated_at"),
+        "status": report.get("status"),
+        "test_manifest": str(audited_path),
+        "test_manifest_sha256": manifest_digest,
+        "evaluation_ready": True,
+        "official_source_commit": report["official_source_identity"]["source_commit"],
+        "official_test_identity_sha256": report["official_source_identity"]["test_identity_sha256"],
+    }
+
+
+def evaluate_manifest_predictions(
+    records: Iterable[Any],
+    manifest: str | Path | Iterable[VideoManifestRecord],
+    *,
+    protocol: Literal["official", "subset", "generic"] = "official",
+    audit_report: str | Path | Mapping[str, Any] | None = None,
+    official_source_registry: str | Path = "registry/datasets.yaml",
+    reduction: str = "max",
+    undefined: Literal["nan", "raise"] = "nan",
+) -> UCFEvaluationResult:
+    """Evaluate prediction records under an explicit UCF-Crime protocol mode.
+
+    ``official`` requires the complete audited 290-video test split. ``subset``
+    permits a named test subset but keeps strict frame coverage. ``generic``
+    retains the lower-level projection behavior for diagnostics and tests.
+    """
+
+    if protocol not in {"official", "subset", "generic"}:
+        raise ValueError("protocol must be official, subset, or generic")
+    prediction_records = tuple(records)
+    if not prediction_records:
+        raise ValueError("prediction records must not be empty")
+    run_identity = {}
+    if protocol != "generic":
+        for key in ("run_id", "encoder_fingerprint", "checkpoint_sha256"):
+            values = [
+                _field(_field(item, "metadata", {}), key)
+                if key == "checkpoint_sha256"
+                else _field(item, key)
+                for item in prediction_records
+            ]
+            present = {value for value in values if value is not None}
+            if len(present) > 1 or (present and any(value is None for value in values)):
+                raise ValueError(f"prediction records mix incompatible {key} identities")
+            if present:
+                run_identity[key] = next(iter(present))
+    manifests, manifest_digest, manifest_path = _manifest_records(manifest)
+    if any(item.split != DatasetSplit.TEST for item in manifests):
+        raise ValueError(f"{protocol} evaluation requires only test split records")
+    if protocol == "official" and len(manifests) != OFFICIAL_UCF_CRIME_COUNTS["test"]["total"]:
+        raise ValueError(
+            "official protocol requires exactly "
+            f"{OFFICIAL_UCF_CRIME_COUNTS['test']['total']} test videos"
+        )
+
+    grouped: dict[str, list[Any]] = defaultdict(list)
+    for record in prediction_records:
+        grouped[str(_field(record, "video_id"))].append(record)
+    manifest_by_id = {item.video_id: item for item in manifests}
+    if set(grouped) != set(manifest_by_id):
+        raise ValueError(
+            "prediction/manifest video ids differ: "
+            f"prediction_only={sorted(set(grouped) - set(manifest_by_id))}, "
+            f"manifest_only={sorted(set(manifest_by_id) - set(grouped))}"
+        )
+
+    audit_identity = None
+    if protocol == "official":
+        report = _load_audit_report(audit_report)
+        audit_identity = _validate_official_audit(report, manifests, manifest_path, manifest_digest)
+        source_errors: list[dict[str, Any]] = []
+        source_identity = verify_official_source_identity(
+            {"test": manifests},
+            registry_path=official_source_registry,
+            errors=source_errors,
+        )
+        recorded_source = report["official_source_identity"]
+        if source_errors or source_identity["status"] != "verified":
+            raise ValueError(f"official source verification failed: {source_errors}")
+        for key in ("source_commit", "train_identity_sha256", "test_identity_sha256"):
+            if source_identity[key] != recorded_source[key]:
+                raise ValueError(f"dataset audit official source identity changed: {key}")
+
+    coverage_summary: dict[str, Any]
+    if protocol in {"official", "subset"}:
+        per_video = []
+        for video_id, video_records in grouped.items():
+            ordered = sorted(
+                video_records,
+                key=lambda item: (
+                    int(_field(item, "clip_index", 0)),
+                    float(_field(item, "start_s", 0.0)),
+                ),
+            )
+            if any(
+                _field(item, "frame_start") is None or _field(item, "frame_end") is None
+                for item in ordered
+            ):
+                raise ValueError(f"{video_id}: {protocol} protocol requires frame intervals")
+            manifest_item = manifest_by_id[video_id]
+            per_video.append(
+                validate_frame_coverage(
+                    video_id=video_id,
+                    clip_indices=np.asarray(
+                        [int(_field(item, "clip_index", 0)) for item in ordered],
+                        dtype=np.int64,
+                    ),
+                    frame_starts=np.asarray(
+                        [int(_field(item, "frame_start")) for item in ordered],
+                        dtype=np.int64,
+                    ),
+                    frame_ends=np.asarray(
+                        [int(_field(item, "frame_end")) for item in ordered],
+                        dtype=np.int64,
+                    ),
+                    num_frames=manifest_item.num_frames,
+                    fps=manifest_item.fps,
+                    require_fps=True,
+                )
+            )
+        coverage_summary = {"status": "validated", **aggregate_coverage(per_video)}
+    else:
+        coverage_summary = {
+            "status": "not_required",
+            "complete": None,
+            "reason": "generic protocol permits lower-level projection semantics",
+        }
+
+    labels = frame_labels_from_manifest(manifests)
+    result = evaluate_ucf_prediction_records(
+        prediction_records,
+        labels,
+        fps={item.video_id: item.fps for item in manifests if item.fps is not None},
+        reduction=reduction,
+        undefined=undefined,
+    )
+    protocol_id = {
+        "official": "ucf-crime/official-frameauc-v1",
+        "subset": "ucf-crime/subset-frameauc-v1",
+        "generic": "ucf-crime/generic-frameauc-v1",
+    }[protocol]
+    input_identity = {
+        **run_identity,
+        "manifest_sha256": manifest_digest,
+        "predictions_sha256": _prediction_digest(prediction_records),
+        "videos": len(manifests),
+        "prediction_records": len(prediction_records),
+    }
+    if manifest_path is not None:
+        input_identity["manifest_path"] = manifest_path
+    if audit_identity is not None:
+        input_identity["dataset_audit"] = audit_identity
+    return UCFEvaluationResult(
+        metrics=result.metrics,
+        frame_scores=result.frame_scores,
+        protocol=protocol_id,
+        coverage=coverage_summary,
+        input_identity=input_identity,
+    )
+
+
 def evaluate_ucf_frame_auc(
     predictions: Mapping[str, Any], frame_labels: Mapping[str, Any], **kwargs: Any
 ) -> float:
@@ -357,6 +656,7 @@ __all__ = [
     "TemporalPrediction",
     "UCFEvaluationResult",
     "evaluate_batches",
+    "evaluate_manifest_predictions",
     "evaluate_ucf_frame_auc",
     "evaluate_ucf_prediction_records",
     "evaluate_ucf_predictions",

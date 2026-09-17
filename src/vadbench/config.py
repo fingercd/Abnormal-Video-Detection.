@@ -60,6 +60,8 @@ def validate_experiment_shape(config: Mapping[str, Any]) -> None:
         if not isinstance(value, Mapping):
             raise ConfigError(f"缺少对象配置段：{section}")
 
+    validate_encoder_config(config["encoder"])
+
     supervision = str(config["task"].get("supervision", ""))
     if supervision not in {"video", "segment", "frame"}:
         raise ConfigError("task.supervision 必须是 video、segment 或 frame")
@@ -69,6 +71,28 @@ def validate_experiment_shape(config: Mapping[str, Any]) -> None:
         raise ConfigError("streaming 必须是对象")
     if streaming.get("enabled") and int(streaming.get("chunk_frames", 0)) <= 0:
         raise ConfigError("启用 streaming 时 chunk_frames 必须大于 0")
+
+
+def validate_encoder_config(config: Mapping[str, Any]) -> None:
+    """Keep experiment overrides explicit; model-specific options belong to params."""
+
+    allowed = {
+        "adapter",
+        "definition",
+        "checkpoint",
+        "trainable",
+        "device",
+        "params",
+        "micro_batch_size",
+    }
+    unknown = set(config) - allowed
+    if unknown:
+        raise ConfigError(
+            f"未知 encoder 字段：{sorted(unknown)}；模型和精度参数请写入 encoder.params，"
+            "权重用 encoder.checkpoint 选择 registry 条目"
+        )
+    if not isinstance(config.get("params", {}), Mapping):
+        raise ConfigError("encoder.params 必须是对象")
 
 
 def validate_capabilities(config: Mapping[str, Any], capabilities: Any) -> None:

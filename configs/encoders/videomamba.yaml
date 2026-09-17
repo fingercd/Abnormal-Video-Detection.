@@ -13,6 +13,7 @@ constructor:
   feature_stage: backbone_tokens
   preprocess_profile: videomamba-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: official
   model_id: OpenGVLab/VideoMamba
   revision: 69502a732f8f69709cec9ed6c54d5345259fd825

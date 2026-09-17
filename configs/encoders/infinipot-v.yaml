@@ -18,6 +18,7 @@ constructor:
   upstream_entrypoint: infinipot_v/model.py:load_model
   preprocess_profile: infinipot-v-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: local_upstream
   model_id: aiha-lab/InfiniPot-V
   revision: 81a4dbe2e74660a8148cc2a6cee1148a9a268479

@@ -13,6 +13,7 @@ constructor:
   strict_checkpoint: false
 
 checkpoint:
+  constructor_key: checkpoint_path
   source: torchvision
   model_id: torchvision.models.video.mvit_v2_s
   revision: v0.20.1

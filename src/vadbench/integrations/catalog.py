@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from importlib import resources
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any
@@ -17,6 +16,7 @@ from typing import Any
 from vadbench.config import load_yaml
 from vadbench.contracts import EncoderCapabilities
 from vadbench.registry import EncoderRegistry
+from vadbench.resources import package_resource_path
 
 CATALOG_SCHEMA_VERSION = 1
 
@@ -26,18 +26,7 @@ _RELATIVE_YAML_PATH = re.compile(
 )
 _DOTTED_IDENTIFIER = r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*"
 _ADAPTER_TARGET = re.compile(rf"^{_DOTTED_IDENTIFIER}:{_DOTTED_IDENTIFIER}$")
-_PACKAGED_CATALOG_PARTS = ("resources", "encoder-integrations.yaml")
-_STATUSES = frozenset(
-    {
-        "planned",
-        "preflight_pass",
-        "acquiring",
-        "integrated",
-        "smoke_pass",
-        "failed",
-        "blocked",
-    }
-)
+_STATUSES = frozenset({"planned", "integrated", "blocked"})
 _RUN_MODES = frozenset({"fixed", "long", "streaming"})
 _RUNTIMES = frozenset({"in_process", "external_python"})
 _CHECKPOINT_STATUSES = frozenset({"planned", "registered", "verified"})
@@ -53,7 +42,7 @@ _FEATURE_STAGES = frozenset(
         "decoder_contextual",
     }
 )
-_IMPLEMENTED_STATUSES = frozenset({"integrated", "smoke_pass", "failed"})
+_IMPLEMENTED_STATUSES = frozenset({"integrated"})
 _CAPABILITY_KEYS = frozenset(
     {
         "supports_fixed_clip",
@@ -360,8 +349,6 @@ def _parse_record(value: Any, index: int) -> IntegrationRecord:
         raise IntegrationCatalogError(f"{record.id}: streaming smoke 至少需要 2 个 chunks")
     if record.status in _IMPLEMENTED_STATUSES and record.checkpoint.status == "planned":
         raise IntegrationCatalogError(f"{record.id}: {record.status} 不能引用 planned checkpoint")
-    if record.status == "smoke_pass" and record.checkpoint.status != "verified":
-        raise IntegrationCatalogError(f"{record.id}: smoke_pass 必须使用 verified checkpoint")
     return record
 
 
@@ -377,18 +364,12 @@ def default_catalog_path(project_root: str | Path | None = None) -> Path:
     if checkout_catalog.is_file():
         return checkout_catalog.resolve()
 
-    packaged = resources.files("vadbench").joinpath(*_PACKAGED_CATALOG_PARTS)
-    if not packaged.is_file():
-        raise IntegrationCatalogError(
-            f"未找到 encoder integration catalog：checkout={checkout_catalog}，packaged={packaged}"
-        )
     try:
-        packaged_path = Path(packaged)
-    except TypeError as exc:
+        return package_resource_path("registry/encoder-integrations.yaml")
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
         raise IntegrationCatalogError(
-            f"packaged catalog 不是文件系统资源，无法返回稳定路径：{packaged}"
+            f"未找到 encoder integration catalog：checkout={checkout_catalog}"
         ) from exc
-    return packaged_path.resolve()
 
 
 def load_integration_catalog(
@@ -435,10 +416,11 @@ def load_default_integration_catalog(
     root = default_project_root() if project_root is None else Path(project_root).resolve()
     checkout_catalog = (root / "registry" / "encoder-integrations.yaml").resolve()
     selected = default_catalog_path(root)
+    validation_root = root if selected == checkout_catalog else selected.parent.parent
     return load_integration_catalog(
         selected,
-        project_root=root,
-        validate_references=selected == checkout_catalog,
+        project_root=validation_root,
+        validate_references=True,
     )
 
 

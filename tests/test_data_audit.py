@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 from vadbench.data import audit as audit_module
 from vadbench.data.audit import DATASET_AUDIT_SCHEMA_VERSION, audit_ucf_crime_dataset
@@ -89,6 +91,8 @@ def test_default_audit_probes_container_without_reading_full_file_for_hash(
     )
 
     assert report["schema_version"] == DATASET_AUDIT_SCHEMA_VERSION
+    assert set(report["manifest_sha256"]) == {"train", "test"}
+    assert all(len(value) == 64 for value in report["manifest_sha256"].values())
     assert report["deep_hash"] is False
     assert report["hashing"] == {
         "algorithm": "sha256",
@@ -387,12 +391,70 @@ def _official_records_and_files(root: Path) -> tuple[tuple[VideoManifestRecord, 
     )
 
 
+def _official_source_registry(
+    root: Path,
+    train: tuple[VideoManifestRecord, ...],
+    test: tuple[VideoManifestRecord, ...],
+) -> Path:
+    train_source = root / "official" / "Anomaly_Train.txt"
+    temporal_source = root / "official" / "Temporal_Anomaly_Annotation.txt"
+    train_source.parent.mkdir(parents=True, exist_ok=True)
+    train_source.write_text("\n".join(item.path for item in train) + "\n", encoding="utf-8")
+    temporal_lines = []
+    for item in test:
+        if item.is_anomaly:
+            annotation = item.annotations[0]
+            assert annotation.span is not None
+            temporal_lines.append(
+                f"{Path(item.path).name} {item.category} "
+                f"{int(annotation.span.start) + 1} {int(annotation.span.end)} -1 -1"
+            )
+        else:
+            temporal_lines.append(f"{Path(item.path).name} Normal -1 -1 -1 -1")
+    temporal_source.write_text("\n".join(temporal_lines) + "\n", encoding="utf-8")
+
+    def digest(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    registry = root / "official" / "datasets.yaml"
+    registry.write_text(
+        yaml.safe_dump(
+            {
+                "datasets": {
+                    "ucf-crime": {
+                        "source": {"commit": "a" * 40},
+                        "files": {
+                            "train_split": {
+                                "local_path": str(train_source),
+                                "sha256": digest(train_source),
+                            },
+                            "temporal_test_annotations": {
+                                "local_path": str(temporal_source),
+                                "sha256": digest(temporal_source),
+                            },
+                        },
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return registry
+
+
 def test_complete_official_split_passes_and_report_validates_against_schema(
     tmp_path: Path,
 ) -> None:
     train, test = _official_records_and_files(tmp_path)
+    source_registry = _official_source_registry(tmp_path, train, test)
 
-    report = audit_ucf_crime_dataset(tmp_path, train, test, probe_fn=_fake_probe)
+    report = audit_ucf_crime_dataset(
+        tmp_path,
+        train,
+        test,
+        probe_fn=_fake_probe,
+        official_source_registry=source_registry,
+    )
 
     assert report["passed"] is True
     assert report["status"] == "passed_with_warnings"
@@ -419,12 +481,13 @@ def test_complete_official_split_passes_and_report_validates_against_schema(
         "positive_frame_spans": 140,
         "not_ready_records": [],
     }
+    assert report["official_source_identity"]["status"] == "verified"
     assert set(report["category_distribution"]["train"]) == set(UCF_CRIME_CATEGORIES)
     assert report["files"]["present"] == 1900
     assert report["files"]["probed"] == 1900
 
     jsonschema = pytest.importorskip("jsonschema")
-    schema_path = Path(__file__).parents[1] / "schemas" / "dataset-audit-v1.schema.json"
+    schema_path = Path(__file__).parents[1] / "schemas" / "dataset-audit-v2.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(report)
 

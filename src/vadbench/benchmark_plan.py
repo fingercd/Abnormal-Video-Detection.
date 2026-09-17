@@ -1,113 +1,32 @@
-"""把版本化 benchmark YAML 编排为逐 case 加载的真实性能运行。"""
+"""Orchestrate versioned benchmark YAML as isolated real-encoder cases."""
 
 from __future__ import annotations
 
-import gc
 import platform
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import asdict
 from datetime import datetime, timezone
-from functools import partial
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from vadbench.artifacts import file_identity, record_stage
 from vadbench.benchmark import (
     PERFORMANCE_SCHEMA_VERSION,
-    BenchmarkCase,
     BenchmarkSettings,
-    BenchmarkWorkload,
     assess_sampling_comparability,
-    run_encoder_benchmark,
     write_performance_result,
 )
-from vadbench.config import load_experiment, load_yaml
-from vadbench.contracts import ClipBatch
+from vadbench.benchmark_runtime import run_benchmark_case, run_isolated_benchmark_case
+from vadbench.config import load_yaml
 from vadbench.data.video import VideoInfo, decode_rgb_frames, probe_video
-from vadbench.orchestration import compression_from_experiment, create_encoder_from_experiment
-
-
-def _deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
-    result = dict(base)
-    for key, value in override.items():
-        if isinstance(value, Mapping) and isinstance(result.get(key), Mapping):
-            result[key] = _deep_merge(result[key], value)
-        else:
-            result[key] = value
-    return result
 
 
 def _resolve(root: Path, value: str | Path) -> Path:
     path = Path(value)
     return path.resolve() if path.is_absolute() else (root / path).resolve()
-
-
-def _sample_indices(info: VideoInfo, sample_fps: float, sampled_frames: int) -> np.ndarray:
-    if sample_fps <= 0 or sampled_frames <= 0:
-        raise ValueError("sample_fps 与 sampled_frames 必须大于 0")
-    stride = max(1, int(round(info.fps / sample_fps)))
-    indices = np.arange(sampled_frames, dtype=np.int64) * stride
-    if int(indices[-1]) >= info.num_frames:
-        raise ValueError(
-            f"视频只有 {info.num_frames} 帧，无法以 stride={stride} 采 {sampled_frames} 帧"
-        )
-    return indices
-
-
-def _batch_groups(
-    decoded: np.ndarray,
-    *,
-    indices: np.ndarray,
-    fps: float,
-    video_id: str,
-    mode: str,
-    units: int,
-    frames_per_unit: int,
-) -> ClipBatch | tuple[ClipBatch, ...]:
-    expected = units * frames_per_unit
-    if decoded.shape[0] != expected or indices.shape[0] != expected:
-        raise ValueError(f"预处理期望 {expected} 帧，实际 {decoded.shape[0]}/{indices.shape[0]}")
-    frames = decoded.reshape(units, frames_per_unit, *decoded.shape[1:])
-    frame_indices = indices.reshape(units, frames_per_unit)
-    timestamps = frame_indices.astype(np.float64) / float(fps)
-
-    def one(start: int, stop: int) -> ClipBatch:
-        clip_indices = list(range(start, stop))
-        return ClipBatch(
-            frames=frames[start:stop],
-            timestamps_s=timestamps[start:stop],
-            video_ids=(video_id,) * (stop - start),
-            frame_indices=frame_indices[start:stop],
-            metadata={
-                "clip_ids": [f"{video_id}:benchmark-{index:04d}" for index in clip_indices],
-                "clip_indices": clip_indices,
-                "sampling_kind": "shared_ordered_frames",
-            },
-        )
-
-    if mode == "fixed":
-        return one(0, units)
-    if mode == "streaming":
-        return tuple(one(index, index + 1) for index in range(units))
-    raise ValueError(f"未知 benchmark mode：{mode}")
-
-
-def _case_experiment(
-    case_spec: Mapping[str, Any], root: Path, *, device: str | None
-) -> dict[str, Any]:
-    experiment = load_experiment(_resolve(root, str(case_spec["experiment"])))
-    encoder = dict(case_spec.get("encoder", {}))
-    if device is not None:
-        encoder["device"] = device
-    streaming = {
-        **dict(experiment.get("streaming", {})),
-        "enabled": str(case_spec["mode"]) == "streaming",
-    }
-    if case_spec.get("compression") is not None:
-        streaming["compression"] = dict(case_spec["compression"])
-    return _deep_merge(experiment, {"encoder": encoder, "streaming": streaming})
 
 
 def _require_case_result(result: Mapping[str, Any], requirements: Mapping[str, Any]) -> None:
@@ -122,18 +41,6 @@ def _require_case_result(result: Mapping[str, Any], requirements: Mapping[str, A
                 )
 
 
-def _release_runtime() -> None:
-    gc.collect()
-    try:
-        import torch
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-    except ImportError:  # pragma: no cover - optional dependency
-        pass
-
-
 def run_benchmark_plan(
     plan_path: str | Path,
     *,
@@ -143,112 +50,93 @@ def run_benchmark_plan(
     warmup: int | None = None,
     repeat_count: int | None = None,
     output: str | Path | None = None,
-    encoder_factory: Callable[..., tuple[Any, Mapping[str, Any]]] = create_encoder_from_experiment,
+    encoder_factory: Callable[..., tuple[Any, Mapping[str, Any]]] | None = None,
     probe_fn: Callable[..., VideoInfo] = probe_video,
     decode_fn: Callable[..., np.ndarray] = decode_rgb_frames,
+    isolated_executor: Callable[[Any, Mapping[str, Any]], Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """串行加载每个 encoder case，运行后立即释放，避免多模型同时占用 A100。"""
+    """Run every real case in its registered Python; injected factories stay local.
+
+    Tests and narrow local adapters can inject ``encoder_factory``. The default
+    path uses the v2 environment registry, so CUDA telemetry comes from the
+    interpreter that loaded the model.
+    """
 
     root = Path(project_root).resolve()
-    plan = load_yaml(_resolve(root, plan_path))
+    resolved_plan_path = _resolve(root, plan_path)
+    plan = load_yaml(resolved_plan_path)
     benchmark = dict(plan.get("benchmark", {}))
     input_spec = dict(plan.get("input", {}))
     case_specs = list(plan.get("cases", ()))
     if not case_specs:
         raise ValueError("benchmark plan 至少需要一个 case")
     selected_video = _resolve(root, video or str(input_spec["video"]))
-    info = probe_fn(selected_video)
-    sample_fps = float(input_spec["sample_fps"])
-    sampled_frames = int(input_spec["sampled_frames"])
-    indices = _sample_indices(info, sample_fps, sampled_frames)
-    actual_stride = int(indices[1] - indices[0]) if len(indices) > 1 else 1
-    video_seconds = float((int(indices[-1]) - int(indices[0]) + actual_stride) / info.fps)
-
     settings = BenchmarkSettings(
         warmup=int(benchmark.get("warmup", 1) if warmup is None else warmup),
         repeat=int(benchmark.get("repeat", 5) if repeat_count is None else repeat_count),
         synchronize_cuda=bool(benchmark.get("synchronize_cuda", True)),
         device=device or benchmark.get("device"),
     )
-
-    case_results: list[dict[str, Any]] = []
-
-    for case_spec in case_specs:
-        experiment = _case_experiment(case_spec, root, device=settings.device)
-        adapter, definition = encoder_factory(experiment, project_root=root)
-        mode = str(case_spec["mode"])
-        grouping = case_spec["grouping"]
-        units = int(grouping["units"])
-        frames_per_unit = int(grouping["frames_per_unit"])
-        if units * frames_per_unit != sampled_frames:
-            raise ValueError(f"{case_spec['name']}: grouping 与 sampled_frames 不一致")
-
-        preprocess = partial(
-            _batch_groups,
-            indices=indices,
-            fps=info.fps,
-            video_id=selected_video.stem,
-            mode=mode,
-            units=units,
-            frames_per_unit=frames_per_unit,
-        )
-
-        workload = BenchmarkWorkload(
-            name=str(input_spec.get("sampling_protocol", "benchmark")),
-            mode=mode,
-            decode=partial(decode_fn, selected_video, indices),
-            preprocess=preprocess,
-            sampling={
-                **input_spec,
-                "source_fps": info.fps,
-                "actual_frame_stride": actual_stride,
-                "source_video_path": str(selected_video),
-            },
-            video_seconds=video_seconds,
-            task=str(input_spec.get("task", "encoder_performance_only")),
-        )
-        compression = compression_from_experiment(experiment) if mode == "streaming" else None
-        case = BenchmarkCase(
-            name=str(case_spec["name"]),
-            adapter=adapter,
-            workload=workload,
-            compression=compression,
-            config={
-                "case": case_spec,
-                "experiment": experiment,
-                "encoder_definition": definition,
-            },
-        )
-        try:
-            case_result = run_encoder_benchmark(case, settings)
-            _require_case_result(case_result, case_spec.get("result_requirements", {}))
-            case_results.append(case_result)
-        finally:
-            del case, adapter
-            _release_runtime()
-
-    result = {
-        "schema_version": PERFORMANCE_SCHEMA_VERSION,
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "settings": asdict(settings),
-        "comparison": assess_sampling_comparability(case_results),
-        "provenance": {
-            "machine": {
-                "hostname": platform.node(),
-                "system": platform.system(),
-                "release": platform.release(),
-                "machine": platform.machine(),
-                "processor": platform.processor(),
-                "python_version": platform.python_version(),
-                "python_implementation": platform.python_implementation(),
-                "python_executable": sys.executable,
-            },
-            "plan": str(_resolve(root, plan_path)),
-        },
-        "cases": case_results,
-    }
     destination = _resolve(root, output or str(benchmark["output"]))
-    write_performance_result(result, destination)
+    with record_stage(
+        destination.parent,
+        "benchmark",
+        config=plan,
+        inputs={"plan": resolved_plan_path, "video": selected_video},
+        project_root=root,
+    ) as stage:
+        case_results: list[dict[str, Any]] = []
+        for case_spec in case_specs:
+            if encoder_factory is None:
+                result = run_isolated_benchmark_case(
+                    case_spec,
+                    root=root,
+                    selected_video=selected_video,
+                    input_spec=input_spec,
+                    settings=settings,
+                    executor=isolated_executor,
+                    diagnostics_dir=destination.parent,
+                )
+            else:
+                result = run_benchmark_case(
+                    case_spec,
+                    root=root,
+                    selected_video=selected_video,
+                    input_spec=input_spec,
+                    settings=settings,
+                    encoder_factory=encoder_factory,
+                    probe_fn=probe_fn,
+                    decode_fn=decode_fn,
+                )
+            _require_case_result(result, case_spec.get("result_requirements", {}))
+            case_results.append(result)
+
+        result = {
+            "schema_version": PERFORMANCE_SCHEMA_VERSION,
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "settings": asdict(settings),
+            "comparison": assess_sampling_comparability(case_results),
+            "provenance": {
+                "machine": {
+                    "hostname": platform.node(),
+                    "system": platform.system(),
+                    "release": platform.release(),
+                    "machine": platform.machine(),
+                    "processor": platform.processor(),
+                    "python_version": platform.python_version(),
+                    "python_implementation": platform.python_implementation(),
+                    "python_executable": sys.executable,
+                },
+                "plan": str(resolved_plan_path),
+            },
+            "cases": case_results,
+        }
+        write_performance_result(result, destination)
+        stage["outputs"] = {"performance": file_identity(destination, project_root=root)}
+        stage["summary"] = {
+            "case_count": len(case_results),
+            "comparison_comparable": result["comparison"]["comparable"],
+        }
     return result
 
 

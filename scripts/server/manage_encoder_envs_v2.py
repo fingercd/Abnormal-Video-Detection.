@@ -348,6 +348,10 @@ def main(argv: list[str] | None = None) -> int:
     else:
         payload = verify(output_root)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
+    if args.command == "verify" and any(
+        group["status"] != "verified" for group in payload["groups"]
+    ):
+        return 1
     return 0
 
 

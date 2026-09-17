@@ -149,6 +149,7 @@ def test_weak_checkpoint_is_rebuilt_and_writes_full_coverage_jsonl(
     assert [(item.frame_start, item.frame_end) for item in records] == [(0, 2), (2, 4)]
     assert [item.anomaly_score for item in records] == pytest.approx([0.5, 0.5])
     assert all(item.encoder_fingerprint == fingerprint for item in records)
+    assert all(item.metadata["ground_truth_scope"] == "video" for item in records)
     rows = [
         PredictionRecord.from_dict(json.loads(line))
         for line in output.read_text(encoding="utf-8").splitlines()

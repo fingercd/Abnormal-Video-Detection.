@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import importlib.metadata
 import json
 import math
@@ -13,6 +14,7 @@ import subprocess
 import sys
 import uuid
 from collections.abc import Iterable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -31,7 +33,8 @@ PREDICTION_SCHEMA_VERSION = "vadbench.prediction.v1"
 CACHE_TELEMETRY_SCHEMA_VERSION = "vadbench.cache-telemetry.v1"
 
 _SECRET_KEY = re.compile(
-    r"(?:password|passwd|secret|token|api[_-]?key|cookie|credential|authorization)", re.I
+    r"(?:^|[_-])(?:password|passwd|secret|token|api[_-]?key|cookie|credentials?|authorization)$",
+    re.I,
 )
 
 
@@ -74,11 +77,17 @@ def collect_git_provenance(repository: str | os.PathLike[str] | None = None) -> 
         return {"available": False}
     branch = _run_git(["branch", "--show-current"], cwd) or None
     status = _run_git(["status", "--porcelain", "--untracked-files=no"], cwd)
+    code_digest = hashlib.sha256()
+    for folder in ("src", "scripts"):
+        for path in sorted((cwd / folder).rglob("*.py")):
+            code_digest.update(path.relative_to(cwd).as_posix().encode("utf-8"))
+            code_digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
     return {
         "available": True,
         "commit": commit,
         "branch": branch,
         "dirty": bool(status),
+        "source_sha256": code_digest.hexdigest(),
     }
 
 
@@ -100,8 +109,65 @@ def collect_runtime_provenance(
 
 
 def new_run_id(prefix: str = "run") -> str:
-    timestamp = utc_now_iso().replace("-", "").replace(":", "").replace(".", "").replace("Z", "Z")
+    timestamp = utc_now_iso().replace("-", "").replace(":", "").replace(".", "")
     return f"{prefix}-{timestamp}-{uuid.uuid4().hex[:8]}"
+
+
+def file_identity(path: str | Path, *, project_root: str | Path = ".") -> dict[str, Any]:
+    """Keep content identity separate from the machine-specific location."""
+
+    from .checkpoints import sha256_file
+
+    source = Path(path).resolve()
+    root = Path(project_root).resolve()
+    logical_path = (
+        source.relative_to(root).as_posix() if source.is_relative_to(root) else source.name
+    )
+    return {
+        "path": logical_path,
+        "location": str(source),
+        "exists": source.is_file(),
+        "sha256": sha256_file(source) if source.is_file() else None,
+    }
+
+
+@contextmanager
+def record_stage(
+    output_dir: str | Path,
+    stage: str,
+    *,
+    config: Mapping[str, Any],
+    inputs: Mapping[str, str | Path | None],
+    project_root: str | Path = ".",
+) -> Iterator[dict[str, Any]]:
+    """Persist each attempt independently, including failures before model loading."""
+
+    run = RunProvenance(
+        run_id=new_run_id(stage),
+        config=config,
+        git=collect_git_provenance(project_root),
+    ).to_dict()
+    run.update(schema_version="vadbench.stage.v1", stage=stage, status="running")
+    run["config_sha256"] = hashlib.sha256(
+        json.dumps(run["config"], sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    destination = Path(output_dir) / "provenance" / "stages" / f"{run['run_id']}.json"
+    atomic_write_json(destination, run)
+    try:
+        run["inputs"] = {
+            key: file_identity(path, project_root=project_root)
+            for key, path in inputs.items()
+            if path is not None
+        }
+        yield run
+    except BaseException as exc:
+        run.update(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
+        raise
+    else:
+        run["status"] = "completed"
+    finally:
+        run["finished_at"] = utc_now_iso()
+        atomic_write_json(destination, run)
 
 
 @dataclass(frozen=True)

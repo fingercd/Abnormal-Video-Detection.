@@ -2,15 +2,13 @@
 
 Importing this package only imports the dependency-free adapter facade.  The
 actual upstream model packages are loaded only when an adapter is constructed
-with an explicit local loader, checkout entrypoint, injected worker, or worker
-command.
+with an explicit local loader, checkout entrypoint, or injected worker.
 """
 
 from .base import (
     DEFAULT_NEUTRAL_PROMPT,
     ExternalAssetError,
     ExternalFixedVideoAdapter,
-    ExternalPythonWorker,
     ExternalStreamingVideoAdapter,
     ExternalWorkerError,
     LongVideoAssetError,
@@ -31,7 +29,6 @@ __all__ = [
     "DEFAULT_NEUTRAL_PROMPT",
     "ExternalAssetError",
     "ExternalFixedVideoAdapter",
-    "ExternalPythonWorker",
     "ExternalStreamingVideoAdapter",
     "ExternalWorkerError",
     "LongVUAdapter",

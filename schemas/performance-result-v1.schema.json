@@ -921,6 +921,24 @@
         "config_sha256": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["group", "python_executable", "overlay"],
+          "properties": {
+            "group": {
+              "type": "string",
+              "minLength": 1
+            },
+            "python_executable": {
+              "type": "string",
+              "minLength": 1
+            },
+            "overlay": {
+              "type": ["string", "null"]
+            }
+          }
         }
       }
     },

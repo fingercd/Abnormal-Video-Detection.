@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import shutil
@@ -15,11 +14,16 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from vadbench.checkpoints import (  # noqa: E402
+    CheckpointError,
+    CheckpointSpec,
+    load_checkpoint_registry,
+    sha256_file,
+    verify_checkpoint,
+)
 from vadbench.config import load_yaml  # noqa: E402
 from vadbench.environment_registry import (  # noqa: E402
     load_encoder_candidates,
@@ -28,32 +32,43 @@ from vadbench.environment_registry import (  # noqa: E402
 from vadbench.integrations.catalog import load_default_integration_catalog  # noqa: E402
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def resolve_asset_file(local_path: Path, relative: str) -> Path:
-    if local_path.is_file():
-        return local_path
-    return local_path / relative
-
-
-def verify_entry(entry: dict[str, Any]) -> dict[str, Any]:
+def local_asset_path(entry: dict[str, Any]) -> Path:
     local = Path(str(entry["local_path"]))
-    if not local.is_absolute():
-        local = PROJECT_ROOT / local
+    return local if local.is_absolute() else PROJECT_ROOT / local
+
+
+def checkpoint_root(entry: dict[str, Any], spec: CheckpointSpec) -> Path:
+    local = local_asset_path(entry)
+    if len(spec.sha256) == 1 and local.name in spec.sha256:
+        return local.parent
+    return local
+
+
+def resolve_asset_file(entry: dict[str, Any], relative: str, spec: CheckpointSpec) -> Path:
+    local = local_asset_path(entry)
+    if len(spec.sha256) == 1 and local.name == relative:
+        return local
+    return checkpoint_root(entry, spec) / relative
+
+
+def verify_entry(entry: dict[str, Any], spec: CheckpointSpec) -> dict[str, Any]:
+    root = checkpoint_root(entry, spec)
+    try:
+        actual = verify_checkpoint(spec, root)
+        status = "verified"
+        error = None
+    except CheckpointError as exc:
+        actual = {}
+        status = "missing_or_mismatch"
+        error = str(exc)
     files = []
-    passed = bool(entry.get("sha256"))
-    for relative, expected in dict(entry.get("sha256", {})).items():
-        path = resolve_asset_file(local, str(relative))
+    for relative, expected in spec.sha256.items():
+        path = resolve_asset_file(entry, relative, spec)
         exists = path.is_file()
-        actual = sha256_file(path) if exists else None
-        match = exists and actual == str(expected).lower()
-        passed = passed and match
+        digest = actual.get(relative) if exists else None
+        if digest is None and exists:
+            digest = sha256_file(path)
+        match = exists and digest == expected
         files.append(
             {
                 "path": path.relative_to(PROJECT_ROOT).as_posix()
@@ -62,11 +77,11 @@ def verify_entry(entry: dict[str, Any]) -> dict[str, Any]:
                 "exists": exists,
                 "size_bytes": path.stat().st_size if exists else None,
                 "expected_sha256": expected,
-                "actual_sha256": actual,
+                "actual_sha256": digest,
                 "match": match,
             }
         )
-    return {"status": "verified" if passed else "missing_or_mismatch", "files": files}
+    return {"status": status, "files": files, "error": error}
 
 
 def verify_checkout(candidate: dict[str, Any], definition_path: str) -> dict[str, Any]:
@@ -94,20 +109,33 @@ def verify_checkout(candidate: dict[str, Any], definition_path: str) -> dict[str
             "revision": revision,
             "path": checkout.as_posix(),
         }
-    actual = None
-    if (checkout / ".git").exists():
-        completed = subprocess.run(
-            ["git", "-C", str(checkout), "rev-parse", "HEAD"],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if completed.returncode == 0:
-            actual = completed.stdout.strip()
+    if not revision:
+        return {
+            "status": "revision_missing",
+            "repository": repository,
+            "revision": revision,
+            "actual_revision": None,
+            "path": checkout.as_posix(),
+        }
+    if not (checkout / ".git").exists():
+        return {
+            "status": "git_metadata_missing",
+            "repository": repository,
+            "revision": revision,
+            "actual_revision": None,
+            "path": checkout.as_posix(),
+        }
+    completed = subprocess.run(
+        ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    actual = completed.stdout.strip() if completed.returncode == 0 else None
     status = (
         "verified"
-        if actual is None or revision is None or actual == revision
-        else "revision_mismatch"
+        if actual == revision
+        else ("head_unavailable" if actual is None else "revision_mismatch")
     )
     return {
         "status": status,
@@ -131,6 +159,7 @@ def disk_guard(expected_bytes: int = 0) -> None:
 def acquire_huggingface(
     candidate: dict[str, Any],
     entry: dict[str, Any],
+    spec: CheckpointSpec,
     cache_root: Path,
 ) -> dict[str, Any]:
     from huggingface_hub import snapshot_download
@@ -142,8 +171,8 @@ def acquire_huggingface(
         raise RuntimeError("missing Hugging Face repo_id or revision")
     expected_size = int(checkpoint.get("expected_size_bytes") or 0)
     disk_guard(expected_size)
-    final = PROJECT_ROOT / str(entry["local_path"])
-    if final.exists():
+    final = local_asset_path(entry)
+    if final.exists() or final.is_symlink():
         raise RuntimeError(f"refusing to overwrite existing asset path: {final}")
     temporary = cache_root / "downloads" / candidate["id"]
     temporary.mkdir(parents=True, exist_ok=True)
@@ -157,9 +186,10 @@ def acquire_huggingface(
             cache_dir=str(cache_root / "huggingface"),
             max_workers=1,
         )
+        verify_checkpoint(spec, staging)
         final.parent.mkdir(parents=True, exist_ok=True)
         os.replace(staging, final)
-        return {"status": "downloaded_pending_registry_hash", "path": str(final)}
+        return {"status": "downloaded_verified", "path": str(final)}
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
@@ -181,9 +211,8 @@ def main(argv: list[str] | None = None) -> int:
     unknown = selected - {item["id"] for item in candidates}
     if unknown:
         raise SystemExit(f"unknown encoder ids: {sorted(unknown)}")
-    checkpoint_data = yaml.safe_load(
-        (PROJECT_ROOT / "registry/checkpoints.yaml").read_text(encoding="utf-8")
-    )["checkpoints"]
+    checkpoint_data = load_yaml(PROJECT_ROOT / "registry/checkpoints.yaml")["checkpoints"]
+    checkpoint_specs = load_checkpoint_registry(PROJECT_ROOT / "registry/checkpoints.yaml")
     catalog = load_default_integration_catalog(PROJECT_ROOT)
     records = {record.id: record for record in catalog.integrations}
     runtime_candidates = [
@@ -196,9 +225,10 @@ def main(argv: list[str] | None = None) -> int:
     for candidate in runtime_candidates:
         checkpoint_id = candidate["checkpoint"]["registry_id"]
         entry = checkpoint_data[checkpoint_id]
+        spec = checkpoint_specs[checkpoint_id]
         checkout = verify_checkout(candidate, records[candidate["id"]].definition)
-        verified = verify_entry(entry)
-        if verified["status"] == "verified":
+        verified = verify_entry(entry, spec)
+        if verified["status"] == "verified" and checkout["status"] in {"verified", "not_required"}:
             items.append(
                 {
                     "integration_id": candidate["id"],
@@ -215,24 +245,34 @@ def main(argv: list[str] | None = None) -> int:
             args.execute
             and candidate["license_state"] == "verified"
             and entry.get("source") == "huggingface"
+            and checkout["status"] in {"verified", "not_required"}
         )
         if can_auto:
             try:
-                acquired = acquire_huggingface(candidate, entry, environment.cache_root)
+                acquired = acquire_huggingface(candidate, entry, spec, environment.cache_root)
             except Exception as exc:
                 reason = f"{type(exc).__name__}: {exc}"
         else:
-            reason = (
-                "automatic download disabled"
-                if not args.execute
-                else "manual or license-gated asset"
-            )
+            if checkout["status"] not in {"verified", "not_required"}:
+                reason = f"code checkout is {checkout['status']}"
+            elif not args.execute:
+                reason = "automatic download disabled"
+            else:
+                reason = "manual or license-gated asset"
         if acquired is not None:
+            verified_after_download = verify_entry(entry, spec)
             items.append(
                 {
                     "integration_id": candidate["id"],
                     "checkpoint_id": checkpoint_id,
-                    **acquired,
+                    "status": (
+                        "verified_existing"
+                        if verified_after_download["status"] == "verified"
+                        else "missing_or_mismatch"
+                    ),
+                    "code": checkout,
+                    "files": verified_after_download["files"],
+                    "acquisition": acquired,
                 }
             )
         else:
@@ -241,6 +281,7 @@ def main(argv: list[str] | None = None) -> int:
                 "checkpoint_id": checkpoint_id,
                 "status": "manual_required",
                 "reason": reason,
+                "asset": verified,
                 "official_repo": candidate["checkpoint"].get("repo_url"),
                 "code": checkout,
                 "code_incoming_path": (environment.new_external_root / candidate["id"]).as_posix(),
@@ -287,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     print(json.dumps(asset_payload, ensure_ascii=False, indent=2))
-    return 0
+    return 0 if items and all(item["status"] == "verified_existing" for item in items) else 1
 
 
 if __name__ == "__main__":

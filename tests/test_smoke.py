@@ -25,7 +25,13 @@ def test_cli_smoke_writes_selected_output(tmp_path: Path, monkeypatch, capsys) -
         captured["config"] = config
         return {"status": "smoke_pass", "encoder": {"id": "fake"}}
 
+    def fake_writer(result, output):
+        path = Path(output)
+        path.write_text(json.dumps(result), encoding="utf-8")
+        return path
+
     monkeypatch.setattr(cli, "run_encoder_smoke_v2", fake_smoke)
+    monkeypatch.setattr(cli, "write_smoke_result_v2", fake_writer)
     output = tmp_path / "result.json"
     assert (
         cli.main(

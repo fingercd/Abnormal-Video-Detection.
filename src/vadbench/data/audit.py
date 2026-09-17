@@ -17,6 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypeAlias
 
+import yaml
+
+from vadbench.hashing import sha256_file
+from vadbench.hashing import sha256_file as _sha256_file
+
 from .manifest import (
     DatasetSplit,
     ManifestError,
@@ -24,10 +29,14 @@ from .manifest import (
     VideoManifestRecord,
     canonical_video_id,
 )
-from .ucf_crime import UCF_CRIME_CATEGORIES
+from .ucf_crime import (
+    UCF_CRIME_CATEGORIES,
+    parse_ucf_split_file,
+    parse_ucf_temporal_annotations,
+)
 from .video import VideoInfo, probe_video
 
-DATASET_AUDIT_SCHEMA_VERSION = "vadbench.dataset-audit.v1"
+DATASET_AUDIT_SCHEMA_VERSION = "vadbench.dataset-audit.v2"
 
 OFFICIAL_UCF_CRIME_COUNTS: Mapping[str, Mapping[str, int]] = {
     "train": {"total": 1610, "normal": 800, "anomaly": 810},
@@ -68,6 +77,184 @@ def _source_label(source: ManifestSource) -> str:
     if isinstance(source, (str, Path)):
         return str(source)
     return "<in-memory>"
+
+
+def compute_manifest_sha256(records: Iterable[VideoManifestRecord]) -> str:
+    """Hash canonical manifest semantics, independent of JSONL whitespace."""
+
+    payload = json.dumps(
+        [record.to_dict() for record in records],
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _identity_sha256(value: Any) -> str:
+    payload = json.dumps(
+        value,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def verify_official_source_identity(
+    records_by_split: Mapping[str, tuple[VideoManifestRecord, ...]],
+    *,
+    registry_path: str | Path,
+    errors: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Verify manifests against the repository-pinned official protocol files."""
+
+    registry = Path(registry_path).expanduser().resolve()
+    result: dict[str, Any] = {
+        "status": "unavailable",
+        "registry": str(registry),
+        "source_commit": None,
+        "train_split": None,
+        "temporal_test_annotations": None,
+        "train_identity_sha256": None,
+        "test_identity_sha256": None,
+    }
+    try:
+        payload = yaml.safe_load(registry.read_text(encoding="utf-8"))
+        specification = payload["datasets"]["ucf-crime"]
+        files = specification["files"]
+        source_commit = str(specification["source"]["commit"])
+        result["source_commit"] = source_commit
+    except (OSError, TypeError, KeyError, yaml.YAMLError) as exc:
+        errors.append(
+            _issue(
+                "official_source_unavailable",
+                f"无法读取 UCF-Crime 官方来源登记：{exc}",
+                path=str(registry),
+            )
+        )
+        return result
+
+    project_root = registry.parent.parent
+    resolved_files: dict[str, Path] = {}
+    for name in ("train_split", "temporal_test_annotations"):
+        file_spec = files.get(name)
+        if not isinstance(file_spec, Mapping):
+            errors.append(
+                _issue("official_source_unavailable", f"dataset registry 缺少 {name} 登记")
+            )
+            return result
+        raw_path = file_spec.get("local_path")
+        expected_sha256 = str(file_spec.get("sha256", ""))
+        if not isinstance(raw_path, str) or not raw_path or len(expected_sha256) != 64:
+            errors.append(
+                _issue(
+                    "official_source_unavailable", f"dataset registry 的 {name} 缺少路径或 SHA256"
+                )
+            )
+            return result
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = project_root / path
+        path = path.resolve()
+        if not path.is_file():
+            errors.append(
+                _issue(
+                    "official_source_unavailable",
+                    f"冻结的官方协议文件不存在：{path}",
+                    path=str(path),
+                )
+            )
+            return result
+        actual_sha256 = sha256_file(path)
+        result[name] = {
+            "path": str(path),
+            "expected_sha256": expected_sha256,
+            "actual_sha256": actual_sha256,
+        }
+        if actual_sha256 != expected_sha256:
+            errors.append(
+                _issue(
+                    "official_source_checksum_mismatch",
+                    f"冻结的官方协议文件 SHA256 不匹配：{path}",
+                    path=str(path),
+                    details={"expected": expected_sha256, "actual": actual_sha256},
+                )
+            )
+            return result
+        resolved_files[name] = path
+
+    try:
+        official_train = parse_ucf_split_file(resolved_files["train_split"], DatasetSplit.TRAIN)
+        official_test = parse_ucf_temporal_annotations(resolved_files["temporal_test_annotations"])
+    except Exception as exc:
+        errors.append(
+            _issue(
+                "official_source_invalid",
+                f"冻结的官方协议文件无法解析：{exc}",
+                details={"exception_type": type(exc).__name__},
+            )
+        )
+        return result
+
+    train_identity = [
+        {
+            "video_id": canonical_video_id(item.video_id),
+            "category": item.category,
+        }
+        for item in official_train
+    ]
+    test_identity = [
+        {
+            "video_id": key,
+            "category": item.category,
+            "spans": [[span.start, span.end] for span in item.spans],
+        }
+        for key, item in official_test.items()
+    ]
+    result["train_identity_sha256"] = _identity_sha256(train_identity)
+    result["test_identity_sha256"] = _identity_sha256(test_identity)
+
+    mismatches: list[str] = []
+    for split, source_rows in (("train", train_identity), ("test", test_identity)):
+        if split not in records_by_split:
+            continue
+        manifests = {canonical_video_id(item.video_id): item for item in records_by_split[split]}
+        if set(manifests) != {item["video_id"] for item in source_rows}:
+            mismatches.append(f"{split}_video_set")
+            continue
+        for source in source_rows:
+            record = manifests[source["video_id"]]
+            if record.category != source["category"] or record.is_anomaly != (
+                source["category"] != "Normal"
+            ):
+                mismatches.append(f"{split}_label:{record.video_id}")
+                break
+            if split == "test":
+                spans = [
+                    [a.span.start, a.span.end]
+                    for a in record.annotations
+                    if a.scope == SupervisionScope.FRAME
+                    and a.is_anomaly is True
+                    and a.span is not None
+                ]
+                if spans != source["spans"]:
+                    mismatches.append(f"test_truth:{record.video_id}")
+                    break
+    if mismatches:
+        errors.append(
+            _issue(
+                "official_source_manifest_mismatch",
+                "manifest 的视频集合、类别或测试区间与冻结官方来源不一致",
+                details={"mismatches": mismatches[:10]},
+            )
+        )
+        result["status"] = "mismatch"
+        return result
+    result["status"] = "verified"
+    return result
 
 
 def _load_manifest_source(
@@ -183,14 +370,6 @@ def _duplicate_groups(
         if len(occurrences) > 1
     ]
     return duplicate_ids, duplicate_paths
-
-
-def _sha256_file(path: Path, *, chunk_bytes: int = 8 * 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(chunk_bytes):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _observed_counts(records: Iterable[VideoManifestRecord]) -> dict[str, int]:
@@ -385,6 +564,7 @@ def audit_ucf_crime_dataset(
     deep_hash: bool = False,
     probe_fn: ProbeFunction = probe_video,
     backend: Any | None = None,
+    official_source_registry: str | Path = "registry/datasets.yaml",
 ) -> dict[str, Any]:
     """审计真实 UCF-Crime 数据、官方划分、容器元数据和可选内容哈希。
 
@@ -399,6 +579,7 @@ def audit_ucf_crime_dataset(
         deep_hash: 仅为 ``True`` 时读取每个完整视频并计算 SHA256。
         probe_fn: 默认使用只探测容器的 :func:`probe_video`；参数用于测试或后端适配。
         backend: 原样传递给 ``probe_fn`` 的可选视频后端。
+        official_source_registry: 冻结官方 split/temporal 文件路径与 SHA256 的登记表。
     """
 
     if not isinstance(deep_hash, bool):
@@ -439,6 +620,11 @@ def audit_ucf_crime_dataset(
             errors=errors,
         ),
     }
+    official_source_identity = verify_official_source_identity(
+        records_by_split,
+        registry_path=official_source_registry,
+        errors=errors,
+    )
 
     for source_split, records in records_by_split.items():
         expected_enum = DatasetSplit(source_split)
@@ -719,6 +905,11 @@ def audit_ucf_crime_dataset(
             "train": _source_label(train_manifest),
             "test": _source_label(test_manifest),
         },
+        "manifest_sha256": {
+            "train": compute_manifest_sha256(records_by_split["train"]),
+            "test": compute_manifest_sha256(records_by_split["test"]),
+        },
+        "official_source_identity": official_source_identity,
         "deep_hash": deep_hash,
         "status": status,
         "passed": passed,
@@ -769,4 +960,5 @@ __all__ = [
     "DATASET_AUDIT_SCHEMA_VERSION",
     "OFFICIAL_UCF_CRIME_COUNTS",
     "audit_ucf_crime_dataset",
+    "compute_manifest_sha256",
 ]

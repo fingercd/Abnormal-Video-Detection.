@@ -74,11 +74,10 @@ def execute_request(
     request: WorkerRequest,
     clips: Sequence[ClipBatch],
     *,
-    registry: EncoderRegistry = ENCODER_REGISTRY,
+    adapter: Any,
 ) -> EncoderOutput | StreamExecution:
-    """Instantiate one trusted registry ID and execute one fixed/stream request."""
+    """Execute one fixed/stream request with its already constructed adapter."""
 
-    adapter = registry.create(request.encoder_id, **dict(request.adapter_kwargs))
     capabilities = adapter.capabilities
     if request.operation == "encode":
         if len(clips) != 1:
@@ -202,15 +201,7 @@ def run_worker_once(
         return 1
 
     try:
-        # execute_request owns the public create path.  A tiny one-entry registry
-        # preserves the same validation while avoiding a second instantiation.
-        one = EncoderRegistry()
-        one.register_factory(
-            request.encoder_id,
-            lambda **_ignored_kwargs: adapter,
-            capabilities=adapter.capabilities,
-        )
-        result = execute_request(request, clips, registry=one)
+        result = execute_request(request, clips, adapter=adapter)
     except Exception as exc:
         _write_error_response(
             store,

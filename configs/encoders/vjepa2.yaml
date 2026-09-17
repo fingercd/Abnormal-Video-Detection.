@@ -12,6 +12,7 @@ constructor:
   feature_stage: backbone_tokens
   preprocess_profile: vjepa2-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: facebook/vjepa2-vitl-fpc64-256
   revision: b3c1679b7c34d3255ef3547f27c7b226aefab26f

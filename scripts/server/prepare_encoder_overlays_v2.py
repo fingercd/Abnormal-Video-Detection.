@@ -91,7 +91,26 @@ def hash_overlay(path: Path) -> str:
         if file.name == ".overlay-v2.json":
             continue
         digest.update(file.relative_to(path).as_posix().encode())
-        digest.update(str(file.stat().st_size).encode())
+        with file.open("rb") as handle:
+            for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+                digest.update(block)
+    return digest.hexdigest()
+
+
+def hash_sources(sources: list[tuple[Path, tuple[str, ...]]]) -> str:
+    digest = hashlib.sha256()
+    for source_root, names in sources:
+        for name in names:
+            source = source_root / name
+            digest.update(name.encode())
+            if source.is_dir():
+                digest.update(hash_overlay(source).encode())
+            elif source.is_file():
+                with source.open("rb") as handle:
+                    for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+                        digest.update(block)
+            else:
+                raise FileNotFoundError(source)
     return digest.hexdigest()
 
 
@@ -127,6 +146,12 @@ def populate(encoder_ids: list[str] | None = None) -> dict[str, Any]:
         copied = list(existing_marker.get("copied", [])) if existing_marker else []
         sources = [(Path(spec["source"]), spec["names"])]
         sources.extend(spec.get("extra_sources", ()))
+        source_fingerprint = hash_sources(sources)
+        if existing_marker is not None and (
+            existing_marker.get("fingerprint") != hash_overlay(overlay)
+            or existing_marker.get("source_fingerprint") != source_fingerprint
+        ):
+            raise RuntimeError(f"refusing stale overlay: {overlay}")
         added = []
         for source_root, names in sources:
             for name in names:
@@ -140,6 +165,7 @@ def populate(encoder_ids: list[str] | None = None) -> dict[str, Any]:
                 copied.append(name)
                 added.append(name)
         requested = registry.overlays[encoder_id].get("packages", {})
+        fingerprint = hash_overlay(overlay)
         payload = {
             "schema_version": 2,
             "encoder_id": encoder_id,
@@ -148,6 +174,8 @@ def populate(encoder_ids: list[str] | None = None) -> dict[str, Any]:
             "copied": sorted(set(copied)),
             "requested_packages": requested,
             "mode": "known_working_copy",
+            "fingerprint": fingerprint,
+            "source_fingerprint": source_fingerprint,
         }
         marker.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
@@ -158,7 +186,7 @@ def populate(encoder_ids: list[str] | None = None) -> dict[str, Any]:
                 "encoder_id": encoder_id,
                 "status": "updated" if added else ("reused" if existing_marker else "created"),
                 "overlay": str(overlay),
-                "fingerprint": hash_overlay(overlay),
+                "fingerprint": fingerprint,
             }
         )
     return {"schema_version": 2, "items": items}

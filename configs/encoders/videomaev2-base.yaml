@@ -11,6 +11,7 @@ constructor:
   use_half: true
 
 checkpoint:
+  constructor_key: model_name
   source: huggingface
   model_id: OpenGVLab/VideoMAEv2-Base
   revision: 78c337a418cc4adaf7f1ff6c7ba343418393966b

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -51,6 +52,20 @@ class EncoderEnvironmentRegistry:
         if record is None:
             return None
         return _inside(self.root.parent.parent, record["path"], f"overlay {encoder_id}")
+
+
+@dataclass(frozen=True, slots=True)
+class EncoderRuntime:
+    """One encoder's declared isolated Python and import environment.
+
+    This is deliberately only environment selection. Callers decide whether a
+    missing interpreter is a blocked matrix item or a fatal benchmark error.
+    """
+
+    encoder_id: str
+    group: EncoderEnvironmentGroup
+    python: Path
+    overlay: Path | None
 
 
 def _inside(project_root: Path, value: str, label: str) -> Path:
@@ -171,3 +186,82 @@ def assert_new_environment_executable(
                 f"python executable points into protected environment: {selected}"
             )
     return selected
+
+
+def resolve_encoder_runtime(
+    encoder_id: str,
+    *,
+    project_root: str | Path = ".",
+    registry: EncoderEnvironmentRegistry | None = None,
+) -> EncoderRuntime:
+    """Select the declared v2 Python and optional overlay for one encoder."""
+
+    selected_registry = (
+        load_encoder_environment_registry(project_root) if registry is None else registry
+    )
+    group = selected_registry.group_for(encoder_id)
+    python = assert_new_environment_executable(group.prefix / "bin" / "python", selected_registry)
+    return EncoderRuntime(
+        encoder_id=encoder_id,
+        group=group,
+        python=python,
+        overlay=selected_registry.overlay_for(encoder_id),
+    )
+
+
+def build_encoder_runtime_environment(
+    runtime: EncoderRuntime,
+    *,
+    project_root: str | Path = ".",
+    registry: EncoderEnvironmentRegistry | None = None,
+    base_environment: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Build the reproducible process environment shared by v2 launchers.
+
+    The selected environment is isolated from an activating shell's virtualenv
+    and imports only the repository source plus its declared overlay.
+    """
+
+    root = Path(project_root).resolve()
+    selected_registry = load_encoder_environment_registry(root) if registry is None else registry
+    expected = resolve_encoder_runtime(
+        runtime.encoder_id, project_root=root, registry=selected_registry
+    )
+    if expected != runtime:
+        raise EncoderEnvironmentRegistryError(
+            f"runtime does not match registry selection for {runtime.encoder_id!r}"
+        )
+
+    environment = dict(os.environ if base_environment is None else base_environment)
+    import_paths = [str(root / "src")]
+    if runtime.overlay is not None:
+        import_paths.append(str(runtime.overlay))
+    if runtime.encoder_id == "videomamba":
+        import_paths.extend(
+            [
+                str(root / "external-v2" / "videomamba" / "mamba"),
+                str(root / "external-v2" / "videomamba" / "causal-conv1d"),
+            ]
+        )
+    cache_root = selected_registry.cache_root
+    cache_paths = {
+        "HF_HOME": cache_root / "huggingface",
+        "TORCH_HOME": cache_root / "torch",
+        "PIP_CACHE_DIR": cache_root / "pip",
+        "PYTHONPYCACHEPREFIX": cache_root / "pycache" / runtime.encoder_id,
+        "TMPDIR": cache_root / "tmp" / runtime.encoder_id,
+    }
+    for path in cache_paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+    environment.update({key: str(value) for key, value in cache_paths.items()})
+    environment.update(
+        {
+            "PYTHONPATH": os.pathsep.join(import_paths),
+            "PYTHONNOUSERSITE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "CONDA_PREFIX": str(runtime.python.parents[1]),
+            "LD_LIBRARY_PATH": str(runtime.python.parents[1] / "lib"),
+        }
+    )
+    environment.pop("VIRTUAL_ENV", None)
+    return environment

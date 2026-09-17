@@ -9,7 +9,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = PROJECT_ROOT / "src"
-HEAVY_ROOTS = ("torch", "transformers", "torchvision", "pytorchvideo")
+# Result validation must stay lazy: its rpds extension conflicts with OpenCV
+# during model import in the pinned foundation environment.
+HEAVY_ROOTS = ("torch", "transformers", "torchvision", "pytorchvideo", "jsonschema", "rpds")
 MARKER = "__VADBENCH_LOADED_MODULES__="
 
 

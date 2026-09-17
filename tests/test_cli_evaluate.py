@@ -71,6 +71,8 @@ def test_cli_evaluate_writes_frame_metrics(tmp_path: Path, capsys) -> None:
                 "evaluate",
                 "-c",
                 str(config_path),
+                "--protocol",
+                "subset",
                 "--predictions",
                 str(prediction_path),
                 "--output",
@@ -83,3 +85,20 @@ def test_cli_evaluate_writes_frame_metrics(tmp_path: Path, capsys) -> None:
     assert payload["metrics"]["frame_auc"] == 1.0
     assert output.is_file()
     assert output.with_name("frame_scores.npz").is_file()
+    assert payload["metrics"]["protocol"] == "ucf-crime/subset-frameauc-v1"
+    assert (
+        main(
+            [
+                "evaluate",
+                "-c",
+                str(config_path),
+                "--predictions",
+                str(prediction_path),
+                "--output",
+                str(tmp_path / "official.json"),
+            ]
+        )
+        == 2
+    )
+    attempts = [json.loads(p.read_text()) for p in (tmp_path / "provenance/stages").glob("*.json")]
+    assert attempts[-1]["status"] == "failed"

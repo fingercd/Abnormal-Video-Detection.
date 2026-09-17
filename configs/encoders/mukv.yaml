@@ -18,6 +18,7 @@ constructor:
   upstream_entrypoint: mukv/model.py:load_model
   preprocess_profile: mukv-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: local_upstream
   model_id: IMBALDY/MuKV
   revision: 2127b875ea1c2d91e4349324edbd779168a3da9e

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import tempfile
@@ -11,6 +10,8 @@ from dataclasses import asdict, dataclass, fields, is_dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from vadbench.hashing import sha256_file as _sha256
 
 try:  # The framework's extraction/metric path does not require PyTorch.
     import torch
@@ -206,14 +207,6 @@ class CheckpointArtifact:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _json_default(value: Any) -> Any:

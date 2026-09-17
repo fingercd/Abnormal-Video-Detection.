@@ -18,6 +18,9 @@ from vadbench.integrations.hermes import (
     import_hermes_load_model,
 )
 from vadbench.integrations.videomaev2 import VideoMAEv2Adapter
+from vadbench.integrations.videomaev2_encoder import (
+    VideoMAEv2Encoder as CanonicalVideoMAEv2Encoder,
+)
 from vadbench.registry import ENCODER_REGISTRY
 
 
@@ -267,7 +270,7 @@ def test_integrations_register_lazily_without_model_dependencies() -> None:
     assert hermes_adapter.capabilities == HERMES_LLAVA_OV_CAPABILITIES
 
 
-def test_videomaev2_reuses_legacy_encoder_and_exposes_sequence_and_pooling() -> None:
+def test_videomaev2_exposes_sequence_and_pooling() -> None:
     fake = _FakeVideoMAEEncoder()
     adapter = VideoMAEv2Adapter(encoder=fake, num_frames=16)
     batch = make_clip(frames=16)
@@ -299,6 +302,12 @@ def test_videomaev2_reuses_legacy_encoder_and_exposes_sequence_and_pooling() -> 
     padded_output = adapter.encode(padded)
     assert len(fake.last_clips[0]) == 16
     assert padded_output.timeline.start_s.shape == (1, 4)
+
+
+def test_legacy_videomaev2_import_reexports_canonical_implementation() -> None:
+    from lab_anomaly.models.vit_video_encoder import VideoMAEv2Encoder
+
+    assert VideoMAEv2Encoder is CanonicalVideoMAEv2Encoder
 
 
 def test_hermes_stream_step_captures_visual_tokens_and_decoder_kv() -> None:

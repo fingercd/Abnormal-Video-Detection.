@@ -1,0 +1,492 @@
+{
+  "record_type": "vadbench.documentation-audit.v1",
+  "host": "ibnode3",
+  "route": "node3 public SSH",
+  "project_root": "/users/fotile/VAD",
+  "git": {
+    "commit": "0badc3435e734a841110e29d497940bfda7cc707",
+    "branch": "qzt/refactor-vadbench-simplification",
+    "status_before": ""
+  },
+  "tracked_source_files": 147,
+  "tracked_document_files": 25,
+  "disk_bytes": {
+    "total": 7860702412800,
+    "used": 7365088833536,
+    "free": 495613579264
+  },
+  "gpu": {
+    "exit_code": 0,
+    "stdout": "0, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n1, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n2, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n3, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n4, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n5, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n6, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15\n7, NVIDIA A100-PCIE-40GB, 40960 MiB, 550.54.15",
+    "stderr": ""
+  },
+  "data": {
+    "path": "/users/fotile/VAD/data/raw/ucf_crime",
+    "is_symlink": true,
+    "resolved": "/users/fotile/datasets/UCF-Crime",
+    "exists": true,
+    "file_count": 0,
+    "ordinary_files_under_project_data": [
+      "data/.gitkeep",
+      "data/smoke/mlvu-surveil-8.mp4",
+      "data/smoke/surveillance-smoke.mp4"
+    ]
+  },
+  "scope": "Read-only source, environment and existing artifact inspection; no new model forward or benchmark.",
+  "observed_at": "2026-09-10T17:15:25.978004+00:00",
+  "default_manifests": {
+    "train": {
+      "path": "data/manifests/ucf_crime/train.jsonl",
+      "exists": false
+    },
+    "test": {
+      "path": "data/manifests/ucf_crime/test.jsonl",
+      "exists": false
+    }
+  },
+  "runtimes": {
+    ".venv": {
+      "exit_code": 0,
+      "python": "3.11.15",
+      "torch": "2.5.1+cu124",
+      "cuda": "12.4"
+    },
+    ".venv-hermes": {
+      "exit_code": 0,
+      "python": "3.11.15",
+      "torch": "2.5.1+cu124",
+      "cuda": "12.4"
+    },
+    ".encoder-envs/v2/classic-video-v2": {
+      "exit_code": 0,
+      "python": "3.10.20",
+      "torch": "2.3.0+cu121",
+      "cuda": "12.1"
+    },
+    ".encoder-envs/v2/foundation-video-v2": {
+      "exit_code": 0,
+      "python": "3.10.20",
+      "torch": "2.8.0",
+      "cuda": "12.9"
+    },
+    ".encoder-envs/v2/visual-vlm-v2": {
+      "exit_code": 0,
+      "python": "3.11.15",
+      "torch": "2.5.1+cu124",
+      "cuda": "12.4"
+    },
+    ".encoder-envs/v2/stream-kv-v2": {
+      "exit_code": 0,
+      "python": "3.11.15",
+      "torch": "2.5.1+cu124",
+      "cuda": "12.4"
+    }
+  },
+  "historical_results": {
+    "outputs/refactor/final-native-72faada/matrix-v2.json": {
+      "sha256": "6f550410dc14bbe487143366f2af8638200b0babed39d4feed55d312e38dfea1",
+      "counts": {
+        "skipped": 7,
+        "smoke_pass": 14
+      },
+      "device": "cpu",
+      "run_id": "20260903T170508Z-c12f08b5",
+      "items": [
+        {
+          "integration_id": "r2plus1d_18",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/r2plus1d_18/r2plus1d_18/result.json"
+        },
+        {
+          "integration_id": "x3d",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/x3d/x3d/result.json"
+        },
+        {
+          "integration_id": "mvitv2",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/mvitv2/mvitv2/result.json"
+        },
+        {
+          "integration_id": "slowfast",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/slowfast/slowfast/result.json"
+        },
+        {
+          "integration_id": "c3d",
+          "status": "skipped",
+          "reason": "manual_asset_missing"
+        },
+        {
+          "integration_id": "i3d",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/i3d/i3d/result.json"
+        },
+        {
+          "integration_id": "timesformer",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/timesformer/timesformer/result.json"
+        },
+        {
+          "integration_id": "video_swin",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/video_swin/video_swin/result.json"
+        },
+        {
+          "integration_id": "videomae",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/videomae/videomae/result.json"
+        },
+        {
+          "integration_id": "videomaev2",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/videomaev2/videomaev2/result.json"
+        },
+        {
+          "integration_id": "internvideo2",
+          "status": "skipped",
+          "reason": "manual_asset_missing"
+        },
+        {
+          "integration_id": "videomamba",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/videomamba/videomamba/result.json"
+        },
+        {
+          "integration_id": "vjepa2",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/vjepa2/vjepa2/result.json"
+        },
+        {
+          "integration_id": "longvu",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/longvu/longvu/result.json"
+        },
+        {
+          "integration_id": "videochat",
+          "status": "skipped",
+          "reason": "manual_asset_missing"
+        },
+        {
+          "integration_id": "videochat_online",
+          "status": "skipped",
+          "reason": "license_blocked"
+        },
+        {
+          "integration_id": "videochat_flash",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/videochat_flash/videochat_flash/result.json"
+        },
+        {
+          "integration_id": "ma_lmm",
+          "status": "skipped",
+          "reason": "manual_asset_missing"
+        },
+        {
+          "integration_id": "moviechat",
+          "status": "skipped",
+          "reason": "manual_asset_missing"
+        },
+        {
+          "integration_id": "streaming_vlm",
+          "status": "skipped",
+          "reason": "license_blocked"
+        },
+        {
+          "integration_id": "hermes_llava_ov",
+          "status": "smoke_pass",
+          "reason": null,
+          "technical_status": "smoke_pass",
+          "exit_code": 0,
+          "result_path": "outputs/refactor/final-native-72faada/hermes_llava_ov/hermes_llava_ov/result.json"
+        }
+      ]
+    },
+    "outputs/environment-migration-v2/native-smoke-matrix.json": {
+      "sha256": "0c5b6ae5e3bd50c07badaff0b574dfa04269f3b4fc428e6056c793ea67b27a47",
+      "counts": {
+        "blocked_license": 2,
+        "manual_required": 5,
+        "smoke_pass": 14,
+        "unregistered": 4
+      },
+      "device": null,
+      "run_id": null,
+      "items": [
+        {
+          "integration_id": "r2plus1d_18",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "x3d",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "mvitv2",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "slowfast",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "c3d",
+          "status": "manual_required"
+        },
+        {
+          "integration_id": "i3d",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "timesformer",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "video_swin",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "videomae",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "videomaev2",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "uniformerv2",
+          "status": "unregistered"
+        },
+        {
+          "integration_id": "umt",
+          "status": "unregistered"
+        },
+        {
+          "integration_id": "internvideo2",
+          "status": "manual_required"
+        },
+        {
+          "integration_id": "videomamba",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "vjepa2",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "longvu",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "videochat",
+          "status": "manual_required"
+        },
+        {
+          "integration_id": "videochat_online",
+          "status": "blocked_license"
+        },
+        {
+          "integration_id": "videochat_flash",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "ma_lmm",
+          "status": "manual_required"
+        },
+        {
+          "integration_id": "moviechat",
+          "status": "manual_required"
+        },
+        {
+          "integration_id": "streaming_vlm",
+          "status": "blocked_license"
+        },
+        {
+          "integration_id": "infinipot_v",
+          "status": "unregistered"
+        },
+        {
+          "integration_id": "hermes_llava_ov",
+          "status": "smoke_pass"
+        },
+        {
+          "integration_id": "mukv",
+          "status": "unregistered"
+        }
+      ]
+    }
+  },
+  "validation_scope": {
+    "new_model_forward": false,
+    "new_gpu_benchmark": false,
+    "weight_rehash": {
+      "scope": "registered files exercised by test_checkpoint_registry_25.py",
+      "node3_checkpoint_ids": [
+        "r2plus1d_18-default",
+        "mvitv2-default",
+        "video_swin-default",
+        "i3d-default",
+        "x3d-default",
+        "slowfast-default",
+        "videomaev2-base-hf",
+        "hermes-llava-ov-0.5b"
+      ],
+      "all_21_routes": false
+    },
+    "external_source_research": false,
+    "tracked_source_review": "server clean Git tree and identical local commit; source read by assigned modules",
+    "third_party_source_review": "upstream locks and project adapters; not exhaustive vendored third-party source review"
+  },
+  "validation": {
+    "windows_pytest": {
+      "command": ".venv/Scripts/python.exe -m pytest -q",
+      "passed": 366,
+      "skipped": 9,
+      "seconds": 26.64
+    },
+    "node3_pytest": {
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 374,
+      "skipped": 1,
+      "seconds": 18.19
+    },
+    "server_tool_targeted_pytest": {
+      "passed": 19
+    },
+    "script_syntax": {
+      "python": "passed",
+      "shell_bash_n": "passed"
+    },
+    "legacy_python_ast": {
+      "files": 20,
+      "status": "passed"
+    }
+  },
+  "reproductions": {
+    "extract_reference_config": {
+      "exit_code": 2,
+      "stderr": "error: checkpoint and checkpoint_id are mutually exclusive",
+      "method": "Real CLI and extraction engine with reference YAML/definition; adapter construction replaced to avoid loading weights; no video decoding reached."
+    },
+    "evaluate_gap": {
+      "prediction_covered_frames_per_video": 1,
+      "manifest_frames_per_video": 4,
+      "frame_scores": {
+        "normal": [
+          0.1,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "anomaly": [
+          0.9,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "metrics": {
+        "frame_auc": 0.53125,
+        "frame_ap": 0.625,
+        "num_frames": 8,
+        "num_positive_frames": 4,
+        "num_negative_frames": 4,
+        "num_videos": 2,
+        "roc_auc": 0.53125,
+        "average_precision": 0.625
+      },
+      "method": "Actual record evaluator on synthetic intervals; uncovered frames accepted and filled with zero."
+    },
+    "stale_runner_result": {
+      "schema_version": 1,
+      "kind": "offline_runner_stale_result_reproduction",
+      "scope": "Mocked runner dependencies and subprocess only; no GPU, model loading, environment mutation, or production-code change.",
+      "fixture_root": "outputs/docs-audit-2026-09-11/runner-stale-result-reproduction",
+      "reused_output_root": "outputs/docs-audit-2026-09-11/runner-stale-result-reproduction/reused-output-root",
+      "preexisting_result": "outputs/docs-audit-2026-09-11/runner-stale-result-reproduction/reused-output-root/videomaev2/prior-attempt/result.json",
+      "mock_subprocess": {
+        "returncode": 17,
+        "writes_result": false
+      },
+      "observed": {
+        "runner_main_return": 0,
+        "matrix_item_status": "smoke_pass",
+        "matrix_item_technical_status": "smoke_pass",
+        "matrix_item_exit_code": 17,
+        "selected_result_path": "outputs/docs-audit-2026-09-11/runner-stale-result-reproduction/reused-output-root/videomaev2/prior-attempt/result.json",
+        "launcher_log": "outputs/docs-audit-2026-09-11/runner-stale-result-reproduction/reused-output-root/videomaev2/launcher.log"
+      },
+      "conclusion": "A reused item directory lets the runner select a prior result.json after the current subprocess returns nonzero without creating a result. The stale smoke_pass sets item status to smoke_pass, and main returns 0 because no item status is failed.",
+      "code_locations": {
+        "reuse_directory": "scripts/server/run_native_encoder_matrix_v2.py:159-160",
+        "overwrite_launcher_log": "scripts/server/run_native_encoder_matrix_v2.py:186-189",
+        "discover_existing_results": "scripts/server/run_native_encoder_matrix_v2.py:190-200",
+        "exit_status": "scripts/server/run_native_encoder_matrix_v2.py:222-239"
+      }
+    }
+  },
+  "documentation_validation": {
+    "tracked_documents_before": 25,
+    "tracked_documents_updated": 25,
+    "new_documents": [
+      "docs/README.md",
+      "docs/architecture/current-system.md",
+      "docs/architecture/data-and-evaluation.md",
+      "docs/architecture/encoder-runtime.md",
+      "docs/operations/server.md",
+      "docs/operations/workflows.md",
+      "docs/progress/current-status.md",
+      "docs/reviews/2026-09-11-architecture-review.md"
+    ],
+    "documents_checked": 33,
+    "unchanged_tracked_documents": [],
+    "missing_links": [],
+    "bad_fences": [],
+    "command_examples_parsed": 16,
+    "bad_commands": [],
+    "changed_non_document_paths": [],
+    "preserved_existing_untracked": [
+      "docs/plans/2026-08-31-real-data-gpu-benchmark.md",
+      "tmp_repair_foundation.sh"
+    ]
+  }
+}

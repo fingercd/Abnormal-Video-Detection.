@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -22,4 +23,8 @@ def test_ucf_crime_registry_pins_official_protocol_files() -> None:
     }
     for file_spec in spec["files"].values():
         assert re.fullmatch(r"[0-9a-f]{64}", file_spec["sha256"])
+        assert Path(file_spec["local_path"]).is_relative_to("data/splits/ucf_crime")
+        source = Path(file_spec["local_path"])
+        assert source.is_file()
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == file_spec["sha256"]
     assert spec["coordinates"]["conversion"] == "[raw_start - 1, raw_end)"

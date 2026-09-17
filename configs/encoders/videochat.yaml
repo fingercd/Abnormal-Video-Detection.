@@ -16,6 +16,7 @@ constructor:
   upstream_entrypoint: video_chat/models/videollama.py:load_model
   preprocess_profile: videochat-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: OpenGVLab/VideoChat-7B
   revision: 4dd8210b030374bb0c510a57dfbe916f70d3ef71

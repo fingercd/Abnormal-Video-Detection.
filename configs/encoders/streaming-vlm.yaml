@@ -17,6 +17,7 @@ constructor:
   strict_assets: true
   preprocess_profile: streaming-vlm-bthwc-v1
 checkpoint:
+  constructor_key: model_path
   source: huggingface
   model_id: mit-han-lab/StreamingVLM
   revision: 7ac1cef46d20432053a9814838760318cb26b348

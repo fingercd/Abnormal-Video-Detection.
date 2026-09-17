@@ -35,6 +35,7 @@ from vadbench.contracts import (
     StreamStep,
     TokenTimeline,
 )
+from vadbench.hashing import sha256_file as _sha256_file
 from vadbench.integrations.common import validate_output_health
 
 PROTOCOL_NAME = "vadbench.external_python"
@@ -288,14 +289,6 @@ class ArraySidecarRef:
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> ArraySidecarRef:
         return cls(**_dataclass_kwargs(cls, value, name="array reference"))
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def _sha256_handle(handle: Any) -> str:

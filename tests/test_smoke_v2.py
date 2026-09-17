@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -131,15 +132,41 @@ def test_stream_v2_requires_two_steps_and_records_state(monkeypatch, fake_video:
     assert result["outputs"][1]["aux"]["stream_telemetry"] == {"step": 2}
 
 
-def test_v2_writer_is_atomic_contained_and_does_not_replace_success(tmp_path: Path) -> None:
-    result_path = tmp_path / "out" / "result.json"
-    first = {"status": "smoke_pass", "value": 1}
-    smoke.write_smoke_result_v2(first, result_path, output_root=tmp_path / "out")
-    smoke.write_smoke_result_v2(
-        {"status": "failed", "value": 2}, result_path, output_root=tmp_path / "out"
+def test_v2_writer_validates_and_requires_explicit_overwrite(monkeypatch, fake_video: Path) -> None:
+    monkeypatch.setattr(smoke, "probe_video", lambda path: _Info())
+    monkeypatch.setattr(smoke, "build_clip_batch", lambda *args, **kwargs: _batch(0))
+    first = smoke.run_encoder_smoke_v2(
+        {"encoder": {"adapter": "unit"}, "sampler": {"clip_frames": 2}},
+        fake_video,
+        project_root=fake_video.parent,
+        adapter_instance=_Fixed(),
+        run_id="unit-first",
     )
-    assert json.loads(result_path.read_text()) == first
+    result_path = fake_video.parent / "out" / "result.json"
+    smoke.write_smoke_result_v2(first, result_path, output_root=fake_video.parent / "out")
+    with pytest.raises(FileExistsError, match="显式允许覆盖"):
+        smoke.write_smoke_result_v2(first, result_path, output_root=fake_video.parent / "out")
+
+    second = deepcopy(first)
+    second["run_id"] = "unit-second"
+    smoke.write_smoke_result_v2(
+        second,
+        result_path,
+        output_root=fake_video.parent / "out",
+        overwrite_success=True,
+    )
+    assert json.loads(result_path.read_text())["run_id"] == "unit-second"
+    assert smoke.read_smoke_result_v2(result_path)["run_id"] == "unit-second"
+
+    with pytest.raises(ValueError, match="不符合 v2 schema"):
+        smoke.write_smoke_result_v2(
+            {"status": "failed"},
+            fake_video.parent / "out" / "invalid.json",
+            output_root=fake_video.parent / "out",
+        )
     with pytest.raises(ValueError):
         smoke.write_smoke_result_v2(
-            {"status": "failed"}, tmp_path / "outside.json", output_root=tmp_path / "out"
+            first,
+            fake_video.parent / "outside.json",
+            output_root=fake_video.parent / "out",
         )
