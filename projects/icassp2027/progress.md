@@ -6,7 +6,7 @@
 
 - 三个encoder的独立确认已完成并使用经独立审查的v3脚本分析。P16仅VideoMAEv2在当前
   32/32确认及matched条件下复现，g=0.780 [0.327,1.282]；TimeSformer和VideoMAE未通过。
-  P07也未通过预定的原始+matched联合条件。两条“四encoder共同性质”主张已不能成立，
+  P07也未通过预定的原始+matched联合条件。两条“四encoder共同性质”主张尚不能得到本轮证据支持，
   负结果记录于 [F01](decisions/findings/F01-relative-attention-update.md) 和
   [F02](decisions/findings/F02-midlayer-temporal-change.md)，不改方向/层挽救结果。
 - V-JEPA2主确认在任何本模型确认效果被读取前改为已有完整数据的本机CUDA：服务器上传实测

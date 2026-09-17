@@ -1,8 +1,9 @@
-# F01｜中层 attention 相对更新：模型内复现，跨模型主张被否定
+# F01｜中层 attention 相对更新：模型内复现，跨模型确认未通过
 
-状态：VideoMAEv2 `confirmed`（限定本数据/输入/层）；四 encoder 共性 `rejected`。
+状态：VideoMAEv2 `confirmed`（限定本数据/输入/层）；四 encoder 共性候选 `rejected`，
+指本轮预设确认门禁未通过，不是证明零效应或模型等价。
 V-JEPA2仍在执行，不能把尚未取得的结果填成支持或反对；已完成的TimeSformer和VideoMAE足以
-否定本次预冻结的“四个binding全部通过”主张。confirmed 不代表 actionable 或 deployable。
+使本次预冻结的“四个binding全部通过”门禁无法满足。confirmed 不代表 actionable 或 deployable。
 
 问题：正常与含异常的训练视频，其 attention 分支相对即时输入的更新强度是否不同？
 只使用官方训练视频级标签，W路径，无事件或空间真值。完整fit探索为64正常/64正视频，
