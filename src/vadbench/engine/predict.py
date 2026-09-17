@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
 from vadbench.artifacts import PredictionRecord
 from vadbench.checkpoints import sha256_file
+from vadbench.data.dense_sampling import aggregate_interval_scores
 from vadbench.data.features_dataset import FeatureDataset, build_feature_dataloader
 from vadbench.data.manifest import (
     VideoManifestRecord,
@@ -131,6 +132,162 @@ def _scores(step_output: Any, task_name: str) -> np.ndarray:
     return result.astype(np.float64, copy=False)
 
 
+def _compatibility_target(
+    permit: Any,
+    *,
+    checkpoint_path: str | Path,
+    checkpoint_metadata: Mapping[str, Any],
+    checkpoint_sha256: str,
+) -> dict[str, Any]:
+    """Validate the sole paper-scoped exception to exact cache matching.
+
+    The import stays local so ordinary prediction neither imports nor depends
+    on the paper package.  A structurally similar object is intentionally not
+    accepted: callers must issue the typed permit from ``vadbench.paper``.
+    """
+
+    from vadbench.paper.detection import PredictionCompatibilityPermit
+
+    if not isinstance(permit, PredictionCompatibilityPermit):
+        raise TypeError("compatibility_permit must be a paper PredictionCompatibilityPermit")
+    authorized = permit.authorize(
+        checkpoint_path=checkpoint_path,
+        checkpoint_metadata=checkpoint_metadata,
+        checkpoint_sha256=checkpoint_sha256,
+    )
+    if not isinstance(authorized, Mapping):  # Keep the boundary strict if the permit evolves.
+        raise TypeError("compatibility permit authorization must return a mapping")
+    target = authorized.get("target_encoder_fingerprint")
+    if not isinstance(target, str):
+        raise ValueError("compatibility permit did not authorize a target fingerprint")
+    return dict(authorized)
+
+
+def _aggregate_overlapping_records(
+    records: Iterable[PredictionRecord],
+    manifests: Mapping[str, VideoManifestRecord],
+    *,
+    reduction: Literal["mean", "max"],
+    strict_coverage: bool,
+) -> list[PredictionRecord]:
+    """Convert overlapping window predictions to one legal record per frame."""
+
+    grouped: dict[str, list[PredictionRecord]] = {}
+    for record in records:
+        grouped.setdefault(record.video_id, []).append(record)
+    aggregated: list[PredictionRecord] = []
+    for video_id, items in grouped.items():
+        manifest = manifests[video_id]
+        if manifest.num_frames is None:
+            raise ValueError(f"{video_id}: dense aggregation requires manifest num_frames")
+        if strict_coverage and manifest.fps is None:
+            raise ValueError(f"{video_id}: strict coverage requires manifest fps")
+        frame_starts = np.asarray([item.frame_start for item in items], dtype=np.int64)
+        frame_ends = np.asarray([item.frame_end for item in items], dtype=np.int64)
+        scores = np.asarray([item.anomaly_score for item in items], dtype=np.float64)
+        dense = aggregate_interval_scores(
+            frame_starts,
+            frame_ends,
+            scores,
+            num_frames=manifest.num_frames,
+            reduction=reduction,
+        )
+        first = items[0]
+        interval_start = 0
+        boundaries = [
+            index
+            for index in range(1, manifest.num_frames)
+            if dense.scores[index] != dense.scores[index - 1]
+            or dense.contributors[index] != dense.contributors[index - 1]
+        ]
+        for interval_end in [*boundaries, manifest.num_frames]:
+            score = dense.scores[interval_start]
+            contributors = dense.contributors[interval_start]
+            if manifest.fps is None:
+                start_s, end_s = float(interval_start), float(interval_end)
+            else:
+                start_s = interval_start / float(manifest.fps)
+                end_s = interval_end / float(manifest.fps)
+            metadata = dict(first.metadata)
+            metadata.update(
+                {
+                    "score_level": "frame",
+                    "source_clip_index": None,
+                    "ground_truth_scope": "video",
+                    "dense_aggregation": {
+                        "reduction": reduction,
+                        "contributing_windows": int(contributors),
+                        "interval_source": "exact_equal_frame_run",
+                    },
+                }
+            )
+            aggregated.append(
+                PredictionRecord(
+                    run_id=first.run_id,
+                    video_id=video_id,
+                    clip_id=f"{video_id}:frame-{interval_start:08d}-{interval_end:08d}",
+                    clip_index=interval_start,
+                    start_s=start_s,
+                    end_s=end_s,
+                    frame_start=interval_start,
+                    frame_end=interval_end,
+                    anomaly_score=float(score),
+                    predicted_label=bool(score >= 0.5),
+                    ground_truth=manifest.is_anomaly,
+                    encoder_fingerprint=first.encoder_fingerprint,
+                    metadata=metadata,
+                )
+            )
+            interval_start = interval_end
+        if strict_coverage:
+            validate_frame_coverage(
+                video_id=video_id,
+                clip_indices=np.asarray(
+                    [item.clip_index for item in aggregated if item.video_id == video_id]
+                ),
+                frame_starts=np.asarray(
+                    [item.frame_start for item in aggregated if item.video_id == video_id]
+                ),
+                frame_ends=np.asarray(
+                    [item.frame_end for item in aggregated if item.video_id == video_id]
+                ),
+                num_frames=manifest.num_frames,
+                fps=manifest.fps,
+                require_fps=True,
+            )
+    return aggregated
+
+
+def _verify_permitted_feature_identity(
+    dataset: FeatureDataset,
+    expected: Mapping[str, Any],
+) -> None:
+    """Bind a permit to per-row paper provenance before target features load."""
+
+    allowed = {
+        "representation_fingerprint",
+        "sampling_fingerprint",
+        "feature_cache_fingerprint",
+    }
+    if set(expected) != allowed or not all(isinstance(value, str) for value in expected.values()):
+        raise ValueError("compatibility permit has invalid target paper identity")
+    video_ids = set(dataset.video_ids)
+    rows = [
+        row
+        for row in dataset.feature_store.iter_records()
+        if row.video_id in video_ids and row.encoder_fingerprint == dataset.encoder_fingerprint
+    ]
+    if not rows:
+        raise ValueError("compatibility permit target FeatureStore rows are missing")
+    for row in rows:
+        identity = row.metadata.get("paper_identity")
+        if not isinstance(identity, Mapping) or dict(identity) != dict(expected):
+            raise ValueError(
+                f"{row.video_id}/{row.clip_id}: target FeatureStore identity does not match "
+                "compatibility permit"
+            )
+
+
 def predict_feature_head(
     config: HeadOnlyTrainingConfig | Mapping[str, Any],
     feature_store: FeatureStore | str | Path,
@@ -139,13 +296,23 @@ def predict_feature_head(
     output_path: str | Path,
     device: Any | None = None,
     strict_coverage: bool = True,
+    compatibility_permit: Any | None = None,
+    overlap_reduction: Literal["mean", "max"] | None = None,
 ) -> list[PredictionRecord]:
-    """Load a verified head checkpoint and emit standard clip prediction JSONL."""
+    """Load a verified head checkpoint and emit standard prediction JSONL.
+
+    ``compatibility_permit`` is a deliberately narrow paper-only exception for
+    a checkpoint-bound feature pairing.  Without it the historic exact
+    fingerprint contract is unchanged.  Dense windows must explicitly select
+    an overlap reduction before they can be emitted as official records.
+    """
 
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is required for prediction; install the train extra")
     if not isinstance(strict_coverage, bool):
         raise TypeError("strict_coverage must be boolean")
+    if overlap_reduction not in {None, "mean", "max"}:
+        raise ValueError("overlap_reduction must be null, 'mean', or 'max'")
     raw_config = config if isinstance(config, Mapping) else None
     settings = _settings(config)
     task_name = normalize_task_name(settings.task)
@@ -163,6 +330,30 @@ def predict_feature_head(
         if checkpoint_fingerprint is not None
         else configured_fingerprint
     )
+    checkpoint_digest = sha256_file(checkpoint_path)
+    feature_fingerprint = fingerprint
+    expected_clips = settings.expected_clips
+    permit_audit: Mapping[str, Any] | None = None
+    if compatibility_permit is not None:
+        authorized = _compatibility_target(
+            compatibility_permit,
+            checkpoint_path=checkpoint_path,
+            checkpoint_metadata=checkpoint_metadata,
+            checkpoint_sha256=checkpoint_digest,
+        )
+        feature_fingerprint = str(authorized["target_encoder_fingerprint"])
+        expected_clips = authorized.get("evaluation_expected_clips")
+        if expected_clips is not None and (
+            isinstance(expected_clips, bool)
+            or not isinstance(expected_clips, int)
+            or expected_clips <= 0
+        ):
+            raise ValueError("compatibility permit has invalid evaluation_expected_clips")
+        permit_audit = {
+            "paper_compatibility": dict(authorized.get("receipt", {})),
+            "source_checkpoint_encoder_fingerprint": fingerprint,
+            "target_feature_encoder_fingerprint": feature_fingerprint,
+        }
 
     manifests = _records(manifest)
     manifest_by_id = {item.video_id: item for item in manifests}
@@ -171,11 +362,16 @@ def predict_feature_head(
     dataset = FeatureDataset(
         feature_store,
         manifests,
-        encoder_fingerprint=fingerprint,
+        encoder_fingerprint=feature_fingerprint,
         supervision="weak",
         feature_level=settings.feature_level,
-        expected_clips=settings.expected_clips,
+        expected_clips=expected_clips,
     )
+    if compatibility_permit is not None:
+        target_identity = authorized.get("target_paper_identity")
+        if not isinstance(target_identity, Mapping):
+            raise ValueError("compatibility permit did not bind a target paper identity")
+        _verify_permitted_feature_identity(dataset, target_identity)
     if checkpoint_metadata.get("feature_dim") is not None and (
         int(checkpoint_metadata["feature_dim"]) != dataset.feature_dim
     ):
@@ -209,7 +405,6 @@ def predict_feature_head(
         strict=True,
         verify=True,
     )
-    checkpoint_digest = sha256_file(checkpoint_path)
     model.to(resolved_device)
     model.eval()
     loader = build_feature_dataloader(
@@ -260,7 +455,7 @@ def predict_feature_head(
                 row_frame_starts = frame_starts[row, positions]
                 row_frame_ends = frame_ends[row, positions]
                 manifest_record = manifest_by_id[video_id]
-                if strict_coverage:
+                if strict_coverage and overlap_reduction is None:
                     validate_frame_coverage(
                         video_id=video_id,
                         clip_indices=row_indices,
@@ -316,9 +511,17 @@ def predict_feature_head(
                                 "source_clip_index": source_clip_index,
                                 "checkpoint": Path(checkpoint_path).name,
                                 "checkpoint_sha256": checkpoint_digest,
+                                **({} if permit_audit is None else permit_audit),
                             },
                         )
                     )
+    if overlap_reduction is not None:
+        prediction_records = _aggregate_overlapping_records(
+            prediction_records,
+            manifest_by_id,
+            reduction=overlap_reduction,
+            strict_coverage=strict_coverage,
+        )
     atomic_write_jsonl(output_path, (item.to_dict() for item in prediction_records))
     return prediction_records
 

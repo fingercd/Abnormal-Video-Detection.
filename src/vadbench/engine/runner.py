@@ -14,7 +14,7 @@ from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.features_dataset import FeatureDataset, build_feature_dataloader
 from vadbench.data.manifest import DatasetSplit, validate_manifest
 from vadbench.engine.train import move_to_device, save_checkpoint, train_one_step
-from vadbench.features import FeatureStore, atomic_write_json
+from vadbench.features import FeatureStore, atomic_write_json, ensure_json_metadata
 from vadbench.tasks import build_task
 
 try:
@@ -276,11 +276,13 @@ def train_feature_head(
     encoder_fingerprint: str | None = None,
     device: Any | None = None,
     artifact_store: Any | None = None,
+    checkpoint_metadata: Mapping[str, Any] | None = None,
 ) -> TrainingRunResult:
     """Build the canonical task and train only its head over cached features."""
 
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is required for training; install the train extra")
+    extra_checkpoint_metadata = ensure_json_metadata(checkpoint_metadata or {})
     raw_config = config if isinstance(config, Mapping) else None
     settings = HeadOnlyTrainingConfig.from_mapping(config) if raw_config is not None else config
     task_name = normalize_task_name(settings.task)
@@ -431,22 +433,30 @@ def train_feature_head(
         "epochs": epoch_history,
     }
     checkpoint_path = run_dir / "checkpoints" / "final.pt"
+    checkpoint_payload = {
+        "task": task_name,
+        "encoder_fingerprint": train_dataset.encoder_fingerprint,
+        "feature_dim": train_dataset.feature_dim,
+        "feature_level": train_dataset.feature_level,
+        "status": history["status"],
+        "train_manifest": history["train_manifest"],
+        "validation_manifest": history["validation_manifest"],
+        "config": history["config"],
+    }
+    collision = sorted(set(checkpoint_payload) & set(extra_checkpoint_metadata))
+    if collision:
+        raise ValueError(
+            "checkpoint_metadata cannot override runner-owned keys: " + ", ".join(collision)
+        )
+    checkpoint_payload.update(extra_checkpoint_metadata)
+    history["checkpoint_metadata"] = dict(extra_checkpoint_metadata)
     artifact = save_checkpoint(
         checkpoint_path,
         model,
         optimizer=optimizer,
         step=global_step,
         epoch=len(epoch_history),
-        metadata={
-            "task": task_name,
-            "encoder_fingerprint": train_dataset.encoder_fingerprint,
-            "feature_dim": train_dataset.feature_dim,
-            "feature_level": train_dataset.feature_level,
-            "status": history["status"],
-            "train_manifest": history["train_manifest"],
-            "validation_manifest": history["validation_manifest"],
-            "config": history["config"],
-        },
+        metadata=checkpoint_payload,
     )
     history["checkpoint"] = artifact.to_dict()
     history_path = run_dir / "history.json"

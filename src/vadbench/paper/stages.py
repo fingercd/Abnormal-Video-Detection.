@@ -47,7 +47,7 @@ def observe_clip(
     """
     import torch
 
-    from vadbench.research.collectors import ProbeCollector, ProbeLimits, ProbeTokenMetadata
+    from vadbench.research.collectors import ProbeCollector, ProbeLimits
     from vadbench.token_reduction import IdentityReducer, ReductionContext
     from vadbench.token_reduction.bridges import create_observation_bridge
 
@@ -62,21 +62,19 @@ def observe_clip(
         model.eval()
         with torch.no_grad(), geometry:
             baseline = adapter.encode(clean)
-        if geometry.layout is None or not geometry.receipt.get("flatten_verified"):
+        geometry_verified = geometry.receipt.get("flatten_verified") or (
+            geometry.receipt.get("patch_flatten_verified")
+            and geometry.receipt.get("divided_layout_verified")
+        )
+        if geometry.layout is None or not geometry_verified:
             raise RuntimeError("patch geometry did not execute or flatten verification failed")
         layout = geometry.layout
         if baseline.features.shape[:2] != layout.valid_mask.shape:
             raise ValueError("native output token count differs from verified patch grid")
-        metadata = ProbeTokenMetadata(
-            valid_mask=layout.valid_mask,
-            coordinates=layout.source_coordinates,
-            coordinate_source=layout.provenance["coordinate_source"],
-            special_token_indices=(),
-            has_cls=False,
-        )
         count = bridge.receipt().block_count
         indices = sorted({max(0, math.ceil(depth * count) - 1) for depth in observation["depths"]})
         sites = bridge.observation_sites(indices)
+        metadata = bridge.probe_token_metadata(geometry, sites)
         limits = ProbeLimits(
             max_observations=observation["max_records"],
             max_sampled_tokens=observation["max_tokens"],
@@ -93,13 +91,14 @@ def observe_clip(
         identity_shapes = []
 
         def identity_hook(_module: Any, _inputs: Any, output: Any) -> Any:
+            hidden = bridge.block_output_tensor(indices[0], output)
             result = IdentityReducer().reduce(
-                output,
-                layout.to(output.device),
-                ReductionContext(layer_depth=indices[0], budget=output.shape[1]),
+                hidden,
+                layout.to(hidden.device),
+                ReductionContext(layer_depth=indices[0], budget=hidden.shape[1]),
             )
             identity_shapes.append(list(result.tokens.shape))
-            return result.tokens
+            return bridge.replace_block_output_tensor(indices[0], output, result.tokens)
 
         identity_handles.append(
             sites[f"block.{indices[0]}.output"].register_forward_hook(identity_hook)
@@ -127,12 +126,13 @@ def observe_clip(
             input_layout="BTHWC",
             precision=str(baseline.features.dtype),
             device=str(baseline.features.device),
-            attention_backend="native-eager",
+            attention_backend=architecture.get("attention_backend") or "native-unreported",
             adapter_readout="unchanged adapter pooled output",
             output_shape=list(baseline.features.shape),
             pooled_shape=list(baseline.pooled.shape),
             identity_layer_shapes=identity_shapes,
-            probe_ready=True,
+            probe_ready=not bool(collector.missing_sites),
+            missing_observation_sites=list(collector.missing_sites),
             reduction_ready=False,
             parity=deltas,
             parity_tolerance={"rtol": 1e-5, "atol": 1e-6},
@@ -147,11 +147,12 @@ def run_probe(
     project: PaperProject, plan: dict[str, Any], *, device: str = "cpu"
 ) -> dict[str, Any]:
     """Run a fixed cohort through the existing manifest and model-loading stack."""
+    from vadbench.data.dense_sampling import sample_uniform_full_clips
     from vadbench.data.manifest import load_manifest_jsonl
-    from vadbench.data.video import iter_fixed_segment_batches
-    from vadbench.orchestration import encoder_identity, slice_clip_batch
+    from vadbench.data.video import OpenCVVideoReader, _batch_from_reader, _validate_record_info
+    from vadbench.orchestration import encoder_identity
     from vadbench.registry import ENCODER_REGISTRY
-    from vadbench.research import CohortIndex, join_probe_rows
+    from vadbench.research import CohortIndex
 
     resolved = plan["resolved"]
     suite = resolved["suite"]
@@ -226,53 +227,49 @@ def run_probe(
             clip_frames = constructor.get("num_frames", constructor.get("clip_frames"))
             if clip_frames is None:
                 raise ValueError("resolved encoder must specify its validated clip frame count")
-            batches = iter_fixed_segment_batches(
-                [by_video[v] for v in video_ids],
-                resolved["dataset_root"],
-                num_segments=windows,
-                clip_frames=clip_frames,
-                frame_stride=suite["sampling"]["frame_stride"],
-                position="center",
-            )
-            for batch in batches:
-                for index, clip_id in enumerate(batch.metadata["clip_ids"]):
-                    clip = slice_clip_batch(batch, index, index + 1)
-                    cohort_record = by_clip[clip_id]
-                    if (
-                        cohort_record.source_frames is not None
-                        and tuple(clip.frame_indices[0, clip.valid_mask[0]])
-                        != cohort_record.source_frames
-                    ):
-                        raise ValueError("actual frames differ from the cohort source-frame lock")
-                    result = observe_clip(adapter, name, clip, suite["observation"])
-                    receipt = {
-                        "encoder_id": name,
-                        "video_id": cohort_record.video_id,
-                        "clip_id": clip_id,
-                        "architecture": result["architecture"],
-                        "verified_encoder_identity": identity,
-                        "python_executable": sys.executable,
-                    }
-                    receipts.append(receipt)
-                    for item in result["observations"]:
-                        rows.extend(
-                            row
-                            for row in item.to_rows(
-                                run_id=run_id,
-                                encoder_id=name,
-                                checkpoint_digest=digest(identity["checkpoint"]["sha256"]),
-                                clip_ids=[clip_id],
-                                video_ids=[cohort_record.video_id],
-                                partitions=[suite["partition"]],
-                                backend=result["architecture"]["attention_backend"],
-                            )
-                            if row["probe_id"] in suite["observation"]["probes"]
-                        )
-                    # Persist completed clips so a later failure cannot erase evidence.
-                    atomic_write_jsonl(destination / "architecture_receipts.jsonl", receipts)
-                    atomic_write_jsonl(
-                        destination / "probe_summary.jsonl", join_probe_rows(rows, cohort)
+            for video_id in video_ids:
+                record = by_video[video_id]
+                with OpenCVVideoReader(record.resolve_path(resolved["dataset_root"])) as reader:
+                    _validate_record_info(record, reader.info, strict_manifest_info=True)
+                    samples = sample_uniform_full_clips(
+                        reader.info.num_frames,
+                        num_segments=windows,
+                        clip_frames=clip_frames,
+                        frame_stride=suite["sampling"]["frame_stride"],
                     )
+                    clips = (
+                        (
+                            f"{video_id}:segment-{sample.clip_index:02d}",
+                            _batch_from_reader(
+                                reader,
+                                video_id,
+                                [sample.clip],
+                                metadata={
+                                    "sampling_kind": "uniform_segment_centers_full_clip",
+                                    "score_frame_start": sample.score_frame_start,
+                                    "score_frame_end": sample.score_frame_end,
+                                    "input_window_reused": sample.input_window_reused,
+                                },
+                            ),
+                        )
+                        for sample in samples
+                    )
+                    for clip_id, clip in clips:
+                        cohort_record = by_clip[clip_id]
+                        _observe_and_append(
+                            adapter,
+                            name,
+                            clip,
+                            clip_id,
+                            cohort_record,
+                            identity,
+                            run_id,
+                            suite,
+                            destination,
+                            rows,
+                            receipts,
+                            cohort,
+                        )
             del adapter
         summary = {
             "run_id": run_id,
@@ -287,6 +284,78 @@ def run_probe(
         atomic_write_json(destination / "summary.json", summary)
         stage["outputs"] = summary
     return summary
+
+
+def _observe_and_append(
+    adapter: Any,
+    name: str,
+    clip: Any,
+    clip_id: str,
+    cohort_record: Any,
+    identity: dict[str, Any],
+    run_id: str,
+    suite: dict[str, Any],
+    destination: Path,
+    rows: list,
+    receipts: list,
+    cohort: Any,
+) -> None:
+    from vadbench.research.controls import raw_clip_controls
+    from vadbench.research.labels import join_probe_rows
+
+    if (
+        cohort_record.source_frames is not None
+        and tuple(clip.frame_indices[0, clip.valid_mask[0]]) != cohort_record.source_frames
+    ):
+        raise ValueError("actual frames differ from the cohort source-frame lock")
+    result = observe_clip(adapter, name, clip, suite["observation"])
+    controls = dict(raw_clip_controls(clip, clip_ids=[clip_id])[0])
+    controls.update(
+        encoder_id=name,
+        partition=cohort_record.partition,
+        weak_label=cohort_record.weak_label,
+        sampling_protocol={**suite["sampling"], "clip_frames": clip.num_frames},
+        timestamp_source="source frame index divided by OpenCV-reported fps",
+        video_duration_s=clip.metadata["source_num_frames"] / clip.metadata["source_fps"],
+        input_sampling_id=digest(
+            {
+                "sampling": suite["sampling"],
+                "clip_frames": clip.num_frames,
+                "timestamp_policy": "frame_index_over_reported_fps",
+            }
+        ),
+    )
+    receipts.append(
+        {
+            "encoder_id": name,
+            "video_id": cohort_record.video_id,
+            "clip_id": clip_id,
+            "architecture": result["architecture"],
+            "verified_encoder_identity": identity,
+            "python_executable": sys.executable,
+            "sampling": dict(clip.metadata),
+            "input_controls": controls,
+        }
+    )
+    for item in result["observations"]:
+        rows.extend(
+            row
+            for row in item.to_rows(
+                run_id=run_id,
+                encoder_id=name,
+                checkpoint_digest=digest(identity["checkpoint"]["sha256"]),
+                clip_ids=[clip_id],
+                video_ids=[cohort_record.video_id],
+                partitions=[suite["partition"]],
+                backend=result["architecture"]["attention_backend"],
+            )
+            if row["probe_id"] in suite["observation"]["probes"]
+        )
+    atomic_write_jsonl(destination / "architecture_receipts.jsonl", receipts)
+    atomic_write_jsonl(
+        destination / "input_controls.jsonl", (item["input_controls"] for item in receipts)
+    )
+    atomic_write_jsonl(destination / "probe_summary.jsonl", join_probe_rows(rows, cohort))
 
 
 def verify_plan(project: PaperProject, encoder_id: str, video: str, device: str) -> dict[str, Any]:

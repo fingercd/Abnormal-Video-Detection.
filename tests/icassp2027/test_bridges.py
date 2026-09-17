@@ -41,6 +41,11 @@ class _Encoder(nn.Module):
         return value
 
 
+class _TupleBlock(nn.Module):
+    def forward(self, value: torch.Tensor):
+        return value + 1, torch.ones(value.shape[:2])
+
+
 def _layers_model(path: tuple[str, ...], *, cls: bool = False) -> nn.Module:
     root = nn.Module()
     current = root
@@ -82,6 +87,9 @@ def test_active_bridges_resolve_only_known_loaded_block_paths(
         assert receipt.layout == "unverified"  # no config/layout evidence in this fixture
         assert receipt.has_cls is True
         assert receipt.special_token_indices == (0,)
+    elif encoder_id == "videomae":
+        assert receipt.has_cls is False
+        assert receipt.special_token_indices == ()
     else:
         assert receipt.has_cls is None
         assert receipt.special_token_indices is None
@@ -109,9 +117,9 @@ def test_hook_sites_are_real_modules_do_not_change_output_and_are_cleaned_up() -
         "block.0.norm1",
         "block.0.attn.output",
         "block.0.input",
-        "block.0.mid.input",
+        "block.0.mlp.pre_norm.input",
         "block.0.norm2",
-        "block.0.mlp.output",
+        "block.0.mlp.pre_residual.output",
     }
     assert all(isinstance(module, nn.Module) for module in sites.values())
 
@@ -145,6 +153,34 @@ def test_unknown_or_unverified_paths_fail_closed() -> None:
         bridge.observation_sites(depths=[4])
 
 
+@pytest.mark.parametrize(
+    ("encoder_id", "path"),
+    [
+        ("timesformer", ("timesformer", "encoder", "layer")),
+        ("vjepa2", ("encoder", "layer")),
+    ],
+)
+def test_identity_hook_api_preserves_native_block_tuple_fields(
+    encoder_id: str, path: tuple[str, ...]
+) -> None:
+    root = nn.Module()
+    current = root
+    for name in path[:-1]:
+        child = nn.Module()
+        setattr(current, name, child)
+        current = child
+    block = _TupleBlock()
+    setattr(current, path[-1], nn.ModuleList([block]))
+    bridge = create_observation_bridge(encoder_id, root)
+    native = block(torch.randn(2, 3, 4))
+    hidden = bridge.block_output_tensor(0, native)
+    replaced = bridge.replace_block_output_tensor(0, native, hidden)
+    assert isinstance(replaced, tuple)
+    assert replaced[0] is hidden and replaced[1] is native[1]
+    with pytest.raises(BridgeUnsupportedError, match="shape"):
+        bridge.replace_block_output_tensor(0, native, hidden[:, :-1])
+
+
 def test_bridges_locate_real_transformers_classes_without_loading_weights():
     transformers = pytest.importorskip("transformers")
     vm = transformers.VideoMAEModel(
@@ -162,7 +198,8 @@ def test_bridges_locate_real_transformers_classes_without_loading_weights():
     vm_bridge = create_observation_bridge("videomae", vm)
     assert vm_bridge.receipt().block_path == "encoder.layer"
     assert (
-        vm_bridge.observation_sites([0])["block.0.mlp.output"] is vm.encoder.layer[0].output.dropout
+        vm_bridge.observation_sites([0])["block.0.mlp.pre_residual.output"]
+        is vm.encoder.layer[0].output.dropout
     )
     ts = transformers.TimesformerModel(
         transformers.TimesformerConfig(
@@ -178,7 +215,11 @@ def test_bridges_locate_real_transformers_classes_without_loading_weights():
     ts_bridge = create_observation_bridge("timesformer", ts)
     assert ts_bridge.receipt().layout == "divided_space_time"
     sites = ts_bridge.observation_sites([0])
-    assert sites["block.0.temporal.attn.output"] is ts.encoder.layer[0].temporal_attention
+    assert (
+        sites["block.0.temporal.attn.pre_projection.output"]
+        is ts.encoder.layer[0].temporal_attention
+    )
+    assert sites["block.0.temporal.attn.projection.output"] is ts.encoder.layer[0].temporal_dense
     assert sites["block.0.spatial.attn.output"] is ts.encoder.layer[0].attention
     if hasattr(transformers, "VJEPA2Model"):
         vj = transformers.VJEPA2Model(

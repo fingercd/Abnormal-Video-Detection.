@@ -139,3 +139,17 @@ def test_missing_geometry_is_explicit_and_limits_are_reported():
         layer(torch.ones(1, 4, 2))
     assert observer.dropped_observations == 1
     assert all(row["statistic_value"] is None for row in observer.observations[0].rows)
+
+
+def test_registered_but_nontriggering_or_tensorless_sites_emit_explicit_receipts():
+    active = nn.Identity()
+    dormant = nn.Identity()
+    collector = ProbeCollector(
+        {"block.0.output": active, "block.0.attn.probs.output": dormant}, metadata()
+    )
+    collector.run(active, torch.ones(1, 4, 2))
+    assert collector.missing_sites == ("block.0.attn.probs.output",)
+    missing = next(item for item in collector.observations if item.site.endswith("probs.output"))
+    assert {row["probe_id"] for row in missing.rows} == {"P10", "P11", "P13"}
+    assert {row["status"] for row in missing.rows} == {"unavailable"}
+    assert {row["statistic_name"] for row in missing.rows} == {"hook_not_triggered"}

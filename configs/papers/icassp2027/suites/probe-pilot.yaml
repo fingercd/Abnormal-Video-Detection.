@@ -9,6 +9,7 @@ partition: fit
 role: debug
 max_videos: 8
 sampling:
+  kind: uniform_segment_centers_full_clip
   windows_per_video: 8
   frame_stride: 2
   position: center

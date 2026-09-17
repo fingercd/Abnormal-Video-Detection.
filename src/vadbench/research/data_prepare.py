@@ -224,20 +224,26 @@ def _select_candidates(
             remaining -= len(members)
             if remaining == 0:
                 break
-    return tuple(record.video_id for record in sorted(selected, key=lambda item: item.video_id.casefold()))
+    return tuple(
+        record.video_id for record in sorted(selected, key=lambda item: item.video_id.casefold())
+    )
 
 
 def _take_labelled(
     video_ids: Sequence[str], records: Sequence[VideoManifestRecord], label: int, limit: int
 ) -> tuple[str, ...]:
     by_id = {record.video_id: record for record in records}
-    return tuple(video_id for video_id in video_ids if int(by_id[video_id].is_anomaly) == label)[:limit]
+    return tuple(video_id for video_id in video_ids if int(by_id[video_id].is_anomaly) == label)[
+        :limit
+    ]
 
 
 def _available_candidates(
     candidate_ids: Sequence[str], available_by_id: Mapping[str, VideoManifestRecord]
 ) -> tuple[VideoManifestRecord, ...]:
-    return tuple(available_by_id[video_id] for video_id in candidate_ids if video_id in available_by_id)
+    return tuple(
+        available_by_id[video_id] for video_id in candidate_ids if video_id in available_by_id
+    )
 
 
 def _materialize_cohort(
@@ -300,7 +306,9 @@ def prepare_ucf_research_data(
     )
     root = Path(dataset_root)
     available = tuple(record for record in imported.train if record.resolve_path(root).is_file())
-    unavailable = tuple(record for record in imported.train if not record.resolve_path(root).is_file())
+    unavailable = tuple(
+        record for record in imported.train if not record.resolve_path(root).is_file()
+    )
     if not available:
         raise ResearchDataPreparationError("没有实际可用的官方训练视频，不能创建 cohort")
     available_ids = {record.video_id for record in available}
@@ -358,7 +366,9 @@ def prepare_ucf_research_data(
         else:
             cohorts[name] = cohort
             cohort_status[name] = (
-                "ready" if len({row.video_id for row in cohort.records}) == len(candidate_ids) else "partial"
+                "ready"
+                if len({row.video_id for row in cohort.records}) == len(candidate_ids)
+                else "partial"
             )
     audit = audit_fn(dataset_root, imported.train, imported.test)
     return PreparedResearchData(
@@ -375,13 +385,17 @@ def prepare_ucf_research_data(
         seed=seed,
         audit=audit,
         source_grouping_status=(
-            "provided_source_groups" if normalized_groups else "video_id_only_near_duplicate_unavailable"
+            "provided_source_groups"
+            if normalized_groups
+            else "video_id_only_near_duplicate_unavailable"
         ),
         source_groups=normalized_groups,
     )
 
 
-def write_prepared_research_data(result: PreparedResearchData, output_dir: str | Path) -> dict[str, Path]:
+def write_prepared_research_data(
+    result: PreparedResearchData, output_dir: str | Path
+) -> dict[str, Path]:
     """Write a new isolated run; full-list locks and pending candidates remain explicit."""
 
     destination = Path(output_dir)
@@ -433,7 +447,11 @@ def write_prepared_research_data(result: PreparedResearchData, output_dir: str |
             "candidates": result.candidate_videos,
             "available": available_by_role,
             "pending": {
-                name: [video_id for video_id in ids if video_id not in set(available_by_role.get(name, []))]
+                name: [
+                    video_id
+                    for video_id in ids
+                    if video_id not in set(available_by_role.get(name, []))
+                ]
                 for name, ids in result.candidate_videos.items()
             },
         },

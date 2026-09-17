@@ -6,7 +6,13 @@ have been collected.
 """
 
 from .cohorts import CohortError, CohortIndex, CohortRecord, LabelPolicy
-from .collectors import ProbeCollector, ProbeLimits, ProbeObservation, ProbeTokenMetadata
+from .collectors import (
+    ProbeCollector,
+    ProbeLimits,
+    ProbeObservation,
+    ProbeSiteMetadata,
+    ProbeTokenMetadata,
+)
 from .labels import join_probe_rows
 
 __all__ = [
@@ -17,6 +23,7 @@ __all__ = [
     "ProbeCollector",
     "ProbeLimits",
     "ProbeObservation",
+    "ProbeSiteMetadata",
     "ProbeTokenMetadata",
     "join_probe_rows",
 ]

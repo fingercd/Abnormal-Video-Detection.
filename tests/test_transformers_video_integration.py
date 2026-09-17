@@ -180,3 +180,66 @@ def test_frame_contract_is_checked_before_processor_call() -> None:
     with pytest.raises(ValueError, match="要求 clip_frames=8"):
         adapter.encode(_batch(4))
     assert processor.calls == []
+
+
+def test_real_videomae_processor_accepts_square_override_and_timesformer_224_8_shape():
+    """Exercise the actual processor contract without loading checkpoint weights."""
+
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+
+    small_processor = transformers.VideoMAEImageProcessor(
+        size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16}
+    )
+    small_model = transformers.VideoMAEModel(
+        transformers.VideoMAEConfig(
+            image_size=16,
+            patch_size=8,
+            num_frames=4,
+            tubelet_size=2,
+            hidden_size=8,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            intermediate_size=16,
+        )
+    )
+    small_adapter = TransformersVideoAdapter(
+        variant="videomae",
+        model=small_model,
+        processor=small_processor,
+        clip_frames=4,
+        image_size=16,
+    )
+    small_inputs, _ = small_adapter._prepare_inputs(_batch(4))
+    assert tuple(small_inputs["pixel_values"].shape) == (1, 4, 3, 16, 16)
+    assert tuple(small_adapter.encode(_batch(4)).features.shape) == (1, 8, 8)
+
+    # TimeSformer uses the same processor family.  Its native 224/8 geometry
+    # must still be BTCHW and retain its CLS token: 1 + 8 * 14 * 14 = 1569.
+    processor = transformers.VideoMAEImageProcessor(
+        size={"shortest_edge": 224}, crop_size={"height": 224, "width": 224}
+    )
+    model = transformers.TimesformerModel(
+        transformers.TimesformerConfig(
+            image_size=224,
+            patch_size=16,
+            num_frames=8,
+            hidden_size=8,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            intermediate_size=16,
+        )
+    )
+    adapter = TransformersVideoAdapter(
+        variant="timesformer",
+        model=model,
+        processor=processor,
+        clip_frames=8,
+        image_size=224,
+    )
+    inputs, _ = adapter._prepare_inputs(_batch(8))
+    assert isinstance(inputs["pixel_values"], torch.Tensor)
+    assert tuple(inputs["pixel_values"].shape) == (1, 8, 3, 224, 224)
+    output = adapter.encode(_batch(8))
+    assert tuple(output.features.shape) == (1, 1569, 8)
+    assert tuple(output.pooled.shape) == (1, 8)

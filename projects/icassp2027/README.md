@@ -2,7 +2,8 @@
 
 本轮基础重构把论文配置、只读观察和 token 操作契约接到现有 VADBench。
 active 列表仅由 `profile.yaml` 管理；普通 `python -m vadbench encoders list` 继续返回完整 catalog。
-当前不包含最终 selector、真实缩短序列的 reducer、dense 滑窗测试、XD 专用评测或论文结果导出。
+已补充完整中心窗口与 dense 采样、显式检测身份兼容入口，以及不带选择规则的外部索引干预工具。
+当前没有最终 selector、经真实数据验证的压缩方法、XD 专用评测结果或论文数字。
 
 ## 运行入口
 
@@ -23,9 +24,9 @@ python -m vadbench.paper verify --project projects/icassp2027/profile.yaml --enc
 `outputs/icassp2027/runs/observer-validation-<时间>-<唯一ID>/`，包括架构回执、统计与 stage-v1 来源。
 失败也保留独立失败回执。这是工程验证，不能用其运行时间宣称加速，也不为输入视频补造标签。
 
-本阶段实际 tubelet 几何与完整验证链优先支持原生 VideoMAEv2。其他三个桥已定位受支持模型的
-block/site 接口；TimeSformer 显式区分 temporal/spatial，V-JEPA 2 只定位 encoder、保留 wrapper
-的 no_grad 限制。尚未支持的运行时几何会明确失败，不用通用 reshape 伪造坐标或压缩能力。
+四个桥已实现各自原生几何，真实权重的完整验证优先完成了 VideoMAEv2。其他三模型已用实际库的
+小配置验证结构路径，服务器真权重验证继续进行。TimeSformer 显式区分 temporal/spatial，
+V-JEPA 2 只定位 encoder、保留 wrapper 的 no_grad 限制。未知位置或布局会明确失败。
 
 ## 路径与数据权限
 
@@ -36,8 +37,9 @@ block/site 接口；TimeSformer 显式区分 temporal/spatial，V-JEPA 2 只定�
 默认 `protocol.yaml` 使用 W：开发只用训练视频级标签，正常参考统计只在 fit 拟合。
 用户已在正式测试前将 quality_tolerance 固定为 `0.005`，即最多下降 0.5 个百分点，
 同时报告差值置信区间。
-`paper.compatibility` 提供显式身份及兼容声明校验，但不自动改变现有 predict 的严格 fingerprint
-绑定，也不意味着 train-32→test-dense 或 compressed-feature 预测已经实现。
+`paper.compatibility` 提供显式身份及兼容声明校验。`paper.detection` 通过绑定实际 checkpoint
+与目标缓存的 typed permit 执行已声明的采样/表征配对；原 predict 的默认严格指纹检查不变。
+对应工程测试通过不代表已经产生真实 UCF 检测结果。
 
 执行 `probe` 前需要真实训练 manifest，以及只读的 cohort JSONL sidecar。
 suite 中 `manifest` 指向原有 VideoManifestRecord 格式；cohort 每行对应一个固定窗口，例如：

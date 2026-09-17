@@ -102,7 +102,7 @@ def resolve_probe(project: PaperProject, suite_path: str | Path) -> dict[str, An
     sampling = suite["sampling"]
     fields(
         sampling,
-        required={"windows_per_video", "frame_stride", "position"},
+        required={"kind", "windows_per_video", "frame_stride", "position"},
         optional=set(),
         context="sampling",
     )
@@ -112,7 +112,7 @@ def resolve_probe(project: PaperProject, suite_path: str | Path) -> dict[str, An
     }.items():
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise ConfigError(f"{key} must be a positive integer")
-    if sampling["position"] != "center":
+    if sampling["position"] != "center" or sampling["kind"] != "uniform_segment_centers_full_clip":
         raise ConfigError("pilot sampling uses deterministic center windows")
     observation = suite["observation"]
     fields(
