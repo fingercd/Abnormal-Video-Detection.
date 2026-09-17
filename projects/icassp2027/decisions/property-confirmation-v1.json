@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "status": "frozen_before_independent_confirmation",
+  "frozen_at_utc": "2026-09-17T20:55:38.743071+00:00",
+  "annotation_policy": "W",
+  "candidates": [
+    {
+      "candidate_id": "relative_attention_update",
+      "expected_direction": "positive",
+      "property_signature": {
+        "probe_id": "P16",
+        "statistic_name": "attention_update_to_input_norm_ratio"
+      },
+      "encoder_bindings": [
+        {
+          "encoder_id": "videomaev2",
+          "layer_index": 5,
+          "site": "block.5.attn.output",
+          "sublayer_kind": "attention",
+          "head_id": null,
+          "probe_id": "P16",
+          "statistic_name": "attention_update_to_input_norm_ratio"
+        },
+        {
+          "encoder_id": "timesformer",
+          "layer_index": 5,
+          "site": "block.5.spatial.attn.output",
+          "sublayer_kind": "attention",
+          "head_id": null,
+          "probe_id": "P16",
+          "statistic_name": "attention_update_to_input_norm_ratio"
+        },
+        {
+          "encoder_id": "vjepa2",
+          "layer_index": 11,
+          "site": "block.11.attn.output",
+          "sublayer_kind": "attention",
+          "head_id": null,
+          "probe_id": "P16",
+          "statistic_name": "attention_update_to_input_norm_ratio"
+        },
+        {
+          "encoder_id": "videomae",
+          "layer_index": 5,
+          "site": "block.5.attn.output",
+          "sublayer_kind": "attention",
+          "head_id": null,
+          "probe_id": "P16",
+          "statistic_name": "attention_update_to_input_norm_ratio"
+        }
+      ]
+    },
+    {
+      "candidate_id": "midlayer_temporal_change",
+      "expected_direction": "negative",
+      "property_signature": {
+        "probe_id": "P07",
+        "statistic_name": "same_position_adjacent_time_change_median"
+      },
+      "encoder_bindings": [
+        {
+          "encoder_id": "videomaev2",
+          "layer_index": 5,
+          "site": "block.5.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P07",
+          "statistic_name": "same_position_adjacent_time_change_median"
+        },
+        {
+          "encoder_id": "timesformer",
+          "layer_index": 5,
+          "site": "block.5.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P07",
+          "statistic_name": "same_position_adjacent_time_change_median"
+        },
+        {
+          "encoder_id": "vjepa2",
+          "layer_index": 11,
+          "site": "block.11.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P07",
+          "statistic_name": "same_position_adjacent_time_change_median"
+        },
+        {
+          "encoder_id": "videomae",
+          "layer_index": 5,
+          "site": "block.5.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P07",
+          "statistic_name": "same_position_adjacent_time_change_median"
+        }
+      ]
+    }
+  ],
+  "relative_depth": 0.5,
+  "source_exploration": {
+    "directory": "outputs\\icassp2027\\analysis\\explore-gpu-v1-20260917T204307Z",
+    "videos": 128,
+    "normal": 64,
+    "positive": 64,
+    "clips_per_video": 8,
+    "sha256": {
+      "gate.json": "afc0eaa88304ab1360f11da17eeaa7095e919137b08a9f75f261898e82ad85ad",
+      "analysis_receipt.json": "880fe50df7e9bdb5965efc72f08289f37c7e979b44db0af4b98a4792468748fe",
+      "candidate_review.json": "6f8cb6a51bc99159def3cd88b5bfc6db5b53dd8a8cd1d3f3e4f36561655ae246",
+      "matched_within_bin_v2.csv": "a0a34c28b8aa3d8d6448073ffd1ce45a2b3ed89ca2c7938a586c314317ef1403",
+      "p16_block5_ratio_sensitivity.json": "ef642da2c45c3ac8efdaa7e555b1ae4f01c1bb366edafcf75e9b5fa5d2597d4a"
+    }
+  },
+  "confirm_data": {
+    "path": "D:\\PythonProject\\VAD\\outputs\\icassp2027\\assets\\confirm64-plan-20260917T205233Z",
+    "stage": "data_prepared_not_executed",
+    "candidate_freeze": "pending_owner_signature_freeze",
+    "partition_lock_sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59",
+    "source_candidates_file": "D:\\PythonProject\\VAD\\outputs\\icassp2027\\assets\\frozen192-verified-20260917T200000Z\\frozen-cohort-candidates.json",
+    "dataset_root": "D:\\PythonProject\\VAD\\data\\ucf-frozen192-verified",
+    "videos": 64,
+    "labels": {
+      "normal": 32,
+      "positive": 32
+    },
+    "clips": 512,
+    "min_frames": 187,
+    "manifest_sha256": "4cb50328613b5e157f2e7c74d35a32cad1a89e0e58ebb829488c2c8554bcda3d",
+    "cohort_sha256": "bf6d30676b63488648c3fbd5f71b941a58d2d80b660fc722e0b1f0db66b18c14",
+    "id_set_sha256": "5367dcc5e33d33c45bba5dd1a6bbda8a78daac28482e441d00e777d242cefdc5",
+    "source_group": "unknown; no automatic changes from 192-video fixed-rule RGB audit"
+  },
+  "analysis": {
+    "independent_unit": "video",
+    "clip_aggregation": "equal mean over exactly 8 uniformly sampled clips",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 20260918,
+    "primary": "positive-minus-normal video mean difference and Hedges g; percentile 95% two-sided CI",
+    "directional_family": "two candidates; each directional alpha=.025, equivalent sign check of corresponding 95% two-sided interval",
+    "four_encoder_claim": "all four predeclared bindings must have the expected sign and CI excluding zero; no substitution of depth/statistic after seeing confirmation",
+    "matched": "motion x brightness terciles frozen from fit normal videos per encoder; within each common bin separately resample videos by label; fixed min(n_positive,n_normal) weights; disclose retained videos and empty bins",
+    "matched_requirement": "expected sign and 95% CI excluding zero in each encoder, with at least 16 videos per label retained across complete bins; otherwise conditional claim unconfirmed",
+    "category": "all strata reported descriptively with sample sizes; no selection of favorable categories",
+    "scene": "unknown; this cannot establish scene-matched or event-level causality",
+    "controls_sensitivity": "P01 input/branch norm and motion/brightness/logduration diagnostics are explanatory, not additional candidate-selection endpoints"
+  },
+  "scope_limits": [
+    "P16 is a clip-level Frobenius norm ratio averaged over clips; it does not identify anomalous tokens or prove tokenwise update priority.",
+    "TimeSformer P16 refers to spatial attention relative to its immediate input after temporal updating; other encoders refer to joint attention relative to block input. Compare standardized effect directions, not raw ratios across architectures.",
+    "P16 already requires the observed attention branch; only subsequent computation can potentially be saved.",
+    "P07 is at the same verified patch coordinate, not camera-motion compensated and not event-annotated.",
+    "Confirmation is observational. Matched equal-budget intervention and detection quality must still decide the plugin.",
+    "If either candidate fails, record failure; do not reselect its sign/depth/statistic on confirm. A four-encoder law is not assumed."
+  ],
+  "method_frozen": false,
+  "official_test_access_authorized_by_this_file": false
+}

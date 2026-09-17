@@ -4,6 +4,16 @@
 
 ## 最近核验（UTC 2026-09-17 20:45）
 
+- 完整128探索数据已通过union gate。UTC20:55冻结两个中层候选（P16分支相对更新为正、
+  P07同坐标时间变化为负），详见 [确认定义](decisions/property-confirmation-v1.md)。
+  探索发现经过视频级分箱bootstrap复核，但不称为确认规律。原between-bin CI保留并纠正解释。
+- 四模型已具备实际序列缩短与冻结主干内部参数梯度的工程证据：最新GPU实权重
+  TimeSformer为1569→785，VideoMAE为1568→784，V-JEPA2在index11后8192→4096；
+  三者identity最大差0且leaf梯度有限非零。V-JEPA2较早index3测试在8GB/70%上限下OOM，
+  原失败保留；index11是单独运行。VideoMAEv2此前CPU实权重1568→784证据保持原身份。
+- node3显式进程级`torch.backends.cudnn.enabled=False`后，原V-JEPA2真权重GPU验证通过，
+  没有重装环境或换权重。服务器正式dense/plugin比较将固定同一backend，不和本机计时混合。
+
 - 主探索 CUDA 两批均退出 0：`probe-20260917T193541117630Z-ef589e03` 完成 127×8，
   原唯一缺项 Normal_Videos533 的补充批完成 1×8。冻结完整候选为正常/异常各64视频；
   正在审核 union、采样和环境身份，再做视频级统计。CPU复测单独保存，不能增加独立样本数。
