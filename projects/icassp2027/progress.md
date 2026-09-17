@@ -4,6 +4,16 @@
 
 ## 最近核验（UTC 2026-09-17 20:45）
 
+- 三个encoder的独立确认已完成并使用经独立审查的v3脚本分析。P16仅VideoMAEv2在当前
+  32/32确认及matched条件下复现，g=0.780 [0.327,1.282]；TimeSformer和VideoMAE未通过。
+  P07也未通过预定的原始+matched联合条件。两条“四encoder共同性质”主张已不能成立，
+  负结果记录于 [F01](decisions/findings/F01-relative-attention-update.md) 和
+  [F02](decisions/findings/F02-midlayer-temporal-change.md)，不改方向/层挽救结果。
+- V-JEPA2主确认在任何本模型确认效果被读取前改为已有完整数据的本机CUDA：服务器上传实测
+  约410KB/s，剩余粗估108.6分钟。原等待数据的server PID31073已核对命令/状态后取消，
+  尚未执行GPU，上传继续。当前本机run为`probe-20260917T213446427749Z-6b75566a`，
+  仍在采集，不能把其未完成项计入确认。冻结候选内容没有变化。
+
 - VideoMAEv2确认采集512/512完成，run `probe-20260917T205806968233Z-e21841be`。
   TimeSformer正在同一冻结64视频上采集；尚未读取确认效应来改变候选。
   V-JEPA2已排入服务器“64个final内容校验→空闲GPU租约→确认采集”的依赖队列。
