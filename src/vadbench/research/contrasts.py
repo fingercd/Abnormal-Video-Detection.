@@ -103,12 +103,14 @@ def _label(value: Any) -> int | None:
     return value if type(value) is int and value in {0, 1} else None
 
 
-def _candidate_signature(
-    candidate: Mapping[str, Any], *, require_direction: bool
-) -> dict[str, Any]:
+def _exact_candidate_binding(candidate: Mapping[str, Any]) -> dict[str, Any]:
     missing = [name for name in SIGNATURE_FIELDS if name not in candidate]
     if missing:
-        raise ContrastError(f"冻结候选缺少精确签名字段：{missing}")
+        raise ContrastError(f"冻结 encoder binding 缺少精确签名字段：{missing}")
+    return {name: candidate[name] for name in SIGNATURE_FIELDS}
+
+
+def _candidate_signature(candidate: Mapping[str, Any], *, require_direction: bool) -> dict[str, Any]:
     identifier = candidate.get("candidate_id")
     if not isinstance(identifier, str) or not identifier.strip():
         raise ContrastError("冻结候选必须含非空 candidate_id")
@@ -117,10 +119,45 @@ def _candidate_signature(
         raise ContrastError("confirm 冻结候选的 expected_direction 必须为 positive 或 negative")
     if direction is not None and direction not in {"positive", "negative"}:
         raise ContrastError("expected_direction 必须为 positive、negative 或省略")
-    result = {name: candidate[name] for name in SIGNATURE_FIELDS}
-    result["candidate_id"] = identifier
-    result["expected_direction"] = direction
-    return result
+    raw_bindings = candidate.get("encoder_bindings")
+    if raw_bindings is None:
+        bindings = (_exact_candidate_binding(candidate),)
+        binding_mode = "single_encoder_legacy_binding"
+        property_signature = {
+            "probe_id": bindings[0]["probe_id"],
+            "statistic_name": bindings[0]["statistic_name"],
+        }
+    else:
+        if not isinstance(raw_bindings, list) or not raw_bindings or not all(
+            isinstance(item, Mapping) for item in raw_bindings
+        ):
+            raise ContrastError("encoder_bindings 必须是非空的精确签名对象数组")
+        bindings = tuple(_exact_candidate_binding(item) for item in raw_bindings)
+        if len({item["encoder_id"] for item in bindings}) != len(bindings):
+            raise ContrastError("同一性质的 encoder_bindings 不可重复 encoder_id")
+        raw_property = candidate.get("property_signature")
+        if not isinstance(raw_property, Mapping) or set(raw_property) != {
+            "probe_id",
+            "statistic_name",
+        }:
+            raise ContrastError(
+                "跨 encoder 候选必须显式 property_signature={probe_id, statistic_name}"
+            )
+        property_signature = dict(raw_property)
+        if any(
+            binding["probe_id"] != property_signature["probe_id"]
+            or binding["statistic_name"] != property_signature["statistic_name"]
+            for binding in bindings
+        ):
+            raise ContrastError("encoder_bindings 必须共享预冻结的 probe_id/statistic_name 性质定义")
+        binding_mode = "cross_encoder_pre_frozen_bindings"
+    return {
+        "candidate_id": identifier,
+        "expected_direction": direction,
+        "property_signature": property_signature,
+        "encoder_bindings": bindings,
+        "binding_mode": binding_mode,
+    }
 
 
 def validate_candidate_definition(
@@ -150,7 +187,23 @@ def validate_candidate_definition(
 
 
 def _matches_candidate(signature: tuple[Any, ...], candidate: Mapping[str, Any]) -> bool:
-    return all(signature[index] == candidate[name] for index, name in enumerate(SIGNATURE_FIELDS))
+    return any(
+        all(signature[index] == binding[name] for index, name in enumerate(SIGNATURE_FIELDS))
+        for binding in candidate["encoder_bindings"]
+    )
+
+
+def _candidate_binding_for_signature(
+    signature: tuple[Any, ...], candidate: Mapping[str, Any]
+) -> Mapping[str, Any] | None:
+    return next(
+        (
+            binding
+            for binding in candidate["encoder_bindings"]
+            if all(signature[index] == binding[name] for index, name in enumerate(SIGNATURE_FIELDS))
+        ),
+        None,
+    )
 
 
 def aggregate_probe_rows(rows: Iterable[Mapping[str, Any]]) -> tuple[dict[str, Any], ...]:
@@ -355,13 +408,24 @@ def _bootstrap_hedges(
     # A two-video group can draw a constant resample, for which standardized
     # effect is undefined.  Re-draw rather than silently treating it as zero;
     # retain the attempt count so this handling is auditable.
-    while len(values) < replicates and attempts < replicates * 20:
-        attempts += 1
-        sampled_positive = rng.choice(positive, size=len(positive), replace=True)
-        sampled_normal = rng.choice(normal, size=len(normal), replace=True)
-        effect = _hedges_g(sampled_positive, sampled_normal)
-        if effect is not None:
-            values.append(effect)
+    limit = replicates * 20
+    correction = 1 - 3 / (4 * (len(positive) + len(normal)) - 9)
+    denominator = len(positive) + len(normal) - 2
+    while len(values) < replicates and attempts < limit:
+        draw_count = min(max(256, 2 * (replicates - len(values))), limit - attempts)
+        sampled_positive = positive[
+            rng.integers(0, len(positive), size=(draw_count, len(positive)))
+        ]
+        sampled_normal = normal[rng.integers(0, len(normal), size=(draw_count, len(normal)))]
+        numerator = (len(positive) - 1) * sampled_positive.var(axis=1, ddof=1) + (
+            len(normal) - 1
+        ) * sampled_normal.var(axis=1, ddof=1)
+        valid = numerator > 0
+        effects = correction * (
+            sampled_positive.mean(axis=1) - sampled_normal.mean(axis=1)
+        ) / np.sqrt(numerator / denominator, where=valid, out=np.ones_like(numerator))
+        values.extend(float(item) for item in effects[valid][: replicates - len(values)])
+        attempts += draw_count
     low, high = _ci(values)
     return low, high, len(values), attempts
 
@@ -403,12 +467,18 @@ def _weak_video_contrast(
         normalization_caution="not_detected",
         ci_low=None,
         ci_high=None,
+        ci_contains_point_estimate=None,
         bootstrap_valid_replicates=0,
         bootstrap_attempts=0,
         cdf_overlap=None,
         common_language_positive_gt_normal=None,
         selection_source=selection_source,
         confirmation_source=confirmation_source,
+        multiple_comparison_status=(
+            "exploratory_grid_unadjusted_not_confirmed"
+            if config.phase == "explore"
+            else "pre_frozen_property_family_no_within_phase_selection"
+        ),
         status="unavailable",
         reason=None,
     )
@@ -434,6 +504,7 @@ def _weak_video_contrast(
         mean_difference=row["raw_mean_delta_positive_minus_normal"],
         ci_low=low,
         ci_high=high,
+        ci_contains_point_estimate=bool(low <= effect <= high),
         bootstrap_valid_replicates=valid,
         bootstrap_attempts=attempts,
         cdf_overlap=_ks_cdf_overlap(normal, positive),
@@ -489,12 +560,18 @@ def _matched_control_contrast(
         mean_difference=None,
         ci_low=None,
         ci_high=None,
+        ci_contains_point_estimate=None,
         bootstrap_valid_replicates=0,
         bootstrap_attempts=0,
         cdf_overlap=None,
         common_language_positive_gt_normal=None,
         selection_source=selection_source,
         confirmation_source=confirmation_source,
+        multiple_comparison_status=(
+            "exploratory_grid_unadjusted_not_confirmed"
+            if config.phase == "explore"
+            else "pre_frozen_property_family_no_within_phase_selection"
+        ),
         status="unavailable",
         reason=None,
     )
@@ -506,16 +583,16 @@ def _matched_control_contrast(
     differences = np.asarray(
         [float(np.mean(values[1]) - np.mean(values[0])) for _, values in complete], dtype=float
     )
-    boot = [
-        float(np.mean(rng.choice(differences, size=len(differences), replace=True)))
-        for _ in range(config.bootstrap_replicates)
-    ]
-    low, high = _ci(boot)
+    boot = rng.choice(
+        differences, size=(config.bootstrap_replicates, len(differences)), replace=True
+    ).mean(axis=1)
+    low, high = _ci(boot.tolist())
     row.update(
         effect=float(np.mean(differences)),
         mean_difference=float(np.mean(differences)),
         ci_low=low,
         ci_high=high,
+        ci_contains_point_estimate=bool(low <= float(np.mean(differences)) <= high),
         bootstrap_valid_replicates=len(boot),
         bootstrap_attempts=len(boot),
         status="available",
@@ -546,6 +623,7 @@ def _empty_unavailable(
         normalization_caution="not_detected",
         ci_low=None,
         ci_high=None,
+        ci_contains_point_estimate=None,
         bootstrap_valid_replicates=0,
         bootstrap_attempts=0,
         cdf_overlap=None,
@@ -597,6 +675,9 @@ def analyze_contrasts(
     composition: list[dict[str, Any]] = []
     for signature in sorted(selected_signatures, key=str):
         candidate = next((item for item in candidates if _matches_candidate(signature, item)), None)
+        binding = (
+            _candidate_binding_for_signature(signature, candidate) if candidate is not None else None
+        )
         selection_source = (
             "frozen_candidate_definition" if candidate else "unselected_exploration_grid"
         )
@@ -641,6 +722,17 @@ def analyze_contrasts(
                 if primary["effect"] is None
                 else (primary["effect"] > 0 if direction == "positive" else primary["effect"] < 0)
             )
+            primary["frozen_property_signature"] = candidate["property_signature"]
+            primary["encoder_binding_mode"] = candidate["binding_mode"]
+            primary["frozen_encoder_binding"] = dict(binding) if binding is not None else None
+        primary.setdefault(
+            "multiple_comparison_status",
+            (
+                "exploratory_grid_unadjusted_not_confirmed"
+                if config.phase == "explore"
+                else "pre_frozen_property_family_no_within_phase_selection"
+            ),
+        )
         contrasts.append(primary)
 
         categories = sorted(
@@ -737,6 +829,24 @@ def analyze_contrasts(
         "available_signatures": len(all_signatures),
         "analyzed_signatures": len(selected_signatures),
         "candidate_ids": [item["candidate_id"] for item in candidates],
+        "candidate_property_definitions": [
+            {
+                "candidate_id": item["candidate_id"],
+                "property_signature": item["property_signature"],
+                "binding_mode": item["binding_mode"],
+                "encoder_bindings": [dict(binding) for binding in item["encoder_bindings"]],
+            }
+            for item in candidates
+        ],
+        "multiple_comparison": {
+            "family_size": len(selected_signatures),
+            "status": (
+                "exploratory_grid_unadjusted_not_confirmed"
+                if config.phase == "explore"
+                else "pre_frozen_property_family_no_within_phase_selection"
+            ),
+            "p_values_reported": False,
+        },
         "research_conclusions": None,
     }
     return ContrastAnalysis(
@@ -757,14 +867,17 @@ def render_candidate_cards(
     )
     cards: list[str] = ["# Probe candidate cards (draft; not research conclusions)", ""]
     for candidate in normalized:
-        signature = tuple(candidate[name] for name in SIGNATURE_FIELDS)
         related = [
             row
             for row in analysis.contrast_rows
-            if tuple(row[name] for name in SIGNATURE_FIELDS) == signature
+            if any(
+                tuple(row[name] for name in SIGNATURE_FIELDS)
+                == tuple(binding[name] for name in SIGNATURE_FIELDS)
+                for binding in candidate["encoder_bindings"]
+            )
         ]
-        primary = next((row for row in related if row["contrast_id"] == "weak_video"), None)
-        matched = next((row for row in related if row["contrast_id"] == "matched_control"), None)
+        primary = [row for row in related if row["contrast_id"] == "weak_video"]
+        matched = [row for row in related if row["contrast_id"] == "matched_control"]
         category_rows = [
             row for row in related if row["contrast_id"] == "category_stratified_weak_video"
         ]
@@ -772,19 +885,23 @@ def render_candidate_cards(
             [
                 f"## {candidate['candidate_id']} — draft",
                 "",
-                f"- Probe: `{candidate['encoder_id']}` / layer `{candidate['layer_index']}` / `{candidate['site']}` / `{candidate['probe_id']}` / `{candidate['statistic_name']}`.",
+                f"- Pre-frozen property: `{candidate['property_signature']}`; binding mode `{candidate['binding_mode']}`.",
+                f"- Encoder bindings: `{candidate['encoder_bindings']}`.",
                 f"- Frozen expected direction: `{candidate.get('expected_direction') or 'not set'}`. The tool did not choose this candidate or its direction.",
-                f"- Weak-video result: status `{primary['status'] if primary else 'unavailable'}`; effect `{primary['effect'] if primary else None}`; CI `[{primary['ci_low'] if primary else None}, {primary['ci_high'] if primary else None}]`; n(V+) `{primary['num_positive_videos'] if primary else 0}`, n(V−) `{primary['num_normal_videos'] if primary else 0}`.",
-                f"- Matched scene×motion control: status `{matched['status'] if matched else 'unavailable'}`; effect `{matched['effect'] if matched else None}`; complete groups `{matched.get('num_matched_groups') if matched else 0}`.",
+                f"- Weak-video rows: `{[(item['encoder_id'], item['status'], item['effect'], item['ci_low'], item['ci_high'], item['num_positive_videos'], item['num_normal_videos']) for item in primary]}`.",
+                f"- Matched-control rows: `{[(item['encoder_id'], item['status'], item['effect'], item.get('num_matched_groups')) for item in matched]}`.",
             ]
         )
         opposite = [
             row["stratum"]
             for row in category_rows
             if row["status"] == "available"
-            and primary
-            and primary["effect"] is not None
-            and row["effect"] * primary["effect"] < 0
+            and any(
+                item["effect"] is not None
+                and item["encoder_id"] == row["encoder_id"]
+                and row["effect"] * item["effect"] < 0
+                for item in primary
+            )
         ]
         cards.append(
             "- Counterexamples: "

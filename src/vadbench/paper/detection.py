@@ -359,6 +359,9 @@ def train_detector(
     feature_store: FeatureStore | str | Path,
     train_manifest: Any,
     validation_manifest: Any | None = None,
+    validation_feature_store: FeatureStore | str | Path | None = None,
+    validation_encoder_fingerprint: str | None = None,
+    validation_sampling: Any | None = None,
     output_dir: str | Path,
     device: Any | None = None,
 ) -> TrainingRunResult:
@@ -379,12 +382,20 @@ def train_detector(
         sampling=config.declaration.training_sampling,
     )
     if validation_records is not None:
+        if validation_encoder_fingerprint is None or validation_sampling is None:
+            raise ValueError("validation manifest requires its explicit feature store fingerprint and sampling")
+        training_policy = config.declaration.training_sampling.to_dict()
+        validation_policy = validation_sampling.to_dict()
+        training_policy.pop("source_digest")
+        validation_policy.pop("source_digest")
+        if validation_policy != training_policy:
+            raise ValueError("validation sampling policy must match the training sampling policy")
         _verify_feature_identity(
-            feature_store,
+            feature_store if validation_feature_store is None else validation_feature_store,
             validation_records,
-            encoder_fingerprint=config.training_encoder_fingerprint,
+            encoder_fingerprint=validation_encoder_fingerprint,
             representation=config.declaration.training_representation,
-            sampling=config.declaration.training_sampling,
+            sampling=validation_sampling,
         )
     result = train_feature_head(
         config.training_config(),
@@ -397,6 +408,8 @@ def train_detector(
         checkpoint_metadata={
             "paper_detector": _source_checkpoint_identity(config.declaration),
         },
+        validation_feature_store=validation_feature_store,
+        validation_encoder_fingerprint=validation_encoder_fingerprint,
     )
     if result.encoder_fingerprint != config.training_encoder_fingerprint:
         raise RuntimeError("training returned an unexpected FeatureStore fingerprint")

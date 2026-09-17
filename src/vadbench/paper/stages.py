@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import sys
+import tempfile
 from collections import Counter
 from copy import deepcopy
 from pathlib import Path
@@ -35,6 +38,82 @@ def clean_encoder_batch(batch: Any) -> Any:
 
 def _array(value: Any) -> np.ndarray:
     return value.detach().float().cpu().numpy() if hasattr(value, "detach") else np.asarray(value)
+
+
+def _atomic_write_jsonl_stream(path: Path, records: Any) -> None:
+    """Atomically write a JSONL iterator without materializing every record."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", newline="\n", dir=path.parent, delete=False
+        ) as stream:
+            temporary_name = stream.name
+            for record in records:
+                stream.write(
+                    json.dumps(
+                        record,
+                        ensure_ascii=False,
+                        allow_nan=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                )
+                stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, path)
+        temporary_name = None
+    finally:
+        if temporary_name is not None:
+            Path(temporary_name).unlink(missing_ok=True)
+
+
+def _probe_shard_path(destination: Path, ordinal: int, encoder_id: str, clip_id: str) -> Path:
+    """Build an order-preserving filename without putting external IDs in paths."""
+
+    token = digest({"encoder_id": encoder_id, "clip_id": clip_id}).split(":", 1)[1]
+    return destination / "output_shards" / f"{ordinal:08d}-{token}.json"
+
+
+def _write_probe_shard(path: Path, payload: dict[str, Any]) -> None:
+    """Commit one completed clip package; one writer must never overwrite it."""
+
+    if path.exists():
+        raise FileExistsError(f"probe output shard 已存在，拒绝覆盖：{path.name}")
+    atomic_write_json(path, payload)
+
+
+def _iter_probe_shards(shards: Path, expected_count: int):
+    paths = sorted(shards.glob("*.json"))
+    if len(paths) != expected_count:
+        raise RuntimeError(
+            f"probe shard 数量不完整：expected={expected_count}, actual={len(paths)}；拒绝生成最终 summary"
+        )
+    for path in paths:
+        with path.open(encoding="utf-8") as stream:
+            payload = json.load(stream)
+        if not isinstance(payload, dict) or payload.get("schema_version") != "vadbench.probe-shard.v1":
+            raise RuntimeError(f"probe shard schema 非法：{path.name}")
+        yield payload
+
+
+def _merge_probe_shards(destination: Path, expected_count: int) -> None:
+    """Create legacy-compatible final JSONL outputs from completed clip shards."""
+
+    shards = destination / "output_shards"
+
+    def records(field: str):
+        for payload in _iter_probe_shards(shards, expected_count):
+            value = payload.get(field)
+            if not isinstance(value, list):
+                raise RuntimeError(f"probe shard 缺少列表字段 {field!r}")
+            yield from value
+
+    _atomic_write_jsonl_stream(destination / "architecture_receipts.jsonl", records("receipts"))
+    _atomic_write_jsonl_stream(destination / "input_controls.jsonl", records("controls"))
+    _atomic_write_jsonl_stream(destination / "probe_summary.jsonl", records("rows"))
 
 
 def observe_clip(
@@ -210,37 +289,49 @@ def run_probe(
                 for name in video_ids
             },
         )
-        rows = []
-        receipts = []
         windows = suite["sampling"]["windows_per_video"]
         expected_ids = {f"{name}:segment-{i:02d}" for name in video_ids for i in range(windows)}
         if set(by_clip) != expected_ids:
             raise ValueError(
                 "cohort clip IDs must exactly match the frozen uniform-window sampling"
             )
-        for name, stored_definition in resolved["encoders"].items():
-            definition = deepcopy(stored_definition)
-            definition["constructor"]["device"] = device
-            identity = encoder_identity(definition, project_root=project.root)
-            adapter = ENCODER_REGISTRY.create(name, **definition["constructor"])
-            constructor = definition["constructor"]
-            clip_frames = constructor.get("num_frames", constructor.get("clip_frames"))
-            if clip_frames is None:
-                raise ValueError("resolved encoder must specify its validated clip frame count")
-            for video_id in video_ids:
-                record = by_video[video_id]
-                with OpenCVVideoReader(record.resolve_path(resolved["dataset_root"])) as reader:
-                    _validate_record_info(record, reader.info, strict_manifest_info=True)
-                    samples = sample_uniform_full_clips(
-                        reader.info.num_frames,
-                        num_segments=windows,
-                        clip_frames=clip_frames,
-                        frame_stride=suite["sampling"]["frame_stride"],
-                    )
-                    clips = (
-                        (
-                            f"{video_id}:segment-{sample.clip_index:02d}",
-                            _batch_from_reader(
+        expected_clip_count = len(resolved["encoders"]) * len(video_ids) * windows
+        progress = {
+            "run_id": run_id,
+            "status": "running",
+            "expected_clips": expected_clip_count,
+            "completed_clips": 0,
+            "video_count": len(video_ids),
+            "completed_videos": 0,
+        }
+        progress_path = destination / "progress.json"
+        atomic_write_json(progress_path, progress)
+        status_counts: Counter[str] = Counter()
+        completed_by_video: Counter[str] = Counter()
+        ordinal = 0
+        try:
+            for name, stored_definition in resolved["encoders"].items():
+                definition = deepcopy(stored_definition)
+                definition["constructor"]["device"] = device
+                identity = encoder_identity(definition, project_root=project.root)
+                adapter = ENCODER_REGISTRY.create(name, **definition["constructor"])
+                constructor = definition["constructor"]
+                clip_frames = constructor.get("num_frames", constructor.get("clip_frames"))
+                if clip_frames is None:
+                    raise ValueError("resolved encoder must specify its validated clip frame count")
+                for video_id in video_ids:
+                    record = by_video[video_id]
+                    with OpenCVVideoReader(record.resolve_path(resolved["dataset_root"])) as reader:
+                        _validate_record_info(record, reader.info, strict_manifest_info=True)
+                        samples = sample_uniform_full_clips(
+                            reader.info.num_frames,
+                            num_segments=windows,
+                            clip_frames=clip_frames,
+                            frame_stride=suite["sampling"]["frame_stride"],
+                        )
+                        for sample in samples:
+                            clip_id = f"{video_id}:segment-{sample.clip_index:02d}"
+                            clip = _batch_from_reader(
                                 reader,
                                 video_id,
                                 [sample.clip],
@@ -250,38 +341,50 @@ def run_probe(
                                     "score_frame_end": sample.score_frame_end,
                                     "input_window_reused": sample.input_window_reused,
                                 },
-                            ),
-                        )
-                        for sample in samples
-                    )
-                    for clip_id, clip in clips:
-                        cohort_record = by_clip[clip_id]
-                        _observe_and_append(
-                            adapter,
-                            name,
-                            clip,
-                            clip_id,
-                            cohort_record,
-                            identity,
-                            run_id,
-                            suite,
-                            destination,
-                            rows,
-                            receipts,
-                            cohort,
-                        )
-            del adapter
+                            )
+                            cohort_record = by_clip[clip_id]
+                            shard = _probe_shard_path(destination, ordinal, name, clip_id)
+                            status_counts.update(
+                                _observe_and_append(
+                                    adapter,
+                                    name,
+                                    clip,
+                                    clip_id,
+                                    cohort_record,
+                                    identity,
+                                    run_id,
+                                    suite,
+                                    shard,
+                                    cohort,
+                                )
+                            )
+                            ordinal += 1
+                            progress["completed_clips"] = ordinal
+                            completed_by_video[video_id] += 1
+                            progress["completed_videos"] = sum(
+                                count == len(resolved["encoders"]) * windows
+                                for count in completed_by_video.values()
+                            )
+                            atomic_write_json(progress_path, progress)
+                del adapter
+            _merge_probe_shards(destination, expected_clip_count)
+        except BaseException:
+            progress["status"] = "failed"
+            atomic_write_json(progress_path, progress)
+            raise
         summary = {
             "run_id": run_id,
             "status": "completed",
             "output": str(destination),
             "videos": len(video_ids),
-            "clips": len(receipts),
-            "probe_status_counts": dict(Counter(row["status"] for row in rows)),
+            "clips": progress["completed_clips"],
+            "probe_status_counts": dict(status_counts),
             "research_conclusions": None,
             "scope": "observer/identity validation and descriptive probes",
         }
         atomic_write_json(destination / "summary.json", summary)
+        progress["status"] = "completed"
+        atomic_write_json(progress_path, progress)
         stage["outputs"] = summary
     return summary
 
@@ -295,11 +398,9 @@ def _observe_and_append(
     identity: dict[str, Any],
     run_id: str,
     suite: dict[str, Any],
-    destination: Path,
-    rows: list,
-    receipts: list,
+    shard: Path,
     cohort: Any,
-) -> None:
+) -> Counter[str]:
     from vadbench.research.controls import raw_clip_controls
     from vadbench.research.labels import join_probe_rows
 
@@ -325,18 +426,17 @@ def _observe_and_append(
             }
         ),
     )
-    receipts.append(
-        {
-            "encoder_id": name,
-            "video_id": cohort_record.video_id,
-            "clip_id": clip_id,
-            "architecture": result["architecture"],
-            "verified_encoder_identity": identity,
-            "python_executable": sys.executable,
-            "sampling": dict(clip.metadata),
-            "input_controls": controls,
-        }
-    )
+    receipt = {
+        "encoder_id": name,
+        "video_id": cohort_record.video_id,
+        "clip_id": clip_id,
+        "architecture": result["architecture"],
+        "verified_encoder_identity": identity,
+        "python_executable": sys.executable,
+        "sampling": dict(clip.metadata),
+        "input_controls": controls,
+    }
+    rows = []
     for item in result["observations"]:
         rows.extend(
             {
@@ -356,11 +456,17 @@ def _observe_and_append(
             )
             if row["probe_id"] in suite["observation"]["probes"]
         )
-    atomic_write_jsonl(destination / "architecture_receipts.jsonl", receipts)
-    atomic_write_jsonl(
-        destination / "input_controls.jsonl", (item["input_controls"] for item in receipts)
+    joined_rows = list(join_probe_rows(rows, cohort))
+    _write_probe_shard(
+        shard,
+        {
+            "schema_version": "vadbench.probe-shard.v1",
+            "receipts": [receipt],
+            "controls": [controls],
+            "rows": joined_rows,
+        },
     )
-    atomic_write_jsonl(destination / "probe_summary.jsonl", join_probe_rows(rows, cohort))
+    return Counter(str(row["status"]) for row in joined_rows)
 
 
 def verify_plan(project: PaperProject, encoder_id: str, video: str, device: str) -> dict[str, Any]:

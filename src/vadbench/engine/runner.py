@@ -277,6 +277,8 @@ def train_feature_head(
     device: Any | None = None,
     artifact_store: Any | None = None,
     checkpoint_metadata: Mapping[str, Any] | None = None,
+    validation_feature_store: FeatureStore | str | Path | None = None,
+    validation_encoder_fingerprint: str | None = None,
 ) -> TrainingRunResult:
     """Build the canonical task and train only its head over cached features."""
 
@@ -312,10 +314,24 @@ def train_feature_head(
         raise ValueError("training manifest must contain only train videos")
     validation_dataset = None
     if validation_manifest is not None:
+        validation_store = (
+            store
+            if validation_feature_store is None
+            else FeatureStore(validation_feature_store)
+            if isinstance(validation_feature_store, (str, Path))
+            else validation_feature_store
+        )
         validation_dataset = FeatureDataset(
-            store,
+            validation_store,
             validation_manifest,
-            **{**dataset_options, "encoder_fingerprint": train_dataset.encoder_fingerprint},
+            **{
+                **dataset_options,
+                "encoder_fingerprint": (
+                    train_dataset.encoder_fingerprint
+                    if validation_encoder_fingerprint is None
+                    else validation_encoder_fingerprint
+                ),
+            },
         )
         if any(item.split == DatasetSplit.TEST for item in validation_dataset.manifest_records):
             raise ValueError("official test videos cannot be used for validation/model selection")

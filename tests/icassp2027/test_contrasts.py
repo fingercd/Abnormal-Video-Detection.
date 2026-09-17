@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import runpy
 from pathlib import Path
@@ -25,14 +26,16 @@ def row(
     motion: str | None = None,
     brightness: str | None = None,
     duration: str | None = None,
+    encoder_id: str = "fixture-encoder",
+    layer_index: int = 3,
     site: str = "block.3.output",
     statistic: str = "effective_rank",
 ) -> dict:
     return {
         "video_id": video_id,
         "clip_id": clip_id,
-        "encoder_id": "fixture-encoder",
-        "layer_index": 3,
+        "encoder_id": encoder_id,
+        "layer_index": layer_index,
         "site": site,
         "sublayer_kind": "output",
         "head_id": None,
@@ -70,6 +73,16 @@ def test_clip_then_video_aggregation_does_not_weight_videos_by_clip_count():
     assert primary(analysis)["mean_difference"] == pytest.approx(3.5)
     assert primary(analysis)["effect"] > 0
     assert primary(analysis)["ci_low"] > 0
+    assert primary(analysis)["multiple_comparison_status"] == "exploratory_grid_unadjusted_not_confirmed"
+
+
+def test_eight_clips_from_one_video_remain_one_independent_sample():
+    rows = [row("n0", "n0:0", 0, 0), row("n1", "n1:0", 1, 0)]
+    rows.extend(row("p0", f"p0:{index}", 3 + index / 10, 1) for index in range(8))
+    rows.append(row("p1", "p1:0", 4, 1))
+    result = primary(analyze_contrasts(rows, config=ContrastConfig(100, 7, "explore")))
+    assert result["num_independent_videos"] == 4
+    assert result["num_positive_videos"] == 2
 
 
 def test_category_unknown_is_reported_and_matching_excludes_unknown_nuisance():
@@ -143,6 +156,55 @@ def test_confirm_only_evaluates_pre_frozen_exact_signature_and_direction():
     assert result["direction_matches_frozen"] is True
     with pytest.raises(ContrastError, match="candidate definition"):
         analyze_contrasts(rows, config=ContrastConfig(10, 1, "confirm"))
+
+
+def test_cross_encoder_confirmation_uses_one_property_with_explicit_frozen_bindings():
+    rows = []
+    bindings = []
+    for encoder_id, layer_index in (("encoder-a", 3), ("encoder-b", 7)):
+        for prefix, label, value in (("n0", 0, 0), ("n1", 0, 1), ("p0", 1, 3), ("p1", 1, 4)):
+            rows.append(
+                row(
+                    f"{encoder_id}-{prefix}",
+                    f"{encoder_id}-{prefix}:0",
+                    value,
+                    label,
+                    encoder_id=encoder_id,
+                    layer_index=layer_index,
+                    statistic="rank90",
+                )
+            )
+        bindings.append(
+            {
+                "encoder_id": encoder_id,
+                "layer_index": layer_index,
+                "site": "block.3.output",
+                "sublayer_kind": "output",
+                "head_id": None,
+                "probe_id": "P02",
+                "statistic_name": "rank90",
+            }
+        )
+    frozen = {
+        "candidates": [
+            {
+                "candidate_id": "rank90-property",
+                "expected_direction": "positive",
+                "property_signature": {"probe_id": "P02", "statistic_name": "rank90"},
+                "encoder_bindings": bindings,
+            }
+        ]
+    }
+    analysis = analyze_contrasts(
+        rows, config=ContrastConfig(100, 9, "confirm"), candidate_definition=frozen
+    )
+    primary_rows = [item for item in analysis.contrast_rows if item["contrast_id"] == "weak_video"]
+    assert len(primary_rows) == 2
+    assert all(item["encoder_binding_mode"] == "cross_encoder_pre_frozen_bindings" for item in primary_rows)
+    assert analysis.receipt["multiple_comparison"]["family_size"] == 2
+    bad = {"candidates": [{**frozen["candidates"][0], "encoder_bindings": [{**bindings[0], "statistic_name": "effective_rank"}]}]}
+    with pytest.raises(ContrastError, match="共享"):
+        analyze_contrasts(rows, config=ContrastConfig(10, 9, "confirm"), candidate_definition=bad)
 
 
 def test_rejects_more_than_two_candidates():
@@ -275,6 +337,42 @@ def test_cli_marks_fixture_export_synthetic_and_writes_machine_tables(tmp_path):
     assert receipt["matching_fields"] == ["motion_bin", "brightness_bin"]
     assert (output / "contrast_summary.csv").is_file()
     assert (output / "video_summary.csv").is_file()
+
+
+def test_cli_debug_is_engineering_only_and_never_emits_confirmed_status(tmp_path):
+    input_path = tmp_path / "debug_probe_summary.jsonl"
+    rows = [
+        row("n0", "n0:0", 0, 0),
+        row("n1", "n1:0", 1, 0),
+        row("p0", "p0:0", 3, 1),
+        row("p1", "p1:0", 4, 1),
+    ]
+    input_path.write_text("\n".join(json.dumps(item) for item in rows) + "\n", encoding="utf-8")
+    script = Path(__file__).resolve().parents[2] / "scripts" / "icassp2027" / "analyze_probes.py"
+    main = runpy.run_path(str(script))["main"]
+    output = tmp_path / "debug-analysis"
+    assert main(
+        [
+            str(input_path),
+            "--output",
+            str(output),
+            "--partition",
+            "fit",
+            "--analysis-role",
+            "debug",
+            "--bootstrap",
+            "100",
+            "--data-status",
+            "synthetic_test_only",
+            "--no-plots",
+        ]
+    ) == 0
+    receipt = json.loads((output / "analysis_receipt.json").read_text(encoding="utf-8"))
+    assert receipt["analysis_role"] == "debug"
+    assert receipt["evidence_status"] == "engineering_only_not_confirmed"
+    with (output / "contrast_summary.csv").open(encoding="utf-8", newline="") as stream:
+        statuses = [item["evidence_status"] for item in csv.DictReader(stream)]
+    assert statuses and set(statuses) == {"engineering_only_not_confirmed"}
 
 
 def test_cli_fits_encoder_scoped_control_calibration_and_joins_video_bins(tmp_path):

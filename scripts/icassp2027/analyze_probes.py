@@ -20,6 +20,7 @@ from typing import Any
 
 from vadbench.research.contrasts import (
     MATCHING_FIELDS,
+    SIGNATURE_FIELDS,
     ContrastConfig,
     analyze_contrasts,
     join_video_controls,
@@ -218,7 +219,13 @@ def _write_csv(path: Path, rows: tuple[dict[str, Any], ...]) -> None:
         writer.writerows(rows)
 
 
-def _plots(output: Path, analysis, candidates, data_status: str) -> dict[str, Any]:
+def _chunks(values: list[Any], size: int) -> list[list[Any]]:
+    return [values[start : start + size] for start in range(0, len(values), size)]
+
+
+def _plots(
+    output: Path, analysis, candidates, data_status: str, *, max_effects_per_plot: int
+) -> dict[str, Any]:
     try:
         import matplotlib.pyplot as plt
     except ImportError:
@@ -231,40 +238,51 @@ def _plots(output: Path, analysis, candidates, data_status: str) -> dict[str, An
         and row.get("normalization_caution") != "mechanically_near_constant_norm_output"
     ]
     created: list[str] = []
-    if primary:
+    primary.sort(
+        key=lambda row: (
+            row["encoder_id"],
+            str(row["layer_index"]),
+            row["site"],
+            row["probe_id"],
+            row["statistic_name"],
+        )
+    )
+    ci_point_mismatches = 0
+    for page, items in enumerate(_chunks(primary, max_effects_per_plot), start=1):
         labels = [
             f"{row['encoder_id']} | L{row['layer_index']} | {row['probe_id']}:{row['statistic_name']}"
-            for row in primary
+            for row in items
         ]
-        y = list(range(len(primary)))
-        fig, ax = plt.subplots(figsize=(10, max(3, 0.45 * len(primary) + 1.5)))
-        effects = [row["effect"] for row in primary]
-        left = [row["effect"] - row["ci_low"] for row in primary]
-        right = [row["ci_high"] - row["effect"] for row in primary]
-        ax.errorbar(effects, y, xerr=[left, right], fmt="o", color="#1f4e79", capsize=3)
+        y = list(range(len(items)))
+        fig, ax = plt.subplots(figsize=(11, max(3, 0.42 * len(items) + 1.8)))
+        lows, highs, effects = [], [], []
+        for row in items:
+            low, high, effect = row["ci_low"], row["ci_high"], row["effect"]
+            lows.append(low)
+            highs.append(high)
+            effects.append(effect)
+            ci_point_mismatches += int(not low <= effect <= high)
+        # Draw the percentile interval and point estimate separately.  Percentile
+        # bootstrap CIs need not contain their point estimate, so errorbar's
+        # non-negative-distance contract would be both unsafe and misleading.
+        ax.hlines(y, lows, highs, color="#4d4d4d", linewidth=1.4, label="bootstrap 95% CI")
+        ax.scatter(effects, y, color="#1f4e79", s=24, zorder=3, label="point estimate")
         ax.axvline(0, color="black", linewidth=0.8)
         ax.set_yticks(y, labels)
         ax.set_xlabel("Hedges g (weak positive video − normal video)")
-        ax.set_title(f"Probe contrasts with video-bootstrap 95% CI ({data_status})")
+        ax.set_title(
+            f"Probe contrasts: video-bootstrap 95% intervals, page {page} ({data_status})"
+        )
+        ax.legend(loc="best", fontsize=8)
         fig.tight_layout()
-        target = output / "weak_video_effects.png"
+        target = output / f"weak_video_effects_page_{page:02d}.png"
         fig.savefig(target, dpi=180)
         plt.close(fig)
         created.append(target.name)
     candidate_signatures = [
-        tuple(
-            item[name]
-            for name in (
-                "encoder_id",
-                "layer_index",
-                "site",
-                "sublayer_kind",
-                "head_id",
-                "probe_id",
-                "statistic_name",
-            )
-        )
+        tuple(binding[name] for name in SIGNATURE_FIELDS)
         for item in candidates
+        for binding in item["encoder_bindings"]
     ]
     values = [
         row
@@ -285,39 +303,50 @@ def _plots(output: Path, analysis, candidates, data_status: str) -> dict[str, An
         and row["weak_label"] in {0, 1}
     ]
     if values:
-        fig, axes = plt.subplots(
-            1, len(candidate_signatures), figsize=(5 * len(candidate_signatures), 4), squeeze=False
-        )
-        for axis, signature in zip(axes[0], candidate_signatures, strict=True):
-            subset = [
-                row
-                for row in values
-                if tuple(
-                    row[name]
-                    for name in (
-                        "encoder_id",
-                        "layer_index",
-                        "site",
-                        "sublayer_kind",
-                        "head_id",
-                        "probe_id",
-                        "statistic_name",
+        for page, signatures in enumerate(_chunks(candidate_signatures, 6), start=1):
+            fig, axes = plt.subplots(
+                1, len(signatures), figsize=(5 * len(signatures), 4), squeeze=False
+            )
+            for axis, signature in zip(axes[0], signatures, strict=True):
+                subset = [
+                    row
+                    for row in values
+                    if tuple(
+                        row[name]
+                        for name in (
+                            "encoder_id",
+                            "layer_index",
+                            "site",
+                            "sublayer_kind",
+                            "head_id",
+                            "probe_id",
+                            "statistic_name",
+                        )
                     )
-                )
-                == signature
-            ]
-            normal = [row["video_statistic_value"] for row in subset if row["weak_label"] == 0]
-            positive = [row["video_statistic_value"] for row in subset if row["weak_label"] == 1]
-            axis.boxplot([normal, positive], tick_labels=["V−", "V+"], showfliers=True)
-            axis.set_title(f"{signature[0]} / {signature[5]}\n{signature[6]}")
-            axis.set_ylabel("video-level probe statistic")
-        fig.suptitle(f"Frozen candidate distributions ({data_status})")
-        fig.tight_layout()
-        target = output / "candidate_video_distributions.png"
-        fig.savefig(target, dpi=180)
-        plt.close(fig)
-        created.append(target.name)
-    return {"status": "created", "files": created}
+                    == signature
+                ]
+                normal = [row["video_statistic_value"] for row in subset if row["weak_label"] == 0]
+                positive = [row["video_statistic_value"] for row in subset if row["weak_label"] == 1]
+                axis.boxplot([normal, positive], tick_labels=["V−", "V+"], showfliers=True)
+                axis.set_title(f"{signature[0]} / {signature[5]}\n{signature[6]}")
+                axis.set_ylabel("video-level probe statistic")
+            fig.suptitle(f"Frozen candidate distributions, page {page} ({data_status})")
+            fig.tight_layout()
+            target = output / f"candidate_video_distributions_page_{page:02d}.png"
+            fig.savefig(target, dpi=180)
+            plt.close(fig)
+            created.append(target.name)
+    return {
+        "status": "created",
+        "files": created,
+        "effects_per_page": max_effects_per_plot,
+        "ci_point_estimate_outside_percentile_interval": ci_point_mismatches,
+        "near_constant_norm_outputs_omitted_from_effect_plot": sum(
+            row.get("normalization_caution") == "mechanically_near_constant_norm_output"
+            for row in analysis.contrast_rows
+            if row["contrast_id"] == "weak_video"
+        ),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -337,6 +366,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--bootstrap", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=20270917)
+    parser.add_argument(
+        "--max-effects-per-plot",
+        type=int,
+        default=24,
+        help="bounded number of weak-video effects per figure page",
+    )
+    parser.add_argument(
+        "--analysis-role",
+        choices=("debug", "explore", "confirm", "select"),
+        default="explore",
+        help="debug is engineering-only and can never emit confirmed status",
+    )
     parser.add_argument(
         "--matching-field",
         action="append",
@@ -367,6 +408,10 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--controls 必须是存在的 input_controls.jsonl 文件")
     if args.control_calibration is not None and not args.control_calibration.is_file():
         parser.error("--control-calibration 必须是存在的冻结文件")
+    if args.max_effects_per_plot <= 0:
+        parser.error("--max-effects-per-plot 必须是正整数")
+    if args.analysis_role == "debug" and args.phase != "explore":
+        parser.error("debug 只能运行 explore phase，且结果固定为 engineering-only")
     definition = None
     if args.candidate_definition:
         try:
@@ -394,16 +439,29 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ValueError as exc:
         parser.error(str(exc))
+    receipt = dict(analysis.receipt)
+    evidence_status = (
+        "engineering_only_not_confirmed"
+        if args.analysis_role == "debug"
+        else (
+            "exploratory_not_confirmed"
+            if args.phase == "explore"
+            else "pre_frozen_confirmation_measurement_not_actionable"
+        )
+    )
+    for contrast in analysis.contrast_rows:
+        contrast["evidence_status"] = evidence_status
     args.output.mkdir(parents=True, exist_ok=True)
     _write_csv(args.output / "video_summary.csv", analysis.video_rows)
     _write_csv(args.output / "contrast_summary.csv", analysis.contrast_rows)
     _write_csv(args.output / "stratum_composition.csv", analysis.composition_rows)
-    receipt = dict(analysis.receipt)
     receipt.update(
         input_paths=[str(path) for path in args.inputs],
         requested_partition=args.partition,
         data_status=args.data_status,
         output_is_research_finding=False,
+        analysis_role=args.analysis_role,
+        evidence_status=evidence_status,
         controls=control_receipt,
     )
     (args.output / "analysis_receipt.json").write_text(
@@ -420,7 +478,13 @@ def main(argv: list[str] | None = None) -> int:
     plot_receipt = (
         {"status": "disabled"}
         if args.no_plots
-        else _plots(args.output, analysis, candidates, args.data_status)
+        else _plots(
+            args.output,
+            analysis,
+            candidates,
+            args.data_status,
+            max_effects_per_plot=args.max_effects_per_plot,
+        )
     )
     (args.output / "plot_receipt.json").write_text(
         json.dumps(plot_receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
