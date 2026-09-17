@@ -18,12 +18,29 @@ import numpy as np
 from .sampling import FixedClipSample, SamplingError, sample_fixed_clip, uniform_segments
 
 DenseReduction = Literal["mean", "max"]
+ShortVideoPolicy = Literal["strict", "stride1_if_needed"]
 
 
 def _positive_int(value: int, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise SamplingError(f"{name} 必须是正整数")
     return value
+
+
+def _effective_frame_stride(
+    num_frames: int, *, clip_frames: int, frame_stride: int, short_policy: ShortVideoPolicy
+) -> int:
+    if short_policy not in {"strict", "stride1_if_needed"}:
+        raise SamplingError("short_policy must be 'strict' or 'stride1_if_needed'")
+    requested_span = (clip_frames - 1) * frame_stride + 1
+    if num_frames >= requested_span:
+        return frame_stride
+    if short_policy == "stride1_if_needed" and frame_stride > 1 and num_frames >= clip_frames:
+        return 1
+    raise SamplingError(
+        "短视频：固定 sampler 要求 num_frames >= temporal_span；"
+        "stride1_if_needed 仅允许在 num_frames >= clip_frames 时显式改用 stride=1"
+    )
 
 
 @dataclass(frozen=True)
@@ -80,11 +97,14 @@ class DenseSamplingPlan:
     clip_frames: int
     frame_stride: int
     window_stride: int = 1
+    short_policy: ShortVideoPolicy = "strict"
 
     def __post_init__(self) -> None:
         _positive_int(self.clip_frames, "clip_frames")
         _positive_int(self.frame_stride, "frame_stride")
         _positive_int(self.window_stride, "window_stride")
+        if self.short_policy not in {"strict", "stride1_if_needed"}:
+            raise SamplingError("short_policy must be 'strict' or 'stride1_if_needed'")
         if self.window_stride > self.temporal_span:
             raise SamplingError(
                 "window_stride 不能大于固定 clip 的时间跨度，否则 dense 计分区间会有缺口"
@@ -106,12 +126,16 @@ class DenseSamplingPlan:
         """
 
         _positive_int(num_frames, "num_frames")
-        if num_frames < self.temporal_span:
-            raise SamplingError(
-                "固定 dense sampler 要求 num_frames >= temporal_span；"
-                "短视频需要单独、已声明的原生 clip 策略"
-            )
-        final_start = num_frames - self.temporal_span
+        effective_stride = _effective_frame_stride(
+            num_frames,
+            clip_frames=self.clip_frames,
+            frame_stride=self.frame_stride,
+            short_policy=self.short_policy,
+        )
+        effective_span = (self.clip_frames - 1) * effective_stride + 1
+        if self.window_stride > effective_span:
+            raise SamplingError("window_stride 不能大于短视频实际 clip 时间跨度")
+        final_start = num_frames - effective_span
         starts = list(range(0, final_start + 1, self.window_stride))
         end_anchored_start: int | None = None
         if starts[-1] != final_start:
@@ -119,11 +143,11 @@ class DenseSamplingPlan:
             end_anchored_start = final_start
         samples: list[DenseClipSample] = []
         for clip_index, start in enumerate(starts):
-            end = start + self.temporal_span
+            end = start + effective_span
             clip = sample_fixed_clip(
                 num_frames,
                 clip_frames=self.clip_frames,
-                frame_stride=self.frame_stride,
+                frame_stride=effective_stride,
                 start_frame=start,
                 end_frame=end,
                 position="start",
@@ -200,6 +224,7 @@ def sample_uniform_full_clips(
     num_segments: int = 32,
     clip_frames: int = 16,
     frame_stride: int = 2,
+    short_policy: ShortVideoPolicy = "strict",
 ) -> tuple[UniformFullClipSample, ...]:
     """Sample fixed-size clips around uniform segment centers across a video.
 
@@ -215,12 +240,13 @@ def sample_uniform_full_clips(
     num_segments = _positive_int(num_segments, "num_segments")
     clip_frames = _positive_int(clip_frames, "clip_frames")
     frame_stride = _positive_int(frame_stride, "frame_stride")
-    temporal_span = (clip_frames - 1) * frame_stride + 1
-    if num_frames < temporal_span:
-        raise SamplingError(
-            "固定 uniform full sampler 要求 num_frames >= temporal_span；"
-            "短视频需要单独、已声明的原生 clip 策略"
-        )
+    effective_stride = _effective_frame_stride(
+        num_frames,
+        clip_frames=clip_frames,
+        frame_stride=frame_stride,
+        short_policy=short_policy,
+    )
+    temporal_span = (clip_frames - 1) * effective_stride + 1
     if num_frames < num_segments:
         raise SamplingError(
             "uniform full sampler 无法把 num_segments 个计分区间无重叠地放入该视频；"
@@ -238,7 +264,7 @@ def sample_uniform_full_clips(
         clip = sample_fixed_clip(
             num_frames,
             clip_frames=clip_frames,
-            frame_stride=frame_stride,
+            frame_stride=effective_stride,
             start_frame=input_start,
             end_frame=input_end,
             position="start",
@@ -357,6 +383,7 @@ __all__ = [
     "DenseReduction",
     "DenseSamplingPlan",
     "DenseScoreAggregation",
+    "ShortVideoPolicy",
     "UniformFullClipSample",
     "aggregate_dense_scores",
     "aggregate_interval_scores",

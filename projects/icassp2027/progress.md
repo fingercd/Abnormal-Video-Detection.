@@ -1,6 +1,33 @@
 # ICASSP 2027 当前进度
 
-更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；尚无经确认的正常—异常规律或插件有效性结论。**
+更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
+
+## 最新执行回执（UTC 2026-09-17 23 时）
+
+- UCF 官方原始视频 1900/1900 下载和成员 CRC 核验已完成；原始 train1610 的 metadata 已全部
+  生成。固定角色锁 seed20260918 保持 fit1288、confirm161、select161。原测试严格审计另有
+  5 个标注终点超出解码帧数（3 个 +1、2 个 +2），不把下载完成写成 frame metric audit 通过。
+  依据作者官方 evaluator 的 source-end clamp，已选定明确的 decoded-frame 派生协议，详见
+  [边界决策](decisions/ucf-source-end-reconciliation.md)；原始标注与严格失败回执继续保留。
+- 完整 train 中存在 2 个长度小于 127、但大于 64 的视频。V-JEPA2 的 64 帧 stride2 无法容纳，
+  正在实现显式 `stride1_if_needed`，默认 strict 不变；baseline/插件共享政策并绑定采样指纹，
+  不丢视频、不复制帧。其他三个模型的本轮训练窗口不受该边界影响。
+- neutral26 已完成 VideoMAEv2、TimeSformer 各 52 clips。TimeSformer 初次在模型移入 CUDA 时
+  OOM，失败原样保留；同配置先初始化 CUDA context 后复跑 52/52 成功。无法据此确定初次
+  失败的唯一原因。VideoMAE/V-JEPA2 的剩余固定 pilot 顺序执行，尚未完成的统计不汇总。
+- 主确认 V-JEPA2 仍在本机真实 CUDA 采集，最近读数 463/512 clips；其结果尚未进入规律结论。
+  已完成三模型的结果继续使用冻结候选和审核后的 v3 统计脚本，不更换方向、层或签名。
+- 完整 dense 头训练协议已固定于 [训练预算](decisions/detector-training-v1.md)：TopKMIL k3，
+  20 epochs、batch16、AdamW 0.001、weight decay 0，最后 epoch、seed0；关键结果补1/2。
+  正在准备完整提特征与训练 QA。中立 pilot 每 clip 包含多个重复前向，其耗时不能直接当作
+  单次 dense 抽特征速度或净插件收益。
+- 本轮数据边界、短视频采样与训练 QA 集成验证：79 passed，70.67 秒，本地
+  `.venv/Scripts/python.exe`。训练 QA 默认不改变旧 runner；paper 训练显式开启，失败的
+  checkpoint 标记 `trained_pending_qa`，只有非零有限梯度、实际参数更新和回读 logits
+  一致后发布 completed 状态。controller 已贯通 train/validation/evaluation 的同一 short policy。
+- XD 第一卷 1004 个有效，第二卷 996 个通过、4 个 CRC 失败隔离；卷级保持
+  `partial_with_crc_failures`。后续卷继续下载核验。官方 feature-grid 的 800 个 Ti header
+  均已直接验证并冻结，但 raw-video 到官方坐标的严格映射尚未成立，没有正式 XD AP。
 
 ## 最近核验（UTC 2026-09-17 20:45）
 

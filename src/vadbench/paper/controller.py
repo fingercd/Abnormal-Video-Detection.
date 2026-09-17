@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from vadbench.artifacts import new_run_id, record_stage
 from vadbench.data.audit import compute_manifest_sha256
+from vadbench.data.dense_sampling import ShortVideoPolicy
 from vadbench.data.enrich import enrich_video_info
 from vadbench.data.manifest import (
     DatasetSplit,
@@ -47,6 +48,7 @@ class DetectionExperimentRequest:
     project: str = "projects/icassp2027/profile.yaml"
     reducer: str = "identity"
     frame_stride: int = 2
+    short_policy: ShortVideoPolicy = "strict"
     dense_window_stride: int | None = None
     output_dim: int = 768
     precision: str = "float32"
@@ -75,6 +77,8 @@ class DetectionExperimentRequest:
             raise ValueError("dense_window_stride must be positive when specified")
         if self.learning_rate <= 0:
             raise ValueError("learning_rate must be positive")
+        if self.short_policy not in {"strict", "stride1_if_needed"}:
+            raise ValueError("short_policy must be 'strict' or 'stride1_if_needed'")
 
 
 @dataclass(frozen=True)
@@ -226,6 +230,7 @@ def run_detection_experiment(
             {
                 "clip_frames": clip_frames,
                 "frame_stride": request.frame_stride,
+                "short_policy": request.short_policy,
                 "train_segments": 32,
                 "dense_window_stride": dense_window_stride,
                 "dense_window_stride_source": "explicit"
@@ -250,6 +255,7 @@ def run_detection_experiment(
             sampling_kind="uniform_full",
             clip_frames=clip_frames,
             frame_stride=request.frame_stride,
+            short_policy=request.short_policy,
             num_segments=32,
         )
         validation_sampling = (
@@ -261,6 +267,7 @@ def run_detection_experiment(
                 sampling_kind="uniform_full",
                 clip_frames=clip_frames,
                 frame_stride=request.frame_stride,
+                short_policy=request.short_policy,
                 num_segments=32,
             )
         )
@@ -270,6 +277,7 @@ def run_detection_experiment(
             sampling_kind="dense",
             clip_frames=clip_frames,
             frame_stride=request.frame_stride,
+            short_policy=request.short_policy,
             window_stride=dense_window_stride,
         )
         train_features = extract_pooled_features(
@@ -281,6 +289,7 @@ def run_detection_experiment(
                 sampling_kind="uniform_full",
                 clip_frames=clip_frames,
                 frame_stride=request.frame_stride,
+                short_policy=request.short_policy,
                 num_segments=32,
             ),
             adapter=adapter,
@@ -302,6 +311,7 @@ def run_detection_experiment(
                     sampling_kind="uniform_full",
                     clip_frames=clip_frames,
                     frame_stride=request.frame_stride,
+                    short_policy=request.short_policy,
                     num_segments=32,
                 ),
                 adapter=adapter,
@@ -321,6 +331,7 @@ def run_detection_experiment(
                 sampling_kind="dense",
                 clip_frames=clip_frames,
                 frame_stride=request.frame_stride,
+                short_policy=request.short_policy,
                 window_stride=dense_window_stride,
             ),
             adapter=adapter,

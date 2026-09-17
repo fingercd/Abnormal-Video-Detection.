@@ -32,6 +32,7 @@ from .sampling import (
 )
 from .ucf_crime import (
     UCF_CRIME_CATEGORIES,
+    UCF_DECODED_SOURCE_END_POLICY,
     UCACaption,
     UCFCrimeError,
     UCFCrimeImportResult,
@@ -48,12 +49,14 @@ from .ucf_crime import (
     parse_uca_captions,
     parse_ucf_split_file,
     parse_ucf_temporal_annotations,
+    reconcile_ucf_test_records_to_decoded_frames,
     write_ucf_crime_manifests,
 )
 
 __all__ = [
     "MANIFEST_SCHEMA_VERSION",
     "UCF_CRIME_CATEGORIES",
+    "UCF_DECODED_SOURCE_END_POLICY",
     "ClipSample",
     "DatasetSplit",
     "FixedClipSample",
@@ -86,6 +89,7 @@ __all__ = [
     "parse_uca_captions",
     "parse_ucf_split_file",
     "parse_ucf_temporal_annotations",
+    "reconcile_ucf_test_records_to_decoded_frames",
     "sample_32_segments",
     "sample_fixed_clip",
     "sample_uniform_segment_clips",

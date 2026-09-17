@@ -57,6 +57,55 @@ def test_dense_short_video_fails_instead_of_emitting_partial_fixed_clip() -> Non
         DenseSamplingPlan(clip_frames=16, frame_stride=2).sample(30)
 
 
+def test_explicit_stride1_short_policy_preserves_fixed_clip_without_padding() -> None:
+    uniform = sample_uniform_full_clips(
+        104,
+        num_segments=32,
+        clip_frames=64,
+        frame_stride=2,
+        short_policy="stride1_if_needed",
+    )
+    dense = DenseSamplingPlan(
+        clip_frames=64,
+        frame_stride=2,
+        window_stride=8,
+        short_policy="stride1_if_needed",
+    ).sample(104)
+
+    assert all(np.diff(item.frame_indices).tolist() == [1] * 63 for item in uniform)
+    assert all(np.diff(item.frame_indices).tolist() == [1] * 63 for item in dense)
+    assert all(all(item.valid_mask) for item in [*uniform, *dense])
+
+
+def test_short_policy_keeps_stride2_when_the_native_span_fits() -> None:
+    uniform = sample_uniform_full_clips(
+        127,
+        num_segments=32,
+        clip_frames=64,
+        frame_stride=2,
+        short_policy="stride1_if_needed",
+    )
+    dense = DenseSamplingPlan(
+        clip_frames=64,
+        frame_stride=2,
+        short_policy="stride1_if_needed",
+    ).sample(127)
+
+    assert all(np.diff(item.frame_indices).tolist() == [2] * 63 for item in uniform)
+    assert all(np.diff(item.frame_indices).tolist() == [2] * 63 for item in dense)
+
+
+def test_short_policy_keeps_default_strict_and_rejects_less_than_native_frames() -> None:
+    with pytest.raises(SamplingError, match="temporal_span"):
+        sample_uniform_full_clips(104, num_segments=32, clip_frames=64, frame_stride=2)
+    with pytest.raises(SamplingError, match="clip_frames"):
+        DenseSamplingPlan(
+            clip_frames=64,
+            frame_stride=2,
+            short_policy="stride1_if_needed",
+        ).sample(63)
+
+
 def test_encoder_specific_fixed_clips_share_the_same_scoring_time_coverage() -> None:
     # Active encoders may require different native fixed clip lengths.  Their
     # sampled input coordinates differ, but each declared dense protocol still

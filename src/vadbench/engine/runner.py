@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import random
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
@@ -13,7 +14,7 @@ import numpy as np
 from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.features_dataset import FeatureDataset, build_feature_dataloader
 from vadbench.data.manifest import DatasetSplit, validate_manifest
-from vadbench.engine.train import move_to_device, save_checkpoint, train_one_step
+from vadbench.engine.train import load_checkpoint, move_to_device, save_checkpoint, train_one_step
 from vadbench.features import FeatureStore, atomic_write_json, ensure_json_metadata
 from vadbench.tasks import build_task
 
@@ -74,6 +75,7 @@ class HeadOnlyTrainingConfig:
     min_overlap_fraction: float = 0.0
     overlap_reference: str = "token"
     assume_unannotated_is_normal: bool = True
+    verify_training: bool = False
 
     def __post_init__(self) -> None:
         normalize_task_name(self.task)
@@ -162,6 +164,7 @@ class HeadOnlyTrainingConfig:
             min_overlap_fraction=float(take("min_overlap_fraction", 0.0)),
             overlap_reference=str(take("overlap_reference", "token")),
             assume_unannotated_is_normal=bool(take("assume_unannotated_is_normal", True)),
+            verify_training=bool(take("verify_training", False)),
         )
 
 
@@ -264,6 +267,102 @@ def _config_metadata(config: HeadOnlyTrainingConfig) -> dict[str, Any]:
     if head is not None and not isinstance(head, (str, int, float, bool)):
         value["head"] = f"{type(config.head).__module__}.{type(config.head).__qualname__}"
     return value
+
+
+def _clone_detached(value: Any) -> Any:
+    if torch.is_tensor(value):
+        return value.detach().clone()
+    if isinstance(value, Mapping):
+        return {key: _clone_detached(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return tuple(_clone_detached(item) for item in value)
+    if isinstance(value, list):
+        return [_clone_detached(item) for item in value]
+    return value
+
+
+def _tensor_digest(value: Any) -> str:
+    digest = hashlib.sha256()
+
+    def visit(item: Any) -> None:
+        if torch.is_tensor(item):
+            tensor = item.detach().cpu().contiguous()
+            digest.update(str(tuple(tensor.shape)).encode("ascii"))
+            digest.update(str(tensor.dtype).encode("ascii"))
+            digest.update(tensor.numpy().tobytes())
+        elif isinstance(item, Mapping):
+            for key in sorted(item, key=str):
+                digest.update(str(key).encode("utf-8"))
+                visit(item[key])
+        elif isinstance(item, (tuple, list)):
+            for child in item:
+                visit(child)
+
+    visit(value)
+    return digest.hexdigest()
+
+
+def _parameter_snapshot(model: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    values = {
+        name: parameter.detach().clone()
+        for name, parameter in model.named_parameters()
+        if parameter.requires_grad
+    }
+    digest = hashlib.sha256()
+    squared = 0.0
+    for name in sorted(values):
+        tensor = values[name].detach().cpu().contiguous()
+        digest.update(name.encode("utf-8"))
+        digest.update(tensor.numpy().tobytes())
+        squared += float(torch.sum(tensor.float() ** 2).item())
+    return values, {"parameter_count": len(values), "sha256": digest.hexdigest(), "l2": squared**0.5}
+
+
+def _gradient_observation(model: Any) -> dict[str, Any]:
+    squared = 0.0
+    parameters_with_grad = 0
+    nonzero_parameters = 0
+    for parameter in model.parameters():
+        gradient = parameter.grad
+        if gradient is None:
+            continue
+        values = gradient._values() if gradient.is_sparse else gradient
+        if not bool(torch.isfinite(values).all().detach().cpu()):
+            raise FloatingPointError("non-finite gradient detected by training QA")
+        parameters_with_grad += 1
+        squared += float(torch.sum(values.float() ** 2).item())
+        if bool(torch.any(values != 0).detach().cpu()):
+            nonzero_parameters += 1
+    return {
+        "parameters_with_grad": parameters_with_grad,
+        "nonzero_gradient_parameters": nonzero_parameters,
+        "grad_l2": squared**0.5,
+    }
+
+
+def _prediction_logits(model: Any, batch: Any) -> dict[str, Any]:
+    output = model.prediction_step(batch)
+    predictions = output.predictions
+    if torch.is_tensor(predictions):
+        values = {"predictions": predictions}
+    else:
+        values = {
+            name: getattr(predictions, name)
+            for name in ("video_logits", "snippet_logits")
+            if torch.is_tensor(getattr(predictions, name, None))
+        }
+    if not values:
+        raise TypeError("training QA prediction_step did not expose tensor logits")
+    for name, value in values.items():
+        if not bool(torch.isfinite(value).all().detach().cpu()):
+            raise FloatingPointError(f"non-finite training QA logits: {name}")
+    return values
+
+
+def _write_training_qa(run_dir: Path, payload: Mapping[str, Any]) -> Path:
+    path = run_dir / "training_qa.json"
+    atomic_write_json(path, dict(payload))
+    return path
 
 
 def train_feature_head(
@@ -387,11 +486,20 @@ def train_feature_head(
     global_step = 0
     epoch_history: list[dict[str, Any]] = []
     stopped_for_max_steps = False
+    initial_parameters, initial_parameter_state = (
+        _parameter_snapshot(model) if settings.verify_training else ({}, {})
+    )
+    parity_batch: Any | None = None
+    gradient_steps = 0
+    nonzero_gradient_steps = 0
+    max_grad_l2 = 0.0
     for epoch in range(1, settings.epochs + 1):
         losses: list[float] = []
         metrics: dict[str, tuple[float, int]] = {}
         for batch in train_loader:
             batch = move_to_device(batch, resolved_device)
+            if settings.verify_training and parity_batch is None:
+                parity_batch = _clone_detached(batch)
             result = train_one_step(
                 model,
                 batch,
@@ -400,6 +508,12 @@ def train_feature_head(
                 max_grad_norm=settings.max_grad_norm,
             )
             global_step = result.step
+            if settings.verify_training:
+                observation = _gradient_observation(model)
+                gradient_steps += 1
+                max_grad_l2 = max(max_grad_l2, float(observation["grad_l2"]))
+                if observation["nonzero_gradient_parameters"] > 0:
+                    nonzero_gradient_steps += 1
             _accumulate_epoch(result, losses, metrics, "training")
             if settings.max_steps is not None and global_step >= settings.max_steps:
                 stopped_for_max_steps = True
@@ -448,13 +562,14 @@ def train_feature_head(
         "config": _config_metadata(settings),
         "epochs": epoch_history,
     }
+    completed_status = history["status"]
     checkpoint_path = run_dir / "checkpoints" / "final.pt"
     checkpoint_payload = {
         "task": task_name,
         "encoder_fingerprint": train_dataset.encoder_fingerprint,
         "feature_dim": train_dataset.feature_dim,
         "feature_level": train_dataset.feature_level,
-        "status": history["status"],
+        "status": "trained_pending_qa" if settings.verify_training else completed_status,
         "train_manifest": history["train_manifest"],
         "validation_manifest": history["validation_manifest"],
         "config": history["config"],
@@ -474,6 +589,110 @@ def train_feature_head(
         epoch=len(epoch_history),
         metadata=checkpoint_payload,
     )
+    if settings.verify_training:
+        qa: dict[str, Any] = {
+            "schema_version": 1,
+            "enabled": True,
+            "status": "pending",
+            "initial_parameters": initial_parameter_state,
+            "gradient_steps": gradient_steps,
+            "nonzero_gradient_steps": nonzero_gradient_steps,
+            "max_grad_l2": max_grad_l2,
+            "pending_checkpoint": artifact.to_dict(),
+            "pending_checkpoint_status": "trained_pending_qa",
+        }
+        try:
+            if parity_batch is None:
+                raise RuntimeError("training QA did not capture a training batch")
+            if nonzero_gradient_steps == 0 or max_grad_l2 <= 0:
+                raise RuntimeError("training QA observed no finite nonzero gradient")
+            final_parameters, final_parameter_state = _parameter_snapshot(model)
+            changed = [
+                name for name in initial_parameters if not torch.equal(initial_parameters[name], final_parameters[name])
+            ]
+            delta_squared = sum(
+                float(torch.sum((final_parameters[name].float() - initial_parameters[name].float()) ** 2).item())
+                for name in initial_parameters
+            )
+            qa["final_parameters"] = final_parameter_state
+            qa["changed_parameter_count"] = len(changed)
+            qa["parameter_delta_l2"] = delta_squared**0.5
+            if not changed or delta_squared <= 0:
+                raise RuntimeError("training QA observed no trainable parameter change")
+            model.eval()
+            with torch.no_grad():
+                reference_logits = _prediction_logits(model, parity_batch)
+            reloaded = build_task(
+                task_name,
+                None,
+                feature_dim=train_dataset.feature_dim,
+                head=settings.head,
+                head_kwargs=settings.head_kwargs,
+                task_kwargs=settings.task_kwargs,
+            ).to(resolved_device)
+            load_checkpoint(artifact.path, reloaded, map_location=resolved_device)
+            reloaded.eval()
+            with torch.no_grad():
+                reloaded_logits = _prediction_logits(reloaded, parity_batch)
+            parity: dict[str, Any] = {
+                "batch_sha256": _tensor_digest(parity_batch),
+                "outputs": {},
+            }
+            if set(reference_logits) != set(reloaded_logits):
+                raise RuntimeError("training QA reload changed prediction output fields")
+            for name in sorted(reference_logits):
+                reference = reference_logits[name]
+                restored = reloaded_logits[name]
+                if tuple(reference.shape) != tuple(restored.shape):
+                    raise RuntimeError(f"training QA reload changed {name} shape")
+                difference = torch.max(torch.abs(reference - restored)).detach().cpu().item()
+                parity["outputs"][name] = {
+                    "shape": list(reference.shape),
+                    "max_abs_difference": float(difference),
+                    "exact_equal": bool(torch.equal(reference, restored)),
+                }
+                if not torch.equal(reference, restored):
+                    raise RuntimeError(f"training QA checkpoint reload parity failed for {name}")
+            qa["reload_parity"] = parity
+            final_checkpoint_payload = {
+                **checkpoint_payload,
+                "status": completed_status,
+                "training_qa": {
+                    "status": "passed",
+                    "nonzero_gradient_steps": nonzero_gradient_steps,
+                    "changed_parameter_count": qa["changed_parameter_count"],
+                    "parameter_delta_l2": qa["parameter_delta_l2"],
+                    "reload_parity_exact": all(
+                        item["exact_equal"] for item in parity["outputs"].values()
+                    ),
+                },
+            }
+            artifact = save_checkpoint(
+                checkpoint_path,
+                model,
+                optimizer=optimizer,
+                step=global_step,
+                epoch=len(epoch_history),
+                metadata=final_checkpoint_payload,
+            )
+            final_metadata = load_checkpoint(artifact.path, reloaded, map_location=resolved_device)
+            if final_metadata["metadata"].get("status") != completed_status:
+                raise RuntimeError("training QA final checkpoint status did not commit")
+            if final_metadata["metadata"].get("training_qa", {}).get("status") != "passed":
+                raise RuntimeError("training QA final checkpoint metadata did not commit")
+            qa["checkpoint"] = artifact.to_dict()
+            qa["final_checkpoint_load"] = {
+                "missing_keys": final_metadata["missing_keys"],
+                "unexpected_keys": final_metadata["unexpected_keys"],
+            }
+            qa["status"] = "passed"
+        except Exception as error:
+            qa["status"] = "failed"
+            qa["failure"] = {"type": type(error).__name__, "message": str(error)}
+            _write_training_qa(run_dir, qa)
+            raise
+        history["training_qa"] = qa
+        _write_training_qa(run_dir, qa)
     history["checkpoint"] = artifact.to_dict()
     history_path = run_dir / "history.json"
     atomic_write_json(history_path, history)

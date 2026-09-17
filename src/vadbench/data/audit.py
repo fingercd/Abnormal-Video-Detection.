@@ -31,6 +31,7 @@ from .manifest import (
 )
 from .ucf_crime import (
     UCF_CRIME_CATEGORIES,
+    UCF_DECODED_SOURCE_END_POLICY,
     parse_ucf_split_file,
     parse_ucf_temporal_annotations,
 )
@@ -241,8 +242,45 @@ def verify_official_source_identity(
                     and a.span is not None
                 ]
                 if spans != source["spans"]:
-                    mismatches.append(f"test_truth:{record.video_id}")
-                    break
+                    if record.metadata.get("source_end_reconciliation_policy") != (
+                        UCF_DECODED_SOURCE_END_POLICY
+                    ):
+                        mismatches.append(f"test_truth:{record.video_id}")
+                        break
+                    details = record.metadata.get("source_end_reconciliation")
+                    if not isinstance(details, list) or type(record.num_frames) is not int:
+                        mismatches.append(f"test_reconciliation_metadata:{record.video_id}")
+                        break
+                    if len(details) != len(source["spans"]):
+                        mismatches.append(f"test_reconciliation_span_count:{record.video_id}")
+                        break
+                    expected_effective: list[list[int]] = []
+                    policy_valid = True
+                    for raw_source, detail in zip(source["spans"], details, strict=True):
+                        if not isinstance(detail, Mapping) or len(raw_source) != 2:
+                            policy_valid = False
+                            break
+                        raw_start, raw_end = int(raw_source[0]) + 1, int(raw_source[1])
+                        expected_start = max(raw_start, 1)
+                        expected_end = min(raw_end, record.num_frames)
+                        expected_empty = expected_end < expected_start
+                        required = {
+                            "raw_start_1based_inclusive": raw_start,
+                            "raw_end_1based_inclusive": raw_end,
+                            "decoded_frame_count": record.num_frames,
+                            "start_effective_1based_inclusive": expected_start,
+                            "end_effective_1based_inclusive": expected_end,
+                            "decoded_clamped": expected_end != raw_end,
+                            "empty_after_source_end_reconciliation": expected_empty,
+                        }
+                        if any(detail.get(key) != value for key, value in required.items()):
+                            policy_valid = False
+                            break
+                        if not expected_empty:
+                            expected_effective.append([expected_start - 1, expected_end])
+                    if not policy_valid or spans != expected_effective:
+                        mismatches.append(f"test_reconciliation_effective_span:{record.video_id}")
+                        break
     if mismatches:
         errors.append(
             _issue(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -490,6 +491,56 @@ def test_complete_official_split_passes_and_report_validates_against_schema(
     schema_path = Path(__file__).parents[1] / "schemas" / "dataset-audit-v2.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(report)
+
+
+def test_reconciled_policy_rejects_tampered_effective_span(tmp_path: Path) -> None:
+    train, test = _official_records_and_files(tmp_path)
+    source_registry = _official_source_registry(tmp_path, train, test)
+    index = next(i for i, record in enumerate(test) if record.is_anomaly)
+    original = test[index]
+    annotation = original.annotations[0]
+    assert annotation.span is not None
+    raw_start = int(annotation.span.start) + 1
+    raw_end = int(annotation.span.end)
+    detail = {
+        "raw_start_1based_inclusive": raw_start,
+        "raw_end_1based_inclusive": raw_end,
+        "decoded_frame_count": original.num_frames,
+        "start_effective_1based_inclusive": raw_start,
+        "end_effective_1based_inclusive": raw_end,
+        "decoded_clamped": False,
+        "empty_after_source_end_reconciliation": False,
+    }
+    # The raw metadata remains correct, but the actual span has been shortened
+    # by one frame.  Policy flags must not be trusted in place of the formula.
+    tampered_annotation = replace(
+        annotation,
+        span=TemporalSpan(annotation.span.start, annotation.span.end - 1, "frame"),
+        metadata={
+            "raw_start_frame": raw_start,
+            "raw_end_frame": raw_end,
+            "source_end_reconciliation": detail,
+        },
+    )
+    tampered = replace(
+        original,
+        annotations=(tampered_annotation,),
+        metadata={
+            "source_end_reconciliation_policy": "source_end_reconciled_decoded_v1",
+            "source_end_reconciliation": [detail],
+        },
+    )
+    changed = list(test)
+    changed[index] = tampered
+    report = audit_ucf_crime_dataset(
+        tmp_path,
+        train,
+        tuple(changed),
+        probe_fn=_fake_probe,
+        official_source_registry=source_registry,
+    )
+    assert report["passed"] is False
+    assert "official_source_manifest_mismatch" in _error_codes(report)
 
 
 def test_malformed_manifest_line_is_retained_as_error_not_exception(tmp_path: Path) -> None:

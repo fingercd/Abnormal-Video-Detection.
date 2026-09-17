@@ -23,7 +23,11 @@ import numpy as np
 from vadbench.artifacts import new_run_id
 from vadbench.contracts import validate_clip_for_capabilities, validate_encoder_output
 from vadbench.data.audit import compute_manifest_sha256
-from vadbench.data.dense_sampling import DenseSamplingPlan, sample_uniform_full_clips
+from vadbench.data.dense_sampling import (
+    DenseSamplingPlan,
+    ShortVideoPolicy,
+    sample_uniform_full_clips,
+)
 from vadbench.data.manifest import VideoManifestRecord, validate_manifest
 from vadbench.data.video import OpenCVVideoReader, VideoIOError, build_clip_batch
 from vadbench.features import (
@@ -414,6 +418,7 @@ class PooledExtractionSpec:
     frame_stride: int
     num_segments: int = 32
     window_stride: int = 1
+    short_policy: ShortVideoPolicy = "strict"
     micro_batch_size: int = 8
     strict_manifest_info: bool = True
 
@@ -432,6 +437,8 @@ class PooledExtractionSpec:
             raise ValueError("verified_encoder_identity.adapter must match runtime_id")
         if self.sampling_kind not in {"uniform_full", "dense"}:
             raise ValueError("sampling_kind must be 'uniform_full' or 'dense'")
+        if self.short_policy not in {"strict", "stride1_if_needed"}:
+            raise ValueError("short_policy must be 'strict' or 'stride1_if_needed'")
         for name in ("clip_frames", "frame_stride", "num_segments", "window_stride", "micro_batch_size"):
             _positive(getattr(self, name), name)
         expected_regime = "train_32" if self.sampling_kind == "uniform_full" else "test_dense"
@@ -445,6 +452,8 @@ class PooledExtractionSpec:
             raise ValueError("sampling.frame_selection.kind does not match sampling_kind")
         if selection.get("implementation") != _sampling_implementation_identity():
             raise ValueError("sampling implementation evidence does not match the active sampler code")
+        if selection.get("short_video_policy") != self.short_policy:
+            raise ValueError("sampling.short_video_policy does not match short_policy")
         if window.get("clip_frames") != self.clip_frames:
             raise ValueError("sampling.window.clip_frames does not match clip_frames")
         if stride.get("frame_stride") != self.frame_stride:
@@ -524,6 +533,7 @@ def make_sampling_identity(
     frame_stride: int,
     num_segments: int = 32,
     window_stride: int = 1,
+    short_policy: ShortVideoPolicy = "strict",
     padding_kind: str = "forbid",
     projection_kind: str = "frame_intervals_v1",
 ) -> SamplingIdentity:
@@ -537,8 +547,11 @@ def make_sampling_identity(
     _positive(frame_stride, "frame_stride")
     _positive(num_segments, "num_segments")
     _positive(window_stride, "window_stride")
+    if short_policy not in {"strict", "stride1_if_needed"}:
+        raise ValueError("short_policy must be 'strict' or 'stride1_if_needed'")
     selection: dict[str, Any] = {
         "kind": "uniform_full" if sampling_kind == "uniform_full" else "dense_sliding",
+        "short_video_policy": short_policy,
         "implementation": _sampling_implementation_identity(),
     }
     if sampling_kind == "uniform_full":
@@ -565,16 +578,23 @@ def _samples(spec: PooledExtractionSpec, num_frames: int) -> tuple[Any, ...]:
             num_segments=spec.num_segments,
             clip_frames=spec.clip_frames,
             frame_stride=spec.frame_stride,
+            short_policy=spec.short_policy,
         )
     return DenseSamplingPlan(
         clip_frames=spec.clip_frames,
         frame_stride=spec.frame_stride,
         window_stride=spec.window_stride,
+        short_policy=spec.short_policy,
     ).sample(num_frames)
 
 
 def _sample_metadata(sample: Any) -> tuple[int, int, int, dict[str, Any]]:
     metadata: dict[str, Any] = {"clip_index": int(sample.clip_index)}
+    indices = tuple(int(index) for index in sample.frame_indices)
+    if len(indices) > 1:
+        strides = {right - left for left, right in zip(indices[:-1], indices[1:], strict=True)}
+        if len(strides) == 1:
+            metadata["actual_frame_stride"] = strides.pop()
     if hasattr(sample, "end_anchored"):
         metadata["end_anchored"] = bool(sample.end_anchored)
     if hasattr(sample, "requested_input_start"):
@@ -846,6 +866,7 @@ def extract_pooled_features(
                 "frame_stride": spec.frame_stride,
                 "num_segments": spec.num_segments,
                 "window_stride": spec.window_stride,
+                "short_policy": spec.short_policy,
                 "micro_batch_size": spec.micro_batch_size,
             },
             "data_content_evidence": data_evidence,

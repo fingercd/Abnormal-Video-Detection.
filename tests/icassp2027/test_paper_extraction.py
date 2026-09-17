@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -157,7 +158,13 @@ def _representation(adapter: _Adapter, *, reducer: str) -> RepresentationIdentit
 
 
 def _sampling(
-    records, *, root: Path, regime: str, clips: int, window_stride: int = 1
+    records,
+    *,
+    root: Path,
+    regime: str,
+    clips: int,
+    window_stride: int = 1,
+    short_policy: str = "strict",
 ) -> SamplingIdentity:
     return make_sampling_identity(
         records,
@@ -167,6 +174,7 @@ def _sampling(
         frame_stride=1,
         num_segments=clips,
         window_stride=window_stride,
+        short_policy=short_policy,  # type: ignore[arg-type]
     )
 
 
@@ -177,6 +185,7 @@ def _spec(
     kind: str,
     stride: int = 1,
     identity: dict[str, object] | None = None,
+    short_policy: str = "strict",
 ) -> PooledExtractionSpec:
     return PooledExtractionSpec(
         runtime_id="fixture",
@@ -188,6 +197,7 @@ def _spec(
         frame_stride=1,
         num_segments=32,
         window_stride=stride,
+        short_policy=short_policy,  # type: ignore[arg-type]
         micro_batch_size=7,
     )
 
@@ -338,6 +348,72 @@ def test_spec_binds_uniform_segments_and_dense_window_stride_to_sampling_identit
                 },
             ),
         )
+
+
+def test_explicit_short_policy_binds_identity_resolved_config_and_actual_frame_stride(
+    tmp_path: Path,
+) -> None:
+    class _ShortAdapter(_Adapter):
+        capabilities = EncoderCapabilities(
+            supports_fixed_clip=True,
+            supports_training=False,
+            fixed_num_frames=64,
+            min_frames=64,
+            max_frames=64,
+        )
+
+    records = [_record("short-vjepa", split="train", anomaly=False, frames=104)]
+    _touch(tmp_path, records)
+    adapter = _ShortAdapter()
+    representation = _representation(adapter, reducer="identity")
+    fallback = make_sampling_identity(
+        records,
+        dataset_root=tmp_path,
+        sampling_kind="uniform_full",
+        clip_frames=64,
+        frame_stride=2,
+        num_segments=32,
+        short_policy="stride1_if_needed",
+    )
+    strict = make_sampling_identity(
+        records,
+        dataset_root=tmp_path,
+        sampling_kind="uniform_full",
+        clip_frames=64,
+        frame_stride=2,
+        num_segments=32,
+    )
+    assert fallback.fingerprint != strict.fingerprint
+    assert fallback.frame_selection["short_video_policy"] == "stride1_if_needed"
+    spec = PooledExtractionSpec(
+        runtime_id="fixture",
+        verified_encoder_identity=_verified_identity(),
+        representation=representation,
+        sampling=fallback,
+        sampling_kind="uniform_full",
+        clip_frames=64,
+        frame_stride=2,
+        num_segments=32,
+        short_policy="stride1_if_needed",
+    )
+    with pytest.raises(ValueError, match="short_video_policy"):
+        replace(spec, short_policy="strict")
+
+    result = extract_pooled_features(
+        spec,
+        adapter=adapter,
+        manifest=records,
+        dataset_root=tmp_path,
+        output_root=tmp_path / "runs",
+        run_id="short-policy",
+        backend=_CV2(104),
+    )
+
+    assert result.completed
+    resolved = json.loads((Path(result.run_dir) / "resolved.json").read_text(encoding="utf-8"))
+    assert resolved["spec"]["short_policy"] == "stride1_if_needed"
+    row = FeatureStore(result.feature_root).records()[0]
+    assert row.metadata["sampling"]["actual_frame_stride"] == 1
 
 
 @pytest.mark.parametrize(

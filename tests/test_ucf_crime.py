@@ -13,7 +13,9 @@ from vadbench.data.ucf_crime import (
     parse_uca_captions,
     parse_ucf_split_file,
     parse_ucf_temporal_annotations,
+    reconcile_ucf_test_records_to_decoded_frames,
 )
+from vadbench.data.video import VideoInfo
 
 
 def test_parse_official_and_derived_temporal_formats(tmp_path: Path) -> None:
@@ -186,6 +188,75 @@ def test_import_requires_temporal_truth_for_abnormal_test_video(tmp_path: Path) 
             test_split=test,
             temporal_annotations=temporal,
         )
+
+
+def test_decoded_source_end_reconciliation_keeps_raw_endpoints_and_clamps_only_decoded_timeline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "UCF-Crime"
+    test_video = root / "Abuse" / "Abuse900_x264.mp4"
+    test_video.parent.mkdir(parents=True)
+    test_video.touch()
+    train = tmp_path / "Anomaly_Train.txt"
+    train.write_text("Abuse/Abuse001_x264.mp4\n", encoding="utf-8")
+    (root / "Abuse" / "Abuse001_x264.mp4").touch()
+    temporal = tmp_path / "Temporal_Anomaly_Annotation.txt"
+    temporal.write_text("Abuse900_x264.mp4 Abuse 9 12 -1 -1\n", encoding="utf-8")
+    result = import_ucf_crime(
+        dataset_root=root,
+        train_split=train,
+        temporal_annotations=temporal,
+        require_files=True,
+    )
+    monkeypatch.setattr(
+        "vadbench.data.ucf_crime.probe_video",
+        lambda path: VideoInfo(path=path, num_frames=10, fps=25.0, width=2, height=2),
+    )
+    reconciled, receipt = reconcile_ucf_test_records_to_decoded_frames(result.test, root)
+    annotation = next(item for item in reconciled[0].annotations if item.scope == SupervisionScope.FRAME)
+    assert (annotation.start_frame, annotation.end_frame) == (8, 10)
+    detail = annotation.metadata["source_end_reconciliation"]
+    assert detail["raw_start_1based_inclusive"] == 9
+    assert detail["raw_end_1based_inclusive"] == 12
+    assert detail["author_frame_count_round_duration_x30"] == 12
+    assert detail["decoded_frame_count"] == 10
+    assert detail["decoded_clamped"] is True
+    assert receipt["decoded_clamped_spans"] == 1
+    assert receipt["author_decode_frame_count_different_records"] == 1
+
+
+def test_decoded_reconciliation_never_uses_author_30fps_end_as_effective_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "UCF-Crime"
+    for relative in ("Abuse/Abuse001_x264.mp4", "Abuse/Abuse900_x264.mp4"):
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.touch()
+    train = tmp_path / "Anomaly_Train.txt"
+    train.write_text("Abuse/Abuse001_x264.mp4\n", encoding="utf-8")
+    temporal = tmp_path / "Temporal_Anomaly_Annotation.txt"
+    temporal.write_text("Abuse900_x264.mp4 Abuse 9 10 -1 -1\n", encoding="utf-8")
+    result = import_ucf_crime(
+        dataset_root=root,
+        train_split=train,
+        temporal_annotations=temporal,
+        require_files=True,
+    )
+    # N_author=round(10 / 40 * 30)=8 while N_decode=10.  The historical
+    # author clamp must remain diagnostic; decoded end stays raw_end=10.
+    monkeypatch.setattr(
+        "vadbench.data.ucf_crime.probe_video",
+        lambda path: VideoInfo(path=path, num_frames=10, fps=40.0, width=2, height=2),
+    )
+    reconciled, _ = reconcile_ucf_test_records_to_decoded_frames(result.test, root)
+    annotation = next(item for item in reconciled[0].annotations if item.scope == SupervisionScope.FRAME)
+    assert (annotation.start_frame, annotation.end_frame) == (8, 10)
+    detail = annotation.metadata["source_end_reconciliation"]
+    assert detail["end_author_1based_inclusive"] == 8
+    assert detail["end_effective_1based_inclusive"] == 10
+    assert detail["author_clamped"] is True
+    assert detail["decoded_clamped"] is False
 
 
 def test_uca_json_caption_is_preserved_without_anomaly_inference(tmp_path: Path) -> None:

@@ -99,8 +99,9 @@ def _record(video_id, split, anomaly):
 
 
 @pytest.mark.parametrize("with_validation", [False, True])
+@pytest.mark.parametrize("short_policy", ["strict", "stride1_if_needed"])
 def test_engineering_controller_freezes_extracts_and_predicts(
-    tmp_path: Path, with_validation: bool
+    tmp_path: Path, with_validation: bool, short_policy: str
 ):
     train = [_record("normal", "train", False), _record("abnormal", "train", True)]
     validation = [_record("holdout", "val", False)] if with_validation else []
@@ -127,6 +128,7 @@ def test_engineering_controller_freezes_extracts_and_predicts(
         evaluation_manifest=str(evaluation_path),
         output_root=str(tmp_path / "runs"),
         frame_stride=2,
+        short_policy=short_policy,
         dense_window_stride=None,
         output_dim=4,
         epochs=1,
@@ -154,6 +156,11 @@ def test_engineering_controller_freezes_extracts_and_predicts(
         and (run / "result.json").is_file()
     )
     assert json.loads((run / "resolved_sampling.json").read_text())["dense_window_stride"] == 4
+    assert json.loads((run / "resolved_sampling.json").read_text())["short_policy"] == short_policy
+    for role in ("train", "evaluation", *(["validation"] if with_validation else [])):
+        extracted = json.loads((run / "features" / role / "resolved.json").read_text())
+        assert extracted["spec"]["short_policy"] == short_policy
+        assert extracted["spec"]["sampling"]["frame_selection"]["short_video_policy"] == short_policy
     role_checks = json.loads((run / "frozen" / "role_checks.json").read_text())
     assert role_checks["near_duplicate_exclusion"] == "not_established_by_video_identity_checks"
     if with_validation:

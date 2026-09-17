@@ -296,6 +296,7 @@ class DetectionConfig:
             max_steps=self.max_steps,
             seed=self.seed,
             expected_clips=self.expected_training_clips,
+            verify_training=True,
         )
 
 

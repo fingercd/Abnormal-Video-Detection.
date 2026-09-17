@@ -33,6 +33,7 @@ from .manifest import (
     validate_manifest_pair,
     write_manifest_jsonl,
 )
+from .video import probe_video
 
 UCF_CRIME_CATEGORIES = (
     "Abuse",
@@ -58,6 +59,41 @@ _CHUNK_SUFFIX = re.compile(r"(?:__\d+|_C)$", re.IGNORECASE)
 
 class UCFCrimeError(ManifestError):
     """UCF-Crime 源文件格式或切分关系错误。"""
+
+
+UCF_DECODED_SOURCE_END_POLICY = "source_end_reconciled_decoded_v1"
+
+
+@dataclass(frozen=True)
+class UCFSourceEndReconciliation:
+    """One immutable source frame span projected onto a decoded-frame timeline."""
+
+    raw_start_1based_inclusive: int
+    raw_end_1based_inclusive: int
+    author_frame_count: int
+    decoded_frame_count: int
+    start_author: int
+    end_author: int
+    start_effective: int
+    end_effective: int
+    author_clamped: bool
+    decoded_clamped: bool
+    empty_after_reconciliation: bool
+
+    def as_dict(self) -> dict[str, int | bool]:
+        return {
+            "raw_start_1based_inclusive": self.raw_start_1based_inclusive,
+            "raw_end_1based_inclusive": self.raw_end_1based_inclusive,
+            "author_frame_count_round_duration_x30": self.author_frame_count,
+            "decoded_frame_count": self.decoded_frame_count,
+            "start_author_1based_inclusive": self.start_author,
+            "end_author_1based_inclusive": self.end_author,
+            "start_effective_1based_inclusive": self.start_effective,
+            "end_effective_1based_inclusive": self.end_effective,
+            "author_clamped": self.author_clamped,
+            "decoded_clamped": self.decoded_clamped,
+            "empty_after_source_end_reconciliation": self.empty_after_reconciliation,
+        }
 
 
 def _display_video_id(value: str | Path) -> str:
@@ -643,6 +679,111 @@ def import_ucf_crime(
         require_files=require_files,
     )
     return UCFCrimeImportResult(train=train, test=test)
+
+
+def reconcile_ucf_test_records_to_decoded_frames(
+    records: Iterable[VideoManifestRecord],
+    dataset_root: str | Path,
+) -> tuple[tuple[VideoManifestRecord, ...], dict[str, object]]:
+    """Explicitly project immutable source ends onto verified decoded frames.
+
+    This is an opt-in decoded-frame evaluation policy.  It leaves the official
+    annotation source untouched and records both the author-style duration
+    clamp and the decoded-frame clamp in annotation metadata.  It must never
+    be used for train/development records.
+    """
+
+    source_records = tuple(records)
+    if any(record.split != DatasetSplit.TEST for record in source_records):
+        raise UCFCrimeError("decoded source-end reconciliation 只接受 official test records")
+    reconciled: list[VideoManifestRecord] = []
+    aggregate = {
+        "policy": UCF_DECODED_SOURCE_END_POLICY,
+        "test_records": len(source_records),
+        "frame_annotations": 0,
+        "author_clamped_spans": 0,
+        "decoded_clamped_spans": 0,
+        "empty_after_reconciliation_spans": 0,
+        "author_decode_frame_count_different_records": 0,
+    }
+    for record in source_records:
+        info = probe_video(record.resolve_path(dataset_root))
+        author_count = round(info.duration_seconds * 30)
+        if author_count <= 0:
+            raise UCFCrimeError(f"{record.video_id}: N_author 非法")
+        if author_count != info.num_frames:
+            aggregate["author_decode_frame_count_different_records"] += 1
+        annotations: list[SupervisionAnnotation] = []
+        per_record: list[dict[str, int | bool]] = []
+        for annotation in record.annotations:
+            if annotation.scope != SupervisionScope.FRAME:
+                annotations.append(annotation)
+                continue
+            raw_start = annotation.metadata.get("raw_start_frame")
+            raw_end = annotation.metadata.get("raw_end_frame")
+            if type(raw_start) is not int or type(raw_end) is not int:
+                raise UCFCrimeError(f"{record.video_id}: 缺少 immutable raw source endpoint")
+            start_author = max(raw_start, 1)
+            end_author = min(raw_end, author_count)
+            start_effective = start_author
+            # The decoded metric clamps directly against immutable raw_end.
+            # N_author remains a separately recorded historical-evaluator
+            # diagnostic and must not move a modern decoded-frame endpoint.
+            end_effective = min(raw_end, info.num_frames)
+            detail = UCFSourceEndReconciliation(
+                raw_start_1based_inclusive=raw_start,
+                raw_end_1based_inclusive=raw_end,
+                author_frame_count=author_count,
+                decoded_frame_count=info.num_frames,
+                start_author=start_author,
+                end_author=end_author,
+                start_effective=start_effective,
+                end_effective=end_effective,
+                author_clamped=(start_author != raw_start or end_author != raw_end),
+                decoded_clamped=(end_effective != raw_end),
+                empty_after_reconciliation=(end_effective < start_effective),
+            )
+            detail_dict = detail.as_dict()
+            per_record.append(detail_dict)
+            aggregate["frame_annotations"] += 1
+            aggregate["author_clamped_spans"] += int(detail.author_clamped)
+            aggregate["decoded_clamped_spans"] += int(detail.decoded_clamped)
+            aggregate["empty_after_reconciliation_spans"] += int(
+                detail.empty_after_reconciliation
+            )
+            if detail.empty_after_reconciliation:
+                # A zero-support source span cannot be silently expanded.  It
+                # remains in the sealed receipt but is deliberately absent from
+                # the decoded-frame annotation list.
+                continue
+            metadata = dict(annotation.metadata)
+            metadata["source_end_reconciliation"] = detail_dict
+            metadata["evaluation_policy"] = UCF_DECODED_SOURCE_END_POLICY
+            annotations.append(
+                replace(
+                    annotation,
+                    span=TemporalSpan(
+                        start=start_effective - 1,
+                        end=end_effective,
+                        unit=SpanUnit.FRAME,
+                    ),
+                    metadata=metadata,
+                )
+            )
+        record_metadata = dict(record.metadata)
+        record_metadata["source_end_reconciliation_policy"] = UCF_DECODED_SOURCE_END_POLICY
+        record_metadata["source_end_reconciliation"] = per_record
+        reconciled.append(
+            replace(
+                record,
+                annotations=tuple(annotations),
+                num_frames=info.num_frames,
+                fps=info.fps,
+                duration_seconds=info.duration_seconds,
+                metadata=record_metadata,
+            )
+        )
+    return tuple(reconciled), aggregate
 
 
 def attach_uca_captions(
