@@ -43,6 +43,9 @@ class _FakeCapture:
         self.read_calls.append(self.position)
         if self.position in self.backend.fail_indices:
             return False, None
+        if self.position in self.backend.fail_once_indices:
+            self.backend.fail_once_indices.remove(self.position)
+            return False, None
         frame = self.backend.frames[self.position].copy()
         self.position += 1
         return True, frame
@@ -70,6 +73,7 @@ class _FakeCV2:
         self.opened = True
         self.seek_ok = True
         self.fail_indices: set[int] = set()
+        self.fail_once_indices: set[int] = set()
         self.captures: list[_FakeCapture] = []
         self.frames: list[np.ndarray] = []
         for index in range(num_frames):
@@ -155,6 +159,68 @@ def test_sparse_decode_deduplicates_indices_and_converts_bgr_to_rgb(tmp_path: Pa
     assert np.array_equal(frames[0], frames[2])
 
 
+def test_sparse_decode_uses_bounded_nearby_reads_and_restores_unsorted_padding(
+    tmp_path: Path,
+) -> None:
+    path = _touch_video(tmp_path)
+    backend = _FakeCV2(10)
+
+    frames = video.decode_rgb_frames(path, [5, 1, 3, 3, 5], backend=backend)
+
+    capture = backend.captures[0]
+    assert capture.set_calls == [1]
+    assert capture.read_calls == [1, 2, 3, 4, 5]
+    assert np.asarray(frames[:, 0, 0, 2]).tolist() == [5, 1, 3, 3, 5]
+
+
+def test_sparse_decode_keeps_long_jumps_as_seeks(tmp_path: Path) -> None:
+    path = _touch_video(tmp_path)
+    backend = _FakeCV2(10)
+
+    video.decode_rgb_frames(path, [0, 2, 8], backend=backend)
+
+    capture = backend.captures[0]
+    assert capture.set_calls == [0, 8]
+    assert capture.read_calls == [0, 1, 2, 8]
+
+
+def test_sparse_decode_falls_back_to_target_seek_after_nearby_read_failure(tmp_path: Path) -> None:
+    path = _touch_video(tmp_path)
+    backend = _FakeCV2(10)
+    backend.fail_once_indices.add(2)
+
+    frames = video.decode_rgb_frames(path, [1, 3], backend=backend)
+
+    capture = backend.captures[0]
+    assert capture.set_calls == [1, 3]
+    assert capture.read_calls == [1, 2, 3]
+    assert np.asarray(frames[:, 0, 0, 2]).tolist() == [1, 3]
+
+
+def test_sparse_decode_falls_back_to_target_seek_after_target_read_failure(tmp_path: Path) -> None:
+    path = _touch_video(tmp_path)
+    backend = _FakeCV2(10)
+    backend.fail_once_indices.add(3)
+
+    frames = video.decode_rgb_frames(path, [1, 3], backend=backend)
+
+    capture = backend.captures[0]
+    assert capture.set_calls == [1, 3]
+    assert capture.read_calls == [1, 2, 3, 3]
+    assert np.asarray(frames[:, 0, 0, 2]).tolist() == [1, 3]
+
+
+def test_sparse_decode_releases_capture_when_seek_and_read_fail(tmp_path: Path) -> None:
+    path = _touch_video(tmp_path)
+    backend = _FakeCV2(10)
+    backend.fail_indices.add(1)
+
+    with pytest.raises(video.VideoIOError, match="frame=1"):
+        video.decode_rgb_frames(path, [1], backend=backend)
+
+    assert backend.captures[0].released is True
+
+
 def test_build_clip_batch_preserves_padding_mask_and_deduplicates_batch(
     tmp_path: Path,
 ) -> None:
@@ -212,8 +278,9 @@ def test_fixed_segment_manifest_batch_uses_sparse_seeks_not_full_scan(tmp_path: 
     assert batch.metadata["clip_indices"] == list(range(32))
     assert len(backend.captures) == 1
     capture = backend.captures[0]
-    assert capture.set_calls == sorted(set(np.asarray(batch.frame_indices).reshape(-1)))
-    assert len(capture.read_calls) == 64
+    unique_indices = sorted(set(np.asarray(batch.frame_indices).reshape(-1)))
+    assert capture.set_calls == unique_indices[::2]
+    assert len(capture.read_calls) == 96
     assert len(capture.read_calls) < backend.frames.__len__()
 
 

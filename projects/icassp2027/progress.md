@@ -100,6 +100,39 @@
 
 以下保留上一轮基础重构的已完成记录。
 
+### 本机 CUDA、输入与缓存核验
+
+- 本机实际存在 RTX 4060 Laptop 8 GiB，驱动 566.24。已在独立
+  `.encoder-envs/local/torch280-cu126-py311` 加入官方 PyTorch 2.8.0+cu126 / torchvision 0.23.0+cu126，
+  沿用 Python 3.11 与其余现有依赖；原 `.venv` 解释器及 Torch/vision RECORD 摘要未变。
+  CUDA matmul 和真权重 V2 observer/identity 均通过，后者四项误差均为 0，run
+  `observer-validation-20260917T193123231246Z-aa43acc8`。
+- CUDA 主探索 run `probe-20260917T193541117630Z-ef589e03` 使用同一冻结 127 视频第一批和原始
+  观察预算；CPU run 保留为另一运行条件的重复检查，不合并成更多独立样本。主探索选择 CUDA
+  是依据可用计算资源，在查看正式性质统计前固定；原生精度与库版本分别保留。
+- 唯一余项 Normal_Videos533 已从 Quark 完成，且 SHA 与官方 ZIP 独立补取完全相同：
+  `7aa51dd1d758b0135fea20810507044671489ab647d8fca21bdc2fb6a8680618`。
+  两个运行条件各排入同版本的 8 clip 补齐任务，依赖对应 127 视频批完成，不重复合并。
+- 真实检测工程训练已完成：128 train clip、64 validation clip、249 dense evaluation clip；
+  5 epochs / 10 steps，参数确实更新，有限非零梯度与 checkpoint 校验通过。同种子完全重跑
+  的 head 参数差为 0，原 checkpoint SHA 未变；两视频 3999 帧覆盖完整且无重叠或缺口。
+  训练损失从 0.6178 到 0.3596，验证损失从 0.6954 到 0.8272：出现小样本过拟合，不能作为
+  泛化、插件有效性或正式检测质量结论。正式测试仍未访问。
+- 修复实际缓存身份缺口：有效 constructor、已加载模型/encoder config、processor 配置均参与
+  摘要；真实 `torch.dtype` 单独规范化，其他未知值仍严格拒绝。真权重加载实测改变 pooling
+  会改变表示身份、恢复则还原。旧工程缓存保持原身份，不重标或伪装成新版本。
+- 已实测原 decoder 对近邻帧重复 seek 的开销。近邻顺读在 debug8 的全部 RGB bytes/SHA、
+  重复/乱序/长跳边界上与旧实现完全相同；生产实现仍对长跳 seek，异常时回到原目标 seek。
+  实测 decode-only 配对中位约 7.24 倍，**不是插件、GPU 或端到端加速**；新采样身份绑定
+  decoder 源码 SHA。运行中的旧冻结 probe 未修改。相关定向测试 68 项通过，最终受影响
+  video/extraction 24 项通过；身份/检测相关 39 项通过；原生 verifier 17 项通过。
+- 本机另外三份 active 权重也已通过原 registry 校验。TimeSformer 的小型预处理配置从现有
+  服务器复制并验证指定 SHA，其来源与官方模型主体分开记录；没有编造官方 snapshot 文件。
+- 官方 UCF 单 ZIP 的 192 个候选路径/大小全部与冻结计划相符。补齐中间证书链后，node2 使用
+  原 certifi 根锚、主机名和证书校验的临时链路已实际通过；没有新增根 CA 或更改系统 TLS。
+  新 `UCF-Crime-official-verified` 正按官方 CRC/SHA 复用或独立下载 1900 个视频，旧 Quark
+  任务保持原路径。错误地在 node3 启动的一次零 payload 失败已单独保留，不混入成功结果。
+
 此前基础重构范围是已确认的 M0 与 M1 工程基础：论文入口、配置、身份契约、cohort、只读 collector、
 一级统计和 identity 桥。具体 reducer、dense sampler、XD 协议、正式 detector 实验和论文数字
 依照研究顺序留待后续阶段，不在本轮以占位实现冒充完成。

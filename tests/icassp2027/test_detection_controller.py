@@ -114,6 +114,7 @@ def test_engineering_controller_freezes_extracts_and_predicts(
     )
     identity = {
         "adapter": "toy",
+        "constructor": {"clip_frames": 4},
         "checkpoint": {"id": "toy", "sha256": {"toy.bin": "fixture"}},
         "code": {"source_sha256": "broad"},
     }
@@ -206,6 +207,10 @@ def test_real_profile_uses_external_assets_and_rejects_inactive(
         assert Path(definition["checkpoint"]["local_path"]) == external_weights
         return {
             "adapter": "videomaev2",
+            "constructor": {
+                "model_name": {"checkpoint_sha256": {"toy.bin": "fixture"}},
+                "num_frames": 16,
+            },
             "checkpoint": {"id": "toy", "sha256": {"toy.bin": "fixture"}},
             "code": {"source_sha256": "fixture"},
         }

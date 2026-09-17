@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +19,7 @@ from vadbench.paper.compatibility import (
 from vadbench.paper.detection import DetectionConfig, predict_detector, train_detector
 from vadbench.paper.extraction import (
     PooledExtractionSpec,
+    adapter_runtime_summary,
     extract_pooled_features,
     make_sampling_identity,
     representation_from_verified_encoder,
@@ -130,9 +131,12 @@ def _touch(root: Path, records) -> None:
         (root / record.path).touch()
 
 
-def _verified_identity(*, code: str = "fixture-code") -> dict[str, object]:
+def _verified_identity(
+    *, code: str = "fixture-code", constructor: dict[str, object] | None = None
+) -> dict[str, object]:
     return {
         "adapter": "fixture",
+        "constructor": {"clip_frames": 4} if constructor is None else constructor,
         "checkpoint": {"id": "fixture", "sha256": {"model.bin": "fixture"}},
         "code": {"source_sha256": code},
     }
@@ -166,10 +170,17 @@ def _sampling(
     )
 
 
-def _spec(representation, sampling, *, kind: str, stride: int = 1) -> PooledExtractionSpec:
+def _spec(
+    representation,
+    sampling,
+    *,
+    kind: str,
+    stride: int = 1,
+    identity: dict[str, object] | None = None,
+) -> PooledExtractionSpec:
     return PooledExtractionSpec(
         runtime_id="fixture",
-        verified_encoder_identity=_verified_identity(),
+        verified_encoder_identity=_verified_identity() if identity is None else identity,
         representation=representation,
         sampling=sampling,
         sampling_kind=kind,  # type: ignore[arg-type]
@@ -311,6 +322,7 @@ def test_spec_binds_uniform_segments_and_dense_window_stride_to_sampling_identit
     uniform = _sampling(records, root=tmp_path, regime="train_32", clips=32)
     dense = _sampling(records, root=tmp_path, regime="test_dense", clips=31, window_stride=2)
 
+    assert "video_reader_sha256" in uniform.frame_selection["implementation"]
     with pytest.raises(ValueError, match="num_segments"):
         replace(_spec(representation, uniform, kind="uniform_full"), num_segments=16)
     with pytest.raises(ValueError, match="window_stride"):
@@ -415,6 +427,196 @@ def test_backbone_code_identity_ignores_broad_orchestration_git_evidence() -> No
 
     assert first.backbone.code_digest == second.backbone.code_digest
     assert first.backbone.weights_digest == second.backbone.weights_digest
+
+
+@dataclass(frozen=True)
+class _V2RuntimeConfig:
+    image_size: int = 224
+    pooling: str = "auto"
+    model_name: str = r"D:\assets\videomaev2"
+    device_str: str = "cuda:0"
+
+
+class _Processor:
+    def __init__(self, *, do_rescale: bool = True, size: int = 224) -> None:
+        self.do_rescale = do_rescale
+        self.size = size
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "do_rescale": self.do_rescale,
+            "size": {"height": self.size, "width": self.size},
+            "image_mean": [0.485, 0.456, 0.406],
+            "image_std": [0.229, 0.224, 0.225],
+            "device": "cuda:0",
+        }
+
+
+class _NestedModel:
+    config = {"hidden_size": 4, "patch_size": 16}
+
+
+class _Backbone:
+    def __init__(self) -> None:
+        self.config = {"image_size": 224, "num_frames": 4}
+        self.model = _NestedModel()
+
+
+class _V2StyleEncoder:
+    def __init__(self) -> None:
+        self.cfg = _V2RuntimeConfig()
+        self.backbone = _Backbone()
+        self.processor = _Processor()
+
+
+class _V2StyleAdapter:
+    capabilities = _Adapter.capabilities
+    backend = "fixture-v2"
+    implementation_source = "fixture-v2-native"
+    preprocess_profile = "fixture-rgb"
+    encode = _Adapter.encode
+
+    def __init__(self) -> None:
+        self.encoder = _V2StyleEncoder()
+        self.seen_batches = []
+
+
+def _v2_representation(
+    adapter: _V2StyleAdapter, identity: dict[str, object]
+) -> RepresentationIdentity:
+    return representation_from_verified_encoder(
+        runtime_id="fixture",
+        adapter=adapter,
+        verified_encoder_identity=identity,
+        preprocessing={"profile": "fixture-rgb"},
+        readout={"kind": "pooled"},
+        reducer={"name": "identity"},
+        output_dim=4,
+        precision="float32",
+        position_strategy={"kind": "native"},
+    )
+
+
+def test_verified_constructor_and_loaded_v2_runtime_configs_change_representation_and_cache(
+    tmp_path: Path,
+) -> None:
+    torch = pytest.importorskip("torch")
+    identity = _verified_identity(
+        constructor={
+            "model_name": {"checkpoint_sha256": {"model.bin": "fixture"}},
+            "image_size": 224,
+            "num_frames": 4,
+            "pooling": "auto",
+        }
+    )
+    adapter = _V2StyleAdapter()
+    adapter.encoder.backbone.config["torch_dtype"] = torch.float32
+    first = _v2_representation(adapter, identity)
+    assert (
+        adapter_runtime_summary(adapter)["runtime_configurations"]["backbone_config"]["torch_dtype"]
+        == "torch.float32"
+    )
+
+    adapter.encoder.backbone.config["torch_dtype"] = torch.float16
+    changed_dtype = _v2_representation(adapter, identity)
+    assert changed_dtype.fingerprint != first.fingerprint
+    adapter.encoder.backbone.config["torch_dtype"] = torch.float32
+
+    changed_constructor = _v2_representation(
+        adapter,
+        _verified_identity(
+            constructor={
+                "model_name": {"checkpoint_sha256": {"model.bin": "fixture"}},
+                "image_size": 336,
+                "num_frames": 4,
+                "pooling": "auto",
+            }
+        ),
+    )
+    assert changed_constructor.fingerprint != first.fingerprint
+
+    adapter.encoder.cfg = replace(adapter.encoder.cfg, pooling="cls")
+    changed_pooling = _v2_representation(adapter, identity)
+    assert changed_pooling.fingerprint != first.fingerprint
+
+    adapter.encoder.processor.do_rescale = False
+    changed_rescale = _v2_representation(adapter, identity)
+    assert changed_rescale.fingerprint != changed_pooling.fingerprint
+
+    adapter.encoder.processor.size = 112
+    changed_size = _v2_representation(adapter, identity)
+    assert changed_size.fingerprint != changed_rescale.fingerprint
+
+    records = [_record("video", split="train", anomaly=False)]
+    _touch(tmp_path, records)
+    sampling = _sampling(records, root=tmp_path, regime="train_32", clips=32)
+    with pytest.raises(ValueError, match="code_digest"):
+        extract_pooled_features(
+            _spec(first, sampling, kind="uniform_full", identity=identity),
+            adapter=adapter,
+            manifest=records,
+            dataset_root=tmp_path,
+            output_root=tmp_path / "runs",
+            run_id="frozen-runtime-mismatch",
+            backend=_CV2(64),
+        )
+
+    result = extract_pooled_features(
+        _spec(changed_size, sampling, kind="uniform_full", identity=identity),
+        adapter=adapter,
+        manifest=records,
+        dataset_root=tmp_path,
+        output_root=tmp_path / "runs",
+        run_id="changed-runtime",
+        backend=_CV2(64),
+    )
+    assert result.completed
+
+    adapter.encoder.cfg = replace(adapter.encoder.cfg, pooling="mean")
+    current = _v2_representation(adapter, identity)
+    changed_result = extract_pooled_features(
+        _spec(current, sampling, kind="uniform_full", identity=identity),
+        adapter=adapter,
+        manifest=records,
+        dataset_root=tmp_path,
+        output_root=tmp_path / "runs",
+        run_id="changed-runtime-cache",
+        backend=_CV2(64),
+    )
+    assert changed_result.completed
+    assert changed_result.encoder_fingerprint != result.encoder_fingerprint
+
+
+def test_constructor_identity_ignores_deployment_paths_and_device() -> None:
+    adapter = _Adapter()
+    common = {"image_size": 224, "model_name": {"checkpoint_sha256": {"model.bin": "fixture"}}}
+    first = representation_from_verified_encoder(
+        runtime_id="fixture",
+        adapter=adapter,
+        verified_encoder_identity=_verified_identity(
+            constructor=common | {"checkpoint_path": r"D:\weights\a", "device": "cuda:0"}
+        ),
+        preprocessing={"profile": "fixture-rgb"},
+        readout={"kind": "mean"},
+        reducer={"name": "identity"},
+        output_dim=4,
+        precision="float32",
+        position_strategy={"kind": "native"},
+    )
+    second = representation_from_verified_encoder(
+        runtime_id="fixture",
+        adapter=adapter,
+        verified_encoder_identity=_verified_identity(
+            constructor=common | {"checkpoint_path": r"E:\weights\b", "device": "cpu"}
+        ),
+        preprocessing={"profile": "fixture-rgb"},
+        readout={"kind": "mean"},
+        reducer={"name": "identity"},
+        output_dim=4,
+        precision="float32",
+        position_strategy={"kind": "native"},
+    )
+    assert first.fingerprint == second.fingerprint
 
 
 def test_same_manifest_with_changed_video_bytes_rejects_sampling_identity(tmp_path: Path) -> None:

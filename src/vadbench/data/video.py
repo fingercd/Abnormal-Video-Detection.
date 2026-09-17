@@ -1,7 +1,7 @@
 """可选 OpenCV 视频探测、稀疏解码与 :class:`ClipBatch` 构造。
 
 OpenCV 不是核心依赖；即使环境没有 ``cv2``，导入本模块也不会失败。所有解码
-路径都按请求索引 seek，不会为了抽取稀疏 clip 从头顺序扫完整段长视频。同一次
+路径按目标索引 seek 或有限近邻顺读，不会为了稀疏 clip 从头扫描长视频。同一次
 batch 中重复的源帧（包括 padding）只解码一次。
 """
 
@@ -117,7 +117,7 @@ def _positive_capture_int(value: Any, name: str) -> int:
 
 
 class OpenCVVideoReader:
-    """单视频稀疏 seek reader；上下文退出时保证释放 capture。"""
+    """单视频稀疏 reader；上下文退出时保证释放 capture。"""
 
     def __init__(self, path: str | Path, *, backend: Any | None = None) -> None:
         self.path = Path(path).expanduser().resolve()
@@ -185,11 +185,36 @@ class OpenCVVideoReader:
         self._capture = None
         self._info = None
 
+    def _read_rgb_frame(self, capture: Any, index: int) -> np.ndarray:
+        ok, bgr = capture.read()
+        if not ok or bgr is None:
+            raise VideoIOError(f"OpenCV 解码 frame={index} 失败：{self.path}")
+        array = np.asarray(bgr)
+        if array.ndim != 3 or array.shape[2] != 3:
+            raise VideoIOError(f"frame={index} 必须是 HWC 三通道，实际 shape={array.shape}")
+        if array.shape[:2] != (self.info.height, self.info.width):
+            raise VideoIOError(
+                f"frame={index} 尺寸 {array.shape[:2]} 与 probe "
+                f"{(self.info.height, self.info.width)} 不一致"
+            )
+        if array.dtype != np.uint8:
+            if array.dtype.kind not in "biuf" or np.any(array < 0) or np.any(array > 255):
+                raise VideoIOError(f"frame={index} 无法安全转换为 uint8")
+            array = array.astype(np.uint8)
+        # OpenCV 解码是 BGR；copy 同时消除反向 stride，便于后续堆叠/送入 torch。
+        return np.ascontiguousarray(array[..., ::-1])
+
+    def _seek_and_read(self, capture: Any, index: int) -> np.ndarray:
+        seek_result = capture.set(self.backend.CAP_PROP_POS_FRAMES, float(index))
+        if seek_result is not None and not bool(seek_result):
+            raise VideoIOError(f"OpenCV 无法 seek 到 frame={index}")
+        return self._read_rgb_frame(capture, index)
+
     def read_indices(self, frame_indices: Sequence[int]) -> np.ndarray:
         """稀疏读取并按请求顺序返回 RGB uint8 ``[T,H,W,3]``。
 
-        索引会先去重后排序，每个唯一位置只执行一次 seek/read；最终再恢复调用方
-        的原始顺序和重复 padding。
+        索引会先去重后排序。每次调用的首目标和长跳跃均 seek；相邻目标最多前进两
+        帧时顺读并丢弃中间帧。最终恢复调用方的原始顺序和重复 padding。
         """
 
         if not self.is_open:
@@ -210,27 +235,21 @@ class OpenCVVideoReader:
         decoded: dict[int, np.ndarray] = {}
         capture = self._capture
         assert capture is not None  # narrowed by is_open
+        cursor: int | None = None
         for index in unique_indices:
-            seek_result = capture.set(self.backend.CAP_PROP_POS_FRAMES, float(index))
-            if seek_result is not None and not bool(seek_result):
-                raise VideoIOError(f"OpenCV 无法 seek 到 frame={index}")
-            ok, bgr = capture.read()
-            if not ok or bgr is None:
-                raise VideoIOError(f"OpenCV 解码 frame={index} 失败：{self.path}")
-            array = np.asarray(bgr)
-            if array.ndim != 3 or array.shape[2] != 3:
-                raise VideoIOError(f"frame={index} 必须是 HWC 三通道，实际 shape={array.shape}")
-            if array.shape[:2] != (self.info.height, self.info.width):
-                raise VideoIOError(
-                    f"frame={index} 尺寸 {array.shape[:2]} 与 probe "
-                    f"{(self.info.height, self.info.width)} 不一致"
-                )
-            if array.dtype != np.uint8:
-                if array.dtype.kind not in "biuf" or np.any(array < 0) or np.any(array > 255):
-                    raise VideoIOError(f"frame={index} 无法安全转换为 uint8")
-                array = array.astype(np.uint8)
-            # OpenCV 解码是 BGR；copy 同时消除反向 stride，便于后续堆叠/送入 torch。
-            decoded[index] = np.ascontiguousarray(array[..., ::-1])
+            if cursor is None or index - cursor > 2:
+                decoded[index] = self._seek_and_read(capture, index)
+                cursor = index + 1
+                continue
+            try:
+                while cursor < index:
+                    self._read_rgb_frame(capture, cursor)
+                    cursor += 1
+                decoded[index] = self._read_rgb_frame(capture, index)
+            except VideoIOError:
+                # An unread intermediate frame must not become a new dependency.
+                decoded[index] = self._seek_and_read(capture, index)
+            cursor = index + 1
 
         return np.stack([decoded[index] for index in requested], axis=0)
 

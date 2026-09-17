@@ -10,10 +10,11 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import inspect
+import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager, nullcontext
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -132,6 +133,86 @@ def _implementation_file(value: Any, *, role: str) -> dict[str, Any] | None:
     }
 
 
+_RUNTIME_DIAGNOSTIC_KEYS = frozenset(
+    {
+        "cache_dir",
+        "checkpoint_path",
+        "device",
+        "device_str",
+        "local_files_only",
+        "local_path",
+        "model_path",
+        "name_or_path",
+        "_name_or_path",
+        "weights_path",
+        "work_dir",
+    }
+)
+
+
+def _semantic_json(value: Any, *, name: str) -> dict[str, Any]:
+    """Validate a loaded configuration and remove deployment-only values."""
+
+    if is_dataclass(value):
+        value = asdict(value)
+    elif isinstance(value, Mapping):
+        value = dict(value)
+    else:
+        value = value.to_dict()
+
+    def normalize(item: Any) -> Any:
+        if isinstance(item, Mapping):
+            result: dict[str, Any] = {}
+            for raw_key, raw_value in item.items():
+                key = str(raw_key)
+                if key.lower() in _RUNTIME_DIAGNOSTIC_KEYS:
+                    continue
+                if (
+                    key == "model_name"
+                    and isinstance(raw_value, (Path, str))
+                    and Path(raw_value).is_absolute()
+                ):
+                    continue
+                result[key] = normalize(raw_value)
+            return result
+        if isinstance(item, (list, tuple)):
+            return [normalize(child) for child in item]
+        if type(item).__module__ == "torch" and type(item).__qualname__ == "dtype":
+            return str(item)
+        return item
+
+    try:
+        normalized = json.loads(
+            json.dumps(normalize(value), ensure_ascii=False, allow_nan=False, sort_keys=True)
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must contain JSON-compatible values") from exc
+    if not isinstance(normalized, dict):
+        raise ValueError(f"{name} must be a JSON object")
+    return normalized
+
+
+def _runtime_configurations(
+    *, encoder: Any | None, model: Any | None, backbone: Any | None, processor: Any | None
+) -> dict[str, dict[str, Any]]:
+    """Capture configuration actually present on loaded inference objects."""
+
+    configurations: dict[str, dict[str, Any]] = {}
+    if encoder is not None and (cfg := getattr(encoder, "cfg", None)) is not None:
+        configurations["encoder_cfg"] = _semantic_json(cfg, name="encoder.cfg")
+    for role, value in (
+        ("model", model),
+        ("model_nested_model", None if model is None else getattr(model, "model", None)),
+        ("backbone", backbone),
+        ("backbone_nested_model", None if backbone is None else getattr(backbone, "model", None)),
+    ):
+        if value is not None and (config := getattr(value, "config", None)) is not None:
+            configurations[f"{role}_config"] = _semantic_json(config, name=f"{role}.config")
+    if processor is not None:
+        configurations["processor"] = _semantic_json(processor.to_dict(), name="processor.to_dict()")
+    return configurations
+
+
 def adapter_runtime_summary(adapter: Any) -> dict[str, Any]:
     """Return observed adapter/model facts used in the actual cache identity."""
 
@@ -147,8 +228,6 @@ def adapter_runtime_summary(adapter: Any) -> dict[str, Any]:
         "variant",
         "revision",
         "model_name",
-        "device",
-        "device_str",
     ):
         value = getattr(adapter, name, None)
         if value is not None and isinstance(value, (str, int, float, bool)):
@@ -207,6 +286,12 @@ def adapter_runtime_summary(adapter: Any) -> dict[str, Any]:
             )
         },
         "properties": properties,
+        "runtime_configurations": _runtime_configurations(
+            encoder=encoder,
+            model=model,
+            backbone=backbone,
+            processor=processor,
+        ),
         "model_asset": _path_summary(model_path),
         "implementation_files": files,
         "loaded_library_versions": _loaded_library_versions(),
@@ -228,10 +313,20 @@ def _verified_code_digest(identity: Mapping[str, Any], runtime: Mapping[str, Any
         {key: value for key, value in entry.items() if key != "path"}
         for _role, entry in sorted(files.items())
     ]
+    constructor = identity.get("constructor")
+    if not isinstance(constructor, Mapping):
+        raise ValueError("verified_encoder_identity must contain a canonical constructor mapping")
+    configurations = runtime.get("runtime_configurations")
+    if not isinstance(configurations, Mapping):
+        raise ValueError("adapter runtime has no loaded configuration evidence")
     return compute_encoder_fingerprint(
         {
+            "verified_constructor": _semantic_json(
+                constructor, name="verified_encoder_identity.constructor"
+            ),
             "implementation_files": semantic_files,
             "loaded_library_versions": runtime["loaded_library_versions"],
+            "runtime_configurations": dict(configurations),
         }
     )
 
@@ -257,6 +352,7 @@ def _semantic_runtime_identity(runtime: Mapping[str, Any]) -> dict[str, Any]:
         "encoder_library_version": runtime["encoder_library_version"],
         "capabilities": runtime["capabilities"],
         "properties": properties,
+        "runtime_configurations": runtime["runtime_configurations"],
         "implementation_files": [
             {key: value for key, value in entry.items() if key != "path"}
             for _role, entry in sorted(dict(files).items())
@@ -266,6 +362,10 @@ def _semantic_runtime_identity(runtime: Mapping[str, Any]) -> dict[str, Any]:
         # provenance stays in resolved.json and does not perturb cache meaning.
         "verified_weights_digest": _verified_weights_digest(
             runtime["verified_encoder_identity"]
+        ),
+        "verified_constructor": _semantic_json(
+            runtime["verified_encoder_identity"].get("constructor"),
+            name="verified_encoder_identity.constructor",
         ),
     }
 
@@ -406,11 +506,12 @@ def make_data_content_evidence(
 
 def _sampling_implementation_identity() -> dict[str, str]:
     from vadbench.checkpoints import sha256_file
-    from vadbench.data import dense_sampling, sampling
+    from vadbench.data import dense_sampling, sampling, video
 
     return {
         "dense_sampling_sha256": sha256_file(Path(dense_sampling.__file__).resolve()),
         "base_sampling_sha256": sha256_file(Path(sampling.__file__).resolve()),
+        "video_reader_sha256": sha256_file(Path(video.__file__).resolve()),
     }
 
 
