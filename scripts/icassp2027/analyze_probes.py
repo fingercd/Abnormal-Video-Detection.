@@ -223,8 +223,32 @@ def _chunks(values: list[Any], size: int) -> list[list[Any]]:
     return [values[start : start + size] for start in range(0, len(values), size)]
 
 
+def _effect_label(row: dict[str, Any]) -> str:
+    """Keep distinct attention heads/sites distinguishable in dense effect pages."""
+
+    head = "all" if row.get("head_id") is None else str(row["head_id"])
+    return (
+        f"{row['encoder_id']} | {row['site']} | head={head}\n"
+        f"{row['probe_id']}:{row['statistic_name']}"
+    )
+
+
+def _page_sample_note(rows: list[dict[str, Any]]) -> str:
+    sizes = sorted({(row["num_normal_videos"], row["num_positive_videos"]) for row in rows})
+    if len(sizes) == 1:
+        normal, positive = sizes[0]
+        return f"N(V−/V+)={normal}/{positive} per row"
+    return "N(V−/V+) varies by row"
+
+
 def _plots(
-    output: Path, analysis, candidates, data_status: str, *, max_effects_per_plot: int
+    output: Path,
+    analysis,
+    candidates,
+    data_status: str,
+    evidence_status: str,
+    *,
+    max_effects_per_plot: int,
 ) -> dict[str, Any]:
     try:
         import matplotlib.pyplot as plt
@@ -249,12 +273,9 @@ def _plots(
     )
     ci_point_mismatches = 0
     for page, items in enumerate(_chunks(primary, max_effects_per_plot), start=1):
-        labels = [
-            f"{row['encoder_id']} | L{row['layer_index']} | {row['probe_id']}:{row['statistic_name']}"
-            for row in items
-        ]
+        labels = [_effect_label(row) for row in items]
         y = list(range(len(items)))
-        fig, ax = plt.subplots(figsize=(11, max(3, 0.42 * len(items) + 1.8)))
+        fig, ax = plt.subplots(figsize=(16, max(4, 0.52 * len(items) + 2.4)))
         lows, highs, effects = [], [], []
         for row in items:
             low, high, effect = row["ci_low"], row["ci_high"], row["effect"]
@@ -269,9 +290,12 @@ def _plots(
         ax.scatter(effects, y, color="#1f4e79", s=24, zorder=3, label="point estimate")
         ax.axvline(0, color="black", linewidth=0.8)
         ax.set_yticks(y, labels)
+        ax.tick_params(axis="y", labelsize=8)
         ax.set_xlabel("Hedges g (weak positive video − normal video)")
         ax.set_title(
-            f"Probe contrasts: video-bootstrap 95% intervals, page {page} ({data_status})"
+            f"{evidence_status} | video-bootstrap 95% CI | page {page} | "
+            f"{_page_sample_note(items)}",
+            fontsize=12,
         )
         ax.legend(loc="best", fontsize=8)
         fig.tight_layout()
@@ -330,7 +354,10 @@ def _plots(
                 axis.boxplot([normal, positive], tick_labels=["V−", "V+"], showfliers=True)
                 axis.set_title(f"{signature[0]} / {signature[5]}\n{signature[6]}")
                 axis.set_ylabel("video-level probe statistic")
-            fig.suptitle(f"Frozen candidate distributions, page {page} ({data_status})")
+            fig.suptitle(
+                f"{evidence_status} | frozen candidate distributions, page {page} "
+                f"({data_status})"
+            )
             fig.tight_layout()
             target = output / f"candidate_video_distributions_page_{page:02d}.png"
             fig.savefig(target, dpi=180)
@@ -483,6 +510,7 @@ def main(argv: list[str] | None = None) -> int:
             analysis,
             candidates,
             args.data_status,
+            evidence_status,
             max_effects_per_plot=args.max_effects_per_plot,
         )
     )

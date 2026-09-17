@@ -39,8 +39,6 @@
   **134 passed**；`python -m compileall -q src tests`、受影响文件 Ruff 与 `git diff --check` 通过。
   此结果是工程测试，不是四 encoder 的真实质量或速度结论。
 
-以下保留上一轮基础重构的已完成记录。
-
 ### 后续实测与在运行任务（2026-09-18）
 
 - 本地 `243444d` 冻结工作区的 VideoMAEv2 debug8 已完成全部 64 个片段，退出码 0。
@@ -68,6 +66,39 @@
 - 检测控制器已接通真实 pooled 抽取、独立 validation store、TopKMIL BCE 与预测；新增
   验证缓存的采样策略核对、source group 冲突拒绝与 profile/assets 解析。
   本次相关测试为 **164 passed**，包括 validation 非空的 toy 集成测试；真实 head 训练待执行。
+
+### 实际执行补充
+
+- 代码 `6ab8781` 已做本地提交并上传服务器主工作区；模型运行使用独立 checkout。
+  本地真实检测工程 run `paper-detection-20260917T181257007323Z-886655a8` 已启动，
+  train 4 视频 ×32、validation 2 视频 ×32 的 pooled 特征已完整生成，无抽取失败。
+  两个额外 debug 视频用于 dense 预测覆盖检查，主干冻结、TopKMIL BCE 5 epochs、seed 0；
+  整个划分均来自原 fit 调试集，只用于工程核验，不参与性质选择或正式质量结论。
+- 正式 explore 目标仍为预先冻结的 128 视频。核对发现实际服务器锁 seed 是 `20260918`，
+  以原锁为准；全部 1610 个训练 ID 的角色和全部 explore/confirm 候选与本地重建一致。
+  lock SHA-256：`53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59`。
+- 已按实际落盘身份冻结第一计算批 127 视频（1016 片段）；34 个有服务器 SHA 比对，
+  93 个绑定云端 fid/预期大小与本地实算 SHA，不混淆两种证据。唯一未齐候选为
+  `Normal_Videos533_x264`。run `probe-20260917T182551484047Z-0a3dcc04` 在本地 CPU 4 线程运行，
+  max_tokens=256、max_queries=32。剩余一条将单独补齐，128 视频齐备前不选择性质。
+- debug8 的完整统计核验：64 clip 与 controls 的 ID、标签、分区全一致；799 个可估计签名，
+  P13 无 CLS 的 48 项不填补。运动×亮度仅覆盖两组匹配，所有 scene unknown；没有从此小样本
+  锁定任何性质。分页图已实际渲染并检查，图内明确标 debug、视频样本数和 site/head。
+- **工程记录偏差**：绘图子任务在服务器 `code-6ab8781` 的 classic debug 探针运行期间改写了
+  已跟踪的 `scripts/icassp2027/analyze_probes.py`（仅图标题）。完整差异、时间、SHA 已存
+  `outputs/icassp2027/incidents/plot-only-source-mutation-20260917T181849Z/`。核验模型/collector/
+  bridge/stages 源码均等于 HEAD；仍不把该工作区称为运行期间完全不可变，也不把该次运行当作
+  正式确认。保留现场，未追溯改写回执；后续临时绘图脚本放 ignored 控制目录。**本地正式探索
+  和本地检测工程 checkout 没有此改写，保持不变。**
+- XD 官方六个视频 ZIP 已用匿名 HTTP Range 审核目录：4754 个视频、1 个目录，无路径逃逸
+  成员；压缩 79.57 GiB、展开 80.06 GiB。后续核实：node2 的 curl HEAD 返回 403，但标准
+  urllib + 本次匿名 CookieJar 的 GET Range 0-0 返回 206；不能把 HEAD 的结果误写成数据不可达。
+  本机初次归档 worker 误用 Windows PowerShell 5.1，缺少 HttpClientHandler；改为已验证的
+  PowerShell 7 后实际写入约 7.03 GB。因服务器直接下载路径已验证，已停止这组自己的本机
+  下载进程，保留两份 part/身份记录作备份，正在安排 node2 独立下载；UCF 原下载不变。
+  此状态不表示 XD 数据已齐，也未读取测试事件标注。
+
+以下保留上一轮基础重构的已完成记录。
 
 此前基础重构范围是已确认的 M0 与 M1 工程基础：论文入口、配置、身份契约、cohort、只读 collector、
 一级统计和 identity 桥。具体 reducer、dense sampler、XD 协议、正式 detector 实验和论文数字

@@ -375,6 +375,28 @@ def test_cli_debug_is_engineering_only_and_never_emits_confirmed_status(tmp_path
     assert statuses and set(statuses) == {"engineering_only_not_confirmed"}
 
 
+def test_effect_page_label_keeps_site_head_and_video_sample_size():
+    script = Path(__file__).resolve().parents[2] / "scripts" / "icassp2027" / "analyze_probes.py"
+    functions = runpy.run_path(str(script))
+    label = functions["_effect_label"](
+        {
+            "encoder_id": "fixture-encoder",
+            "site": "block.3.attention.probs.input",
+            "head_id": 5,
+            "probe_id": "P10",
+            "statistic_name": "outgoing_attention_entropy_mean",
+        }
+    )
+    assert "block.3.attention.probs.input" in label
+    assert "head=5" in label and "\nP10:" in label
+    assert functions["_page_sample_note"](
+        [
+            {"num_normal_videos": 4, "num_positive_videos": 4},
+            {"num_normal_videos": 4, "num_positive_videos": 4},
+        ]
+    ) == "N(V−/V+)=4/4 per row"
+
+
 def test_cli_fits_encoder_scoped_control_calibration_and_joins_video_bins(tmp_path):
     input_path = tmp_path / "probe_summary.jsonl"
     controls_path = tmp_path / "input_controls.jsonl"
