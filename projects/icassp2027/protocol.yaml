@@ -5,8 +5,9 @@ split_unit: video_source
 explore_partition: fit
 normal_reference_partition: fit
 test_access: after_method_freeze
-# Must be decided before formal method selection/test access; fractions, not percentage points.
-quality_tolerance: null
+# User confirmed 2026-09-17 before formal test access: at most 0.5 percentage points.
+# Metrics are fractions, so 0.5 percentage points is 0.005.
+quality_tolerance: 0.005
 primary_metrics:
   ucf_crime: frame_roc_auc
   xd_violence: frame_ap

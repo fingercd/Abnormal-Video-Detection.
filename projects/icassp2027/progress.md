@@ -1,8 +1,31 @@
 # ICASSP 2027 当前进度
 
-更新日期：2026-09-17。当前阶段：**02 基础重构完成；尚未开始正常—异常性质探索。**
+更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；尚无经确认的正常—异常规律或插件有效性结论。**
 
-本轮范围是已确认的 M0 与 M1 工程基础：论文入口、配置、身份契约、cohort、只读 collector、
+## 当前持续执行记录
+
+用户要求上传服务器、维护本地 Git，并在完成正常—异常观察、四 encoder 复核、免训练与可训练
+简单插件的真实比较后统一交付。未完成研究之前不将工程进展标成研究完成。
+
+- 本地工作分支：`qzt/icassp2027-evidence`，从已验证的 `25f9593` 开始。
+- 已将 `25f9593` 经校验后的增量 Git bundle 上传，并建立服务器独立工作区
+  `/users/fotile/VAD-icassp2027`。原 `/users/fotile/VAD` 的 156 个受保护源码/配置文件摘要未变。
+- 已复用服务器原有 foundation 环境和 VideoMAEv2 overlay，完成一段真实视频的 CPU observer /
+  identity 验证，features 与 pooled 最大绝对差均为 0。run：
+  `observer-validation-20260917T155850443123Z-7e6ae0e7`。
+- 用户已确认主指标容忍度为 **0.5 个百分点**，`protocol.yaml` 记录 `quality_tolerance=0.005`。
+  用户离开期间不再提问，实际待答事项集中在
+  [questions-for-return.md](decisions/questions-for-return.md)。
+- UCF 现有 node2 下载任务 PID 112405 保持运行；最近盘点约 509/1900 个文件完成，总字节约
+  16.6%。这是当时进度，不是当前完成证明；依同节点字节变化继续核实，不重复写入同一分块。
+- node2/node3 当时均无完全空闲 GPU，node1 已知线路不可达。继续做受限 CPU 工程验证、数据
+  准备与代码检查，不占用他人的 GPU、不停止用户已有服务。
+- 正在补齐四模型真实几何、固定数据角色与候选、输入控制量、完整窗口采样和 pooled-only
+  检测链。局部测试通过不等于四模型真实实验或插件结论通过。
+
+以下保留上一轮基础重构的已完成记录。
+
+此前基础重构范围是已确认的 M0 与 M1 工程基础：论文入口、配置、身份契约、cohort、只读 collector、
 一级统计和 identity 桥。具体 reducer、dense sampler、XD 协议、正式 detector 实验和论文数字
 依照研究顺序留待后续阶段，不在本轮以占位实现冒充完成。
 

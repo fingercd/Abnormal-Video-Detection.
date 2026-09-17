@@ -34,7 +34,8 @@ block/site 接口；TimeSformer 显式区分 temporal/spatial，V-JEPA 2 只定�
 相对路径基于仓库根目录；非标准位置的 profile 使用 `--root` 明确根目录。
 
 默认 `protocol.yaml` 使用 W：开发只用训练视频级标签，正常参考统计只在 fit 拟合。
-quality_tolerance 保持 null，正式方法选择/测试前由研究负责人确定。
+用户已在正式测试前将 quality_tolerance 固定为 `0.005`，即最多下降 0.5 个百分点，
+同时报告差值置信区间。
 `paper.compatibility` 提供显式身份及兼容声明校验，但不自动改变现有 predict 的严格 fingerprint
 绑定，也不意味着 train-32→test-dense 或 compressed-feature 预测已经实现。
 
