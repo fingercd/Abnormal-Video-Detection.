@@ -1,0 +1,6 @@
+# Copy to assets.local.yaml and supply existing locations; do not add credentials.
+# Relative paths resolve from the project root. No assets are downloaded automatically.
+dataset_roots:
+  ucf_crime: data/raw/ucf_crime
+  xd_violence: data/raw/xd_violence
+checkpoint_paths: {}

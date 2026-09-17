@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-17",
+  "scope": "02 foundation refactor (M0 and observation/identity engineering); not method research",
+  "baseline": "outputs/icassp2027/refactor/20260917T141225Z/baseline.json",
+  "protection_report": "outputs/icassp2027/refactor/20260917T141225Z/protection-final.json",
+  "protected_file_count": 316,
+  "allowed_existing_changes": [
+    ".gitignore",
+    "README-CN.md",
+    "README.md"
+  ],
+  "code": {
+    "available": true,
+    "commit": "0badc3435e734a841110e29d497940bfda7cc707",
+    "branch": "qzt/refactor-vadbench-simplification",
+    "dirty": true,
+    "source_sha256": "08fe4c835e18605196bdbda008833058b3b3ea130634d4d46e0db1bdc48a5301"
+  },
+  "real_validation": {
+    "run_id": "observer-validation-20260917T150359001546Z-cceee66f",
+    "receipt": "outputs/icassp2027/runs/observer-validation-20260917T150359001546Z-cceee66f/architecture_receipt.json",
+    "device": "cpu",
+    "encoder": "videomaev2",
+    "parity": {
+      "identity_features_max_abs": 0.0,
+      "identity_pooled_max_abs": 0.0,
+      "observer_features_max_abs": 0.0,
+      "observer_pooled_max_abs": 0.0
+    },
+    "scope": "one unlabelled engineering clip, real weights"
+  },
+  "unverified": [
+    "GPU parity/efficiency",
+    "real-weight runtime geometry of timesformer/vjepa2/videomae",
+    "normal-anomaly cohort experiment",
+    "variable-length reduction"
+  ],
+  "not_implemented": [
+    "final reducer",
+    "dense sampler",
+    "XD protocol",
+    "direct_insert predictor execution",
+    "paper metrics export"
+  ]
+}

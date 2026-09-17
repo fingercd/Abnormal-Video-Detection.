@@ -1,4 +1,27 @@
-# VADBench
+# ICASSP 2027: Normal–Anomaly Properties in Video Encoders
+
+The active research workflow compares internal token distributions, spatiotemporal relations,
+attention and readout behaviour before selecting a token-reduction method. The project profile
+selects `videomaev2`, `timesformer`, `vjepa2` and `videomae`; the full VADBench catalog remains available.
+
+- [Current project status and validation](projects/icassp2027/progress.md)
+- [Active profile](projects/icassp2027/profile.yaml) and [development protocol](projects/icassp2027/protocol.yaml)
+- [Observation plan](docs/icassp2027/01_NORMAL_ANOMALY_PROBES.md), [refactoring scope](docs/icassp2027/02_ENCODER_SCOPE_AND_REFACTOR.md), [execution runbook](docs/icassp2027/03_EXECUTION_RUNBOOK.md)
+- [Paper workspace](paper/icassp2027/README.md) and [experiment rules](docs/icassp2027/06_EXPERIMENT_RULES_AND_PITFALLS.md)
+
+Use the already working interpreter for the chosen model. Configuration inspection is lightweight:
+
+```bash
+python -m vadbench.paper status --project projects/icassp2027/profile.yaml
+python -m vadbench.paper probe --project projects/icassp2027/profile.yaml --suite configs/papers/icassp2027/suites/probe-pilot.yaml --dry-run
+```
+
+`status` reports configuration and path availability, not model readiness. `--dry-run` loads no
+weights and writes no run artifacts. Real observer verification and input/cohort instructions
+are documented in [the project guide](projects/icassp2027/README.md). No final reducer or
+normal–anomaly finding is claimed by this foundation refactor.
+
+## VADBench framework reference (historical snapshot, September 2026)
 
 VADBench is a research framework for comparing fixed-clip video representations and stateful long-video/VLM paths under a common UCF-Crime data, timeline, feature, and evaluation contract.
 

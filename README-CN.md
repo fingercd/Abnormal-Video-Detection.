@@ -1,4 +1,26 @@
-# VADBench：视频表征与 UCF-Crime 基准框架
+# ICASSP 2027：正常—异常性质驱动的编码器研究
+
+当前研究先比较正常与异常视频在编码器内部的 token 分布、时空关系、attention 与读出，
+再由独立确认的性质决定 token 操作。论文 profile 选择 `videomaev2`、`timesformer`、
+`vjepa2`、`videomae`；原有完整 catalog、其他模型和公共训练评测链保持兼容。
+
+- [当前进度与验证回执](projects/icassp2027/progress.md)
+- [项目使用说明](projects/icassp2027/README.md)、[active profile](projects/icassp2027/profile.yaml)、[数据协议](projects/icassp2027/protocol.yaml)
+- [01 观察计划](docs/icassp2027/01_NORMAL_ANOMALY_PROBES.md)、[02 重构范围](docs/icassp2027/02_ENCODER_SCOPE_AND_REFACTOR.md)、[03 执行流程](docs/icassp2027/03_EXECUTION_RUNBOOK.md)
+- [论文工作区](paper/icassp2027/README.md)、[06 实验规则](docs/icassp2027/06_EXPERIMENT_RULES_AND_PITFALLS.md)
+
+沿用目标模型已经跑通的解释器。轻量入口：
+
+```bash
+python -m vadbench.paper status --project projects/icassp2027/profile.yaml
+python -m vadbench.paper probe --project projects/icassp2027/profile.yaml --suite configs/papers/icassp2027/suites/probe-pilot.yaml --dry-run
+```
+
+`status` 只检查配置和路径，不把权重目录存在标成模型已验证。`--dry-run` 不加载权重，
+不创建运行产物。基础重构的范围、真实 observer 验证方式和后续实验前提见项目使用说明。
+当前没有最终 reducer 或正常—异常性质结论。
+
+## VADBench 通用框架参考（2026 年 9 月历史快照）
 
 VADBench 用统一的视频身份、时间轴、特征和评测契约，比较固定 clip 表征与长视频状态/缓存路径。项目主代码在 `src/vadbench/`，当前重点是把已经接入的模型变成可复现的实验链路。
 

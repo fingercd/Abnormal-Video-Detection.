@@ -29,6 +29,7 @@ htmlcov/
 /wheels/
 /wandb/
 /mlruns/
+/projects/*/assets.local.yaml
 
 # Temporary research material
 /_tmp*/
