@@ -14,6 +14,7 @@ from vadbench.contracts import ClipBatch
 from vadbench.paper.stages import clean_encoder_batch
 from vadbench.research.interventions import (
     fixed_budget_indices,
+    paired_spatial_indices,
     relative_branch_update,
     same_position_temporal_change,
 )
@@ -205,6 +206,7 @@ def run_intervention_diagnostic(
     relative_depth: float = 0.5,
     budget_ratio: float = 0.5,
     seed: int = 0,
+    include_paired: bool = False,
 ) -> InterventionReceipt:
     """Measure explicit offline index controls on one clean B=1 fixed clip."""
 
@@ -218,6 +220,8 @@ def run_intervention_diagnostic(
         raise ValueError("budget_ratio must be in (0, 1]")
     if type(seed) is not int:
         raise ValueError("seed must be an integer")
+    if include_paired and budget_ratio != 0.5:
+        raise ValueError("paired coverage diagnostic requires budget_ratio=0.5")
     clean = clean_encoder_batch(batch)
     if clean.frame_indices is None or clean.valid_mask is None:
         raise ValueError("intervention diagnostic requires explicit frame_indices and valid_mask")
@@ -262,8 +266,21 @@ def run_intervention_diagnostic(
             suffix_shapes={int(key): tuple(value) for key, value in identity_execution["suffix_shapes"].items()},
             pooled=identity_metrics,
         )
-        for strategy in ("uniform", "seeded_random", "score_high", "score_low"):
-            selection = fixed_budget_indices(scores, layout, budget, strategy, seed=seed if strategy == "seeded_random" else None)
+        selections = {
+            strategy: fixed_budget_indices(
+                scores, layout, budget, strategy, seed=seed if strategy == "seeded_random" else None
+            )
+            for strategy in ("uniform", "seeded_random", "score_high", "score_low")
+        }
+        if include_paired:
+            for choice in ("first", "random", "high", "low"):
+                selection = paired_spatial_indices(
+                    scores, layout, choice, seed=seed if choice == "random" else None
+                )
+                if selection.effective_budget != budget:
+                    raise InterventionRunnerUnsupportedError("paired and global control budgets differ")
+                selections[f"paired_{choice}"] = selection
+        for strategy, selection in selections.items():
             output, execution = _run_indexed(adapter, bridge, clean, depth, layout, selection.indices)
             controls[strategy] = InterventionResult(
                 name=strategy,

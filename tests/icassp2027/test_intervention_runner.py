@@ -240,3 +240,14 @@ def test_runtime_oom_is_not_mislabeled_as_unsupported_adapter() -> None:
             candidate="relative_attention_update",
         )
     assert all(not m._forward_hooks and not m._forward_pre_hooks for m in adapter.model.modules())
+
+
+def test_paired_controls_execute_the_same_shortened_budget_as_global_controls() -> None:
+    receipt = run_intervention_diagnostic(
+        adapter=_V2Adapter(), encoder_id="videomaev2", batch=_batch(4),
+        candidate="relative_attention_update", include_paired=True,
+    )
+    budget = receipt.results["uniform"].effective_budget
+    for name in ("paired_first", "paired_random", "paired_high", "paired_low"):
+        assert receipt.results[name].effective_budget == budget
+        assert all(shape[1] == budget for shape in receipt.results[name].suffix_shapes.values())

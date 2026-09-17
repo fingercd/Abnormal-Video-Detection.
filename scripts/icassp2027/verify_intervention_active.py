@@ -95,6 +95,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--relative-depth", type=float, default=0.5)
     parser.add_argument("--budget-ratio", type=float, default=0.5)
     parser.add_argument("--seed", type=int, default=20260918)
+    parser.add_argument("--paired", action="store_true", help="include horizontal-pair coverage controls at exactly half budget")
     parser.add_argument("--cuda-memory-fraction", type=float)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--output", type=Path)
@@ -146,6 +147,7 @@ def main() -> int:
         "relative_depth": args.relative_depth,
         "budget_ratio": args.budget_ratio,
         "seed": args.seed,
+        "paired_coverage_controls": args.paired,
         "requested_device": str(requested_device),
         "requested_threads": args.threads,
         "requested_cuda_memory_fraction": args.cuda_memory_fraction,
@@ -185,6 +187,7 @@ def main() -> int:
                     relative_depth=args.relative_depth,
                     budget_ratio=args.budget_ratio,
                     seed=args.seed,
+                    include_paired=args.paired,
                 )
             )
             for candidate in candidates

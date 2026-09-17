@@ -6,6 +6,7 @@ import torch
 from vadbench.research.interventions import (
     InterventionScoreError,
     fixed_budget_indices,
+    paired_spatial_indices,
     relative_branch_update,
     same_position_temporal_change,
 )
@@ -78,6 +79,71 @@ def test_timesformer_controls_keep_cls_complete_trajectories_and_width_aligned_b
         fixed_budget_indices(scores, layout, 2, "uniform")
 
 
+def test_paired_spatial_indices_cover_every_horizontal_pair_and_keep_specials():
+    layout = _layout()
+    scores = torch.tensor([[0.0, 1.0, 9.0, 8.0, 2.0, 1.0, 7.0, 6.0, 3.0]])
+    high = paired_spatial_indices(scores, layout, "high")
+    low = paired_spatial_indices(scores, layout, "low")
+    first = paired_spatial_indices(scores, layout, "first")
+    random_a = paired_spatial_indices(scores, layout, "random", seed=5)
+    random_b = paired_spatial_indices(scores, layout, "random", seed=5)
+    assert high.indices.tolist() == [[0, 2, 3, 6, 7]]
+    assert low.indices.tolist() == [[0, 1, 4, 5, 8]]
+    assert first.indices.tolist() == [[0, 1, 2, 5, 6]]
+    assert high.effective_budget == low.effective_budget == first.effective_budget == 5
+    assert torch.equal(random_a.indices, random_b.indices)
+    with pytest.raises(InterventionScoreError, match="需要整数 seed"):
+        paired_spatial_indices(scores, layout, "random")
+
+
+def test_timesformer_pair_control_selects_whole_trajectories_and_native_width_budget():
+    layout = _layout(timesformer=True)
+    scores = torch.tensor([[0.0, 1.0, 1.0, 9.0, 9.0, 2.0, 2.0, 8.0, 8.0]])
+    selection = paired_spatial_indices(scores, layout, "high")
+    assert selection.indices.tolist() == [[0, 3, 4, 7, 8]]
+    assert selection.effective_budget == 5
+    with pytest.raises(InterventionScoreError, match="偶数"):
+        odd = TokenLayout(
+            valid_mask=layout.valid_mask,
+            original_token_ids=layout.original_token_ids,
+            special_token_mask=layout.special_token_mask,
+            mass=layout.mass,
+            source_coordinates=layout.source_coordinates,
+            position_contract=layout.position_contract,
+            provenance={"grid": [2, 2, 3]},
+        )
+        paired_spatial_indices(scores, odd, "first")
+    with pytest.raises(InterventionScoreError, match="padding"):
+        paired_spatial_indices(scores, _layout(padding=True), "first")
+
+
+def test_paired_fp16_scores_preserve_large_native_int64_indices_without_rounding():
+    width = 8192
+    valid = torch.ones((1, width + 1), dtype=torch.bool)
+    special = torch.zeros_like(valid)
+    special[0, 0] = True
+    ids = torch.arange(width + 1).unsqueeze(0)
+    coordinates = torch.zeros((1, width + 1, 3), dtype=torch.long)
+    coordinates[0, 1:, 2] = torch.arange(width)
+    layout = TokenLayout(
+        valid_mask=valid,
+        original_token_ids=ids,
+        special_token_mask=special,
+        mass=valid.float(),
+        source_coordinates=coordinates,
+        position_contract="verified-patch-layout",
+        provenance={"grid": [1, 1, width], "coordinate_source": "large-fixture"},
+    )
+    scores = torch.zeros((1, width + 1), dtype=torch.float16)
+    scores[0, 2::2] = 1
+    selection = paired_spatial_indices(scores, layout, "high")
+    expected = torch.arange(0, width + 1, 2, dtype=torch.long).unsqueeze(0)
+    assert selection.indices.dtype == torch.long
+    assert torch.equal(selection.indices, expected)
+    assert selection.indices.unique().numel() == selection.indices.numel()
+    assert selection.indices.max().item() == 8192
+
+
 def test_relative_branch_update_is_differentiable_and_rejects_zero_or_nonfinite_input_norms():
     branch = torch.tensor([[[3.0, 4.0], [0.0, 2.0]]], requires_grad=True)
     source = torch.tensor([[[6.0, 8.0], [1.0, 0.0]]], requires_grad=True)
@@ -132,3 +198,6 @@ def test_timesformer_cpu_layout_cuda_scores_keeps_native_indices_on_score_device
     selection = fixed_budget_indices(scores, layout, 6, "score_high")
     assert selection.indices.device == scores.device
     assert selection.indices.tolist() == [[0, 1, 2, 3, 4]]
+    paired = paired_spatial_indices(scores, layout, "high")
+    assert paired.indices.device == scores.device
+    assert paired.indices.tolist() == [[0, 1, 2, 7, 8]]

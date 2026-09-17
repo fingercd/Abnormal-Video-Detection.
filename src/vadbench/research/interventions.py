@@ -25,7 +25,7 @@ class IndexSelection:
     indices: torch.Tensor
     requested_budget: int
     effective_budget: int
-    strategy: Strategy
+    strategy: str
 
 
 @dataclass(frozen=True)
@@ -56,6 +56,53 @@ def _is_timesformer(layout: TokenLayout) -> bool:
     return layout.position_contract.startswith("hf-timesformer-")
 
 
+def _grid(layout: TokenLayout) -> tuple[int, int, int]:
+    grid = layout.provenance.get("grid")
+    if not isinstance(grid, list) or len(grid) != 3 or not all(
+        type(value) is int and value > 0 for value in grid
+    ):
+        raise InterventionScoreError("selection 需要已验证 [T,H,W] grid")
+    return tuple(grid)
+
+
+def _dense_coordinates(layout: TokenLayout) -> torch.Tensor:
+    if layout.source_coordinates is None:
+        raise InterventionScoreError("pair selection 缺少已验证坐标")
+    if bool((~layout.valid_mask).any()):
+        raise InterventionScoreError("pair selection 不支持 padding layout")
+    return layout.source_coordinates.detach().cpu()
+
+
+def _timesformer_trajectory_ids(layout: TokenLayout) -> tuple[torch.Tensor, tuple[int, int, int]]:
+    frames, height, width = _grid(layout)
+    special = layout.special_token_mask
+    if not bool(special[:, 0].all()) or bool(special.sum(dim=1).ne(1).any()):
+        raise InterventionScoreError("TimeSformer selection 需要唯一 index-0 CLS")
+    expected_patches = frames * height * width
+    if layout.token_capacity != 1 + expected_patches or _same_valid_count(layout) != layout.token_capacity:
+        raise InterventionScoreError("TimeSformer control 只接受无 padding 的完整 CLS+T×H×W layout")
+    coordinates = _dense_coordinates(layout)
+    all_rows: list[torch.Tensor] = []
+    for batch in range(layout.batch_size):
+        spatial: list[torch.Tensor] = []
+        for row in range(height):
+            for column in range(width):
+                ids = torch.nonzero(
+                    (coordinates[batch, :, 1] == row)
+                    & (coordinates[batch, :, 2] == column)
+                    & ~special[batch].cpu(),
+                    as_tuple=False,
+                ).flatten()
+                if len(ids) != frames:
+                    raise InterventionScoreError("TimeSformer 每个空间轨迹必须含完整时间 token")
+                ordered = ids[torch.argsort(coordinates[batch, ids, 0])]
+                if not torch.equal(coordinates[batch, ordered, 0], torch.arange(frames)):
+                    raise InterventionScoreError("TimeSformer 轨迹时间坐标必须为连续原生顺序")
+                spatial.append(ordered)
+        all_rows.append(torch.stack(spatial))
+    return torch.stack(all_rows), (frames, height, width)
+
+
 def _validate_strategy(strategy: Strategy, seed: int | None) -> None:
     if strategy not in {"uniform", "seeded_random", "score_high", "score_low"}:
         raise InterventionScoreError(f"未知 strategy={strategy!r}")
@@ -82,13 +129,7 @@ def _choose(
 
 
 def _timesformer_selection(scores: torch.Tensor, layout: TokenLayout, budget: int, strategy: Strategy, seed: int | None) -> IndexSelection:
-    grid = layout.provenance.get("grid")
-    if not isinstance(grid, list) or len(grid) != 3 or not all(type(value) is int and value > 0 for value in grid):
-        raise InterventionScoreError("TimeSformer selection 需要已验证 [T,H,W] grid")
-    frames, height, width = grid
-    special = layout.special_token_mask
-    if not bool(special[:, 0].all()) or bool(special.sum(dim=1).ne(1).any()):
-        raise InterventionScoreError("TimeSformer selection 需要唯一 index-0 CLS")
+    trajectories_cpu, (frames, _height, width) = _timesformer_trajectory_ids(layout)
     patch_budget = budget - 1
     if patch_budget < 0:
         raise InterventionScoreError("budget 小于必须保留的 CLS")
@@ -97,32 +138,12 @@ def _timesformer_selection(scores: torch.Tensor, layout: TokenLayout, budget: in
     effective = 1 + trajectories * frames
     if trajectories <= 0:
         raise InterventionScoreError("budget 不能保留完整且 patch-width 对齐的 TimeSformer 轨迹")
-    expected_patches = frames * height * width
-    if layout.token_capacity != 1 + expected_patches or _same_valid_count(layout) != layout.token_capacity:
-        raise InterventionScoreError("TimeSformer control 只接受无 padding 的完整 CLS+T×H×W layout")
-    coordinates = layout.source_coordinates
-    if coordinates is None:
-        raise InterventionScoreError("TimeSformer trajectory selection 缺少已验证坐标")
+    trajectories_all = trajectories_cpu.to(scores.device)
     rows: list[torch.Tensor] = []
     for batch in range(layout.batch_size):
-        spatial: list[tuple[tuple[int, int], torch.Tensor]] = []
-        for row in range(height):
-            for column in range(width):
-                ids = torch.nonzero(
-                    (coordinates[batch, :, 1] == row)
-                    & (coordinates[batch, :, 2] == column)
-                    & ~special[batch],
-                    as_tuple=False,
-                ).flatten()
-                if len(ids) != frames:
-                    raise InterventionScoreError("TimeSformer 每个空间轨迹必须含完整时间 token")
-                ordered = ids[torch.argsort(coordinates[batch, ids, 0])]
-                if not torch.equal(coordinates[batch, ordered, 0], torch.arange(frames, device=ordered.device)):
-                    raise InterventionScoreError("TimeSformer 轨迹时间坐标必须为连续原生顺序")
-                spatial.append(((row, column), ordered))
-        trajectory_ids = torch.stack([ids for _, ids in spatial]).to(scores.device)
+        trajectory_ids = trajectories_all[batch]
         trajectory_scores = scores[batch, trajectory_ids].mean(dim=1)
-        choices = torch.arange(len(spatial), device=scores.device)
+        choices = torch.arange(len(trajectory_ids), device=scores.device)
         chosen = _choose(choices, trajectory_scores, trajectories, strategy, seed)
         indices = torch.cat(
             (
@@ -132,6 +153,99 @@ def _timesformer_selection(scores: torch.Tensor, layout: TokenLayout, budget: in
         )
         rows.append(torch.sort(indices).values)
     return IndexSelection(torch.stack(rows), budget, effective, strategy)
+
+
+def _pair_choice(
+    left_scores: torch.Tensor, right_scores: torch.Tensor, choice: str, seed: int | None, batch: int
+) -> torch.Tensor:
+    """Return a bool mask choosing the right member; never promote token IDs."""
+    if choice == "first":
+        return torch.zeros_like(left_scores, dtype=torch.bool)
+    if choice == "high":
+        return right_scores > left_scores
+    if choice == "low":
+        return right_scores < left_scores
+    if choice == "random":
+        if type(seed) is not int:
+            raise InterventionScoreError("random pair choice 需要整数 seed")
+        generator = torch.Generator(device="cpu").manual_seed(seed + batch)
+        return torch.randint(0, 2, (len(left_scores),), generator=generator, device="cpu").to(
+            left_scores.device, dtype=torch.bool
+        )
+    raise InterventionScoreError(f"未知 pair choice={choice!r}")
+
+
+def paired_spatial_indices(
+    scores: torch.Tensor,
+    layout: TokenLayout,
+    choice: Literal["high", "low", "first", "random"],
+    *,
+    seed: int | None = None,
+) -> IndexSelection:
+    """Keep one token from every verified horizontal spatial pair."""
+
+    _require_scores(scores, layout)
+    if choice not in {"high", "low", "first", "random"}:
+        raise InterventionScoreError(f"未知 pair choice={choice!r}")
+    if choice == "random" and type(seed) is not int:
+        raise InterventionScoreError("random pair choice 需要整数 seed")
+    frames, height, width = _grid(layout)
+    if width % 2:
+        raise InterventionScoreError("paired spatial control 要求偶数 grid width")
+    coordinates = _dense_coordinates(layout)
+    special = layout.special_token_mask.cpu()
+    if _is_timesformer(layout):
+        trajectories_cpu, (_frames, _height, _width) = _timesformer_trajectory_ids(layout)
+        retained_trajectories = height * (width // 2)
+        if retained_trajectories % width:
+            raise InterventionScoreError("TimeSformer paired trajectories 不满足 native patch-width 对齐")
+        trajectories = trajectories_cpu.to(scores.device)
+        rows: list[torch.Tensor] = []
+        for batch in range(layout.batch_size):
+            ids = trajectories[batch].reshape(height, width, frames)
+            values = scores[batch, ids].mean(dim=-1)
+            left_tracks = ids[:, 0::2].reshape(-1, frames)
+            right_tracks = ids[:, 1::2].reshape(-1, frames)
+            choose_right = _pair_choice(
+                values[:, 0::2].reshape(-1), values[:, 1::2].reshape(-1), choice, seed, batch
+            )
+            selected = torch.where(
+                choose_right[:, None], right_tracks, left_tracks
+            ).reshape(-1)
+            rows.append(torch.sort(torch.cat((torch.zeros(1, device=scores.device, dtype=torch.long), selected))).values)
+        effective = 1 + retained_trajectories * frames
+        return IndexSelection(torch.stack(rows), effective, effective, f"paired_{choice}")
+    expected = frames * height * width
+    special_count = int(special[0].sum())
+    if layout.token_capacity - special_count != expected or _same_valid_count(layout) != layout.token_capacity:
+        raise InterventionScoreError("paired spatial control 需要无 padding 的完整 T×H×W patch layout")
+    rows: list[torch.Tensor] = []
+    for batch in range(layout.batch_size):
+        locations: dict[tuple[int, int, int], int] = {}
+        for index in torch.nonzero(~special[batch], as_tuple=False).flatten().tolist():
+            key = tuple(int(value) for value in coordinates[batch, index].tolist())
+            if key in locations:
+                raise InterventionScoreError("verified coordinates 不含唯一相邻空间 pair")
+            locations[key] = index
+        pairs: list[torch.Tensor] = []
+        for time in range(frames):
+            for row in range(height):
+                for column in range(0, width, 2):
+                    ids: list[int] = []
+                    for target in (column, column + 1):
+                        found = locations.get((time, row, target))
+                        if found is None:
+                            raise InterventionScoreError("verified coordinates 不含唯一相邻空间 pair")
+                        ids.append(found)
+                    pairs.append(torch.tensor(ids, dtype=torch.long))
+        pair_ids = torch.stack(pairs).to(scores.device)
+        pair_values = scores[batch, pair_ids]
+        choose_right = _pair_choice(pair_values[:, 0], pair_values[:, 1], choice, seed, batch)
+        chosen = torch.where(choose_right, pair_ids[:, 1], pair_ids[:, 0])
+        specials = torch.nonzero(layout.special_token_mask[batch], as_tuple=False).flatten().to(scores.device)
+        rows.append(torch.sort(torch.cat((specials, chosen))).values)
+    effective = special_count + expected // 2
+    return IndexSelection(torch.stack(rows), effective, effective, f"paired_{choice}")
 
 
 def fixed_budget_indices(
