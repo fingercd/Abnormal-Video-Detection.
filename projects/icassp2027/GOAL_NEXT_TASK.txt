@@ -1,0 +1,9 @@
+以形成可辩护的 ICASSP 2027 论文实验与方法证据为目标，按 projects/icassp2027/RESEARCH_PLAN_V2.md 完成本轮正常—异常性质驱动的 ViT encoder 内部插件研究，接续现有代码、真实资产、探针、校准及成功/失败产物，不从头重做。研究四种 encoder—检测后端配对：VideoMAEv2-B、TimeSformer-B、V-JEPA 2-L、VideoMAE-B 各只采用同一种固定 UR-DMU 后端；前三种为主，VideoMAE-B 为同家族补充，不增加多检测后端实验或擅自加入第五 encoder。创新只在视觉 encoder 内部；先验证四组原视频到后端的真实 native 路径、梯度、参数更新、重载、identity和真实后层序列缩短，再用各自公开预训练encoder建立完整dense训练特征，按固定原作者网络/损失、200段、3000 optimizer steps等协议训练匹配后端。主实验冻结同encoder、同dataset、同seed的dense检查点进行direct_insert比较，refit只作等预算补充，保留0/1/2三个seed且不挑最佳seed。
+
+UCF-Crime沿官方1610 train/290 test做四组主比较；XD-Violence沿官方3954 train/800 test验证VideoMAEv2和TimeSformer，完成所有原视频下载、坏源修复、CRC/SHA和坐标审计后才声称完整数据就绪。原fit/confirm/select角色锁不改，以新视图联合进行方法冻结后的最终训练；XD名称组隔离1598视图保留为稳健性补充。不得用部分数据、旧32片段缓存或上采样伪装完整dense序列，不得用原I3D-UR-DMU权重冒充匹配四encoder的预训练异常头。
+
+审查并验证已冻结的identity、global_uniform、paired_random、pair_linear及必要的最近邻同预算压缩基线。候选可继续实验不等于已建立新颖性；沿用正常—异常探针和独立确认，明确当前仅部分模型性质获支持。若需要修订方法，只能在允许的开发数据和新的明确冻结记录下进行，不能利用官方测试分数挑方法、层、预算、阈值或checkpoint。部署不得使用真值、标签文件名、未来层或完整dense教师。固定质量容忍度0.005，保留全部负结果；以视频为独立单位报告配对差值、95%置信区间和10,000次分层bootstrap。
+
+使用node3八张A100及现有native环境；普通质量任务可在明确显存预算与本项目lease下按用户授权共卡，保护外部任务，正式计时必须独占且记录干扰。完成纯encoder、含adapter及含解码/固定后端的端到端延迟、吞吐、allocated/reserved峰值显存，并核验每层真实token数及插件自身开销。共享作业walltime不作速度数字，V100既有结果只作参考。监控RAM、显存和磁盘；仅在实测资源不足且确认资产无当前引用时，按用户条件授权清理明确不用的旧权重，保留active资源、源码/配置/锁和历史证据，不能通过删除磁盘文件假称释放显存。
+
+维护单一progress与审核exports，安全上传新的冻结代码并做好本地Git，不push、不发布或自动投稿。完成条件是正式实验矩阵、关键seed、质量统计、真实效率及身份/数据审计全部有可复查回执，并给出性质、两类插件是否有效以及论文可支持主张和局限的完整判断；工程测试、准备脚本、部分下载或阶段性产物不算研究完成。任何缺失值保持null，不编造论文数字、新颖性或引用。依用户已确认计划自主推进，无法通过既有授权解决的实质问题及时询问。

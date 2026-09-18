@@ -2,6 +2,30 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+## 当前审阅门禁与连接验收
+
+- 用户最新要求先解释新旧情况、交付计划，确认后才新建任务并设Goal执行。
+  [新计划](RESEARCH_PLAN_V2.md)、[拟用Goal正文](GOAL_NEXT_TASK.txt)、
+  [交接清单](NEXT_TASK_HANDOFF.md)已经准备；目前未创建新任务、未修改当前Goal文字，
+  未启动新的正式训练或评分。当前继续的是已授权的小规模连接验收和原数据恢复。
+- 新后端/data/extraction实现已提交本地Git为`866674c`并上传同名clean服务器checkout。
+  联合首轮51项通过；新增raw内容绑定后提取器6项通过；LF/CRLF修复后的backend＋训练
+  30项通过。原插件/部署/校准梯度/位置路径回归103项通过；Ruff、compileall通过。
+- 原UR源码及两套checkpoint已转入服务器，native foundation CPU严格加载两套均通过。
+  处理了Windows源码CRLF与上游Git blob LF摘要差异，实际执行仍是五份精确上游定义，
+  没有改网络/损失。原native环境未安装或升级。
+- 小规模A100实际guard-a02 PID24912、chain25347，控制目录为
+  `code-866674c/outputs/icassp2027/control/native-urdmu-acceptance-20260918T085000Z`。
+  首次guard参数5秒低于其30秒下限，在启动child前被拒绝；原记录保留，修正为30秒
+  后显式a02启动。最近VideoMAEv2已经真实完成20clips×4路径、UR两步训练/重载和
+  同一冻结head的有限输出/shape/权重不变检查；其余三组顺序运行，未报全完成。
+- 新UCF1610逐成员CRC/SHA/size/container probe审计和完整view consumer复验已通过。
+  contract SHA为`47467e6c88497fbb8f81bc7e2be59cc9e7ed0b6076cdf1548f0e1fe1be5c6998`。
+  XD官方3954 inventory实际blocked，available2800/missing1154，不生成完整训练合同。
+- 主机RAM充足；共享磁盘最近剩余约183GiB。没有删除任何旧encoder资产。
+  [插件继续审查](decisions/plugin-continuation-review-v2.md)明确区分工程可继续与论文
+  新颖性/检测质量尚未成立，保留峰值显存未降等负证据。
+
 ## 当前正式口径与执行（UTC 2026-09-18 07 时）
 
 - 用户在预训练权重调查后的最新决定：每个ViT encoder只配一个固定检测后端，允许为
