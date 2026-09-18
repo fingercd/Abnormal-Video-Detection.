@@ -370,14 +370,18 @@ def test_long_video_writes_bounded_indexes_and_publishes_once(tmp_path, monkeypa
     _touch(tmp_path, records)
     adapter = _Adapter()
     sampling = _sampling(records, root=tmp_path, regime="test_dense", clips=32, window_stride=2)
-    spec = _spec(_representation(adapter, reducer="identity"), sampling, kind="dense", stride=2)
-    original_write = FeatureStore.write
+    spec = replace(
+        _spec(_representation(adapter, reducer="identity"), sampling, kind="dense", stride=2),
+        micro_batch_size=7,
+    )
+    original_write = FeatureStore.write_many
     original_publish = extraction.atomic_write_jsonl
-    sizes, publications = [], []
+    sizes, publications, batch_sizes = [], [], []
 
-    def checked_write(store, **kwargs):
+    def checked_write(store, items):
         assert store.root.parent.name == "blocks"
-        result = original_write(store, **kwargs)
+        result = original_write(store, items)
+        batch_sizes.append(len(items))
         sizes.append(len(store.records()))
         return result
 
@@ -385,7 +389,7 @@ def test_long_video_writes_bounded_indexes_and_publishes_once(tmp_path, monkeypa
         publications.append(Path(path))
         return original_publish(path, rows)
 
-    monkeypatch.setattr(FeatureStore, "write", checked_write)
+    monkeypatch.setattr(FeatureStore, "write_many", checked_write)
     monkeypatch.setattr(extraction, "atomic_write_jsonl", checked_publish)
 
     def run(name, resume=None):
@@ -403,12 +407,43 @@ def test_long_video_writes_bounded_indexes_and_publishes_once(tmp_path, monkeypa
     old = run("long")
     assert old.completed and old.records_written == 69
     assert max(sizes) == 64
+    assert len(batch_sizes) == 11 and sum(batch_sizes) == 69 and max(batch_sizes) == 7
     assert publications.count(Path(old.run_dir) / "shards" / "long" / "index.jsonl") == 1
     adapter.seen_batches.clear()
     result = run("copy", old.run_dir)
     assert result.completed and not adapter.seen_batches
     assert publications.count(Path(result.run_dir) / "shards" / "long" / "index.jsonl") == 1
     assert max(sizes) == 64
+
+
+def test_cross_block_batch_failure_keeps_only_completed_block_unpublished(tmp_path, monkeypatch):
+    records = [_record("long", split="train", anomaly=False, frames=140)]
+    _touch(tmp_path, records)
+    adapter = _Adapter()
+    sampling = _sampling(records, root=tmp_path, regime="test_dense", clips=32, window_stride=2)
+    spec = replace(
+        _spec(_representation(adapter, reducer="identity"), sampling, kind="dense", stride=2),
+        micro_batch_size=7,
+    )
+    original_write = FeatureStore.write_many
+
+    def fail_second_block(store, items):
+        if store.root.name == "000001":
+            raise OSError("injected second-block write failure")
+        return original_write(store, items)
+
+    monkeypatch.setattr(FeatureStore, "write_many", fail_second_block)
+    result = extract_pooled_features(
+        spec, adapter=adapter, manifest=records, dataset_root=tmp_path,
+        output_root=tmp_path / "runs", run_id="cross-block-failure", backend=_CV2(140),
+    )
+    assert not result.completed and result.records_written == 64
+    root = Path(result.run_dir)
+    shard = root / "shards" / "long"
+    assert len(FeatureStore(shard / "blocks" / "000000").records()) == 64
+    assert not (shard / "blocks" / "000001" / "index.jsonl").exists()
+    assert not (shard / "index.jsonl").exists()
+    assert not (root / "index.jsonl").exists()
 
 
 def test_interrupted_microshards_do_not_publish_video_index(tmp_path):

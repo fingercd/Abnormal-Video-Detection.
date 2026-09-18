@@ -656,19 +656,37 @@ class FeatureStore:
         is checked explicitly and rejects NumPy/PyTorch tensors.
         """
 
-        arrays: dict[str, np.ndarray] = {"features": _normalise_array(features, name="features")}
+        return self.write_many(
+            [{
+                "video_id": video_id, "clip_id": clip_id, "clip_index": clip_index,
+                "encoder_fingerprint": encoder_fingerprint, "features": features,
+                "start_s": start_s, "end_s": end_s, "frame_start": frame_start,
+                "frame_end": frame_end, "timeline_start_s": timeline_start_s,
+                "timeline_end_s": timeline_end_s, "timeline_valid": timeline_valid,
+                "source_frame_start": source_frame_start, "source_frame_end": source_frame_end,
+                "pooled": pooled, "aux_arrays": aux_arrays, "metadata": metadata,
+                "overwrite": overwrite,
+            }]
+        )[0]
+
+    def _prepare_write(self, item: Mapping[str, Any]) -> tuple[dict[str, Any], tuple[str, str, str]]:
+        required = {"video_id", "clip_id", "clip_index", "encoder_fingerprint", "features", "start_s", "end_s"}
+        allowed = required | {
+            "frame_start", "frame_end", "timeline_start_s", "timeline_end_s", "timeline_valid",
+            "source_frame_start", "source_frame_end", "pooled", "aux_arrays", "metadata", "overwrite",
+        }
+        if not isinstance(item, Mapping) or not required <= set(item) or set(item) - allowed:
+            raise TypeError("write_many items must contain exactly write keyword arguments")
+        values = dict(item)
+        arrays: dict[str, np.ndarray] = {"features": _normalise_array(values["features"], name="features")}
         optional_arrays = {
-            "timeline_start_s": timeline_start_s,
-            "timeline_end_s": timeline_end_s,
-            "timeline_valid": timeline_valid,
-            "source_frame_start": source_frame_start,
-            "source_frame_end": source_frame_end,
-            "pooled": pooled,
+            name: values.get(name)
+            for name in ("timeline_start_s", "timeline_end_s", "timeline_valid", "source_frame_start", "source_frame_end", "pooled")
         }
         for name, value in optional_arrays.items():
             if value is not None:
                 arrays[name] = _normalise_array(value, name=name)
-        for raw_name, value in (aux_arrays or {}).items():
+        for raw_name, value in (values.get("aux_arrays") or {}).items():
             if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", raw_name):
                 raise ValueError(f"invalid auxiliary array name: {raw_name!r}")
             name = f"aux_{raw_name}"
@@ -678,48 +696,62 @@ class FeatureStore:
         if arrays["features"].ndim < 1:
             raise ValueError("features must have at least one dimension")
 
-        clean_metadata = ensure_json_metadata(metadata or {})
-        fingerprint_part = encoder_fingerprint.removeprefix("sha256:")[:16]
-        video_part = _slug(video_id, fallback="video")
-        clip_part = _slug(clip_id, fallback="clip")
+        clean_metadata = ensure_json_metadata(values.get("metadata") or {})
+        fingerprint_part = values["encoder_fingerprint"].removeprefix("sha256:")[:16]
+        video_part = _slug(values["video_id"], fallback="video")
+        clip_part = _slug(values["clip_id"], fallback="clip")
         directory = self.blob_root / fingerprint_part / video_part
         directory.mkdir(parents=True, exist_ok=True)
-        stem = f"{clip_index:08d}-{clip_part}"
-        key = (encoder_fingerprint, video_id, clip_id)
+        prepared = {
+            **values,
+            "arrays": arrays, "metadata": clean_metadata, "directory": directory,
+            "stem": f"{values['clip_index']:08d}-{clip_part}", "overwrite": values.get("overwrite", True),
+        }
+        return prepared, (values["encoder_fingerprint"], values["video_id"], values["clip_id"])
 
+    def write_many(self, items: Sequence[Mapping[str, Any]]) -> list[FeatureRecord]:
+        """Atomically upsert one batch, reading and publishing its index at most once."""
+        if not items:
+            return []
+        prepared_with_keys = [self._prepare_write(item) for item in items]
+        keys = [key for _prepared, key in prepared_with_keys]
+        if len(keys) != len(set(keys)):
+            raise ValueError("write_many rejects duplicate batch upsert keys")
         with _InterProcessLock(self.index_path):
             current = list(self.iter_records())
-            existing = [
-                record
-                for record in current
-                if (record.encoder_fingerprint, record.video_id, record.clip_id) == key
-            ]
-            if existing and not overwrite:
-                raise FileExistsError(f"feature record already exists: {video_id}/{clip_id}")
-            references = (
-                self._write_npz(directory, stem, arrays)
-                if self.storage_format == "npz"
-                else self._write_npy(directory, stem, arrays)
-            )
-            record = FeatureRecord(
-                video_id=video_id,
-                clip_id=clip_id,
-                clip_index=clip_index,
-                encoder_fingerprint=encoder_fingerprint,
-                storage_format=self.storage_format,
-                arrays=references,
-                start_s=float(start_s),
-                end_s=float(end_s),
-                frame_start=frame_start,
-                frame_end=frame_end,
-                metadata=clean_metadata,
-            )
+            existing = {(record.encoder_fingerprint, record.video_id, record.clip_id) for record in current}
+            for prepared, key in prepared_with_keys:
+                if key in existing and not prepared["overwrite"]:
+                    raise FileExistsError(f"feature record already exists: {key[1]}/{key[2]}")
+            records = []
+            for prepared, _key in prepared_with_keys:
+                references = (
+                    self._write_npz(prepared["directory"], prepared["stem"], prepared["arrays"])
+                    if self.storage_format == "npz"
+                    else self._write_npy(prepared["directory"], prepared["stem"], prepared["arrays"])
+                )
+                records.append(
+                    FeatureRecord(
+                        video_id=prepared["video_id"],
+                        clip_id=prepared["clip_id"],
+                        clip_index=prepared["clip_index"],
+                        encoder_fingerprint=prepared["encoder_fingerprint"],
+                        storage_format=self.storage_format,
+                        arrays=references,
+                        start_s=float(prepared["start_s"]),
+                        end_s=float(prepared["end_s"]),
+                        frame_start=prepared.get("frame_start"),
+                        frame_end=prepared.get("frame_end"),
+                        metadata=prepared["metadata"],
+                    )
+                )
+            batch_keys = set(keys)
             updated = [
                 item
                 for item in current
-                if (item.encoder_fingerprint, item.video_id, item.clip_id) != key
+                if (item.encoder_fingerprint, item.video_id, item.clip_id) not in batch_keys
             ]
-            updated.append(record)
+            updated.extend(records)
             updated.sort(
                 key=lambda item: (
                     item.encoder_fingerprint,
@@ -729,7 +761,7 @@ class FeatureStore:
                 )
             )
             atomic_write_jsonl(self.index_path, (item.to_dict() for item in updated))
-            return record
+            return records
 
     # Compatibility name used by extraction pipelines.
     put = write

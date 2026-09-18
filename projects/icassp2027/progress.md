@@ -4,16 +4,17 @@
 
 ## 当前运行快照（本轮接手后的最新状态）
 
-- 八路A100共享dense提取仍运行。最近完整视频分片数为：V2 fit60/select26、Time fit61/select26、
-  VMA fit70/select51、VJ fit42/select18；分母分别1288与161。视频长短不等，这不是计算完成率。
+- 八路A100共享dense提取仍运行。最近完整视频分片数为：V2 fit70/select53、Time fit71/select52、
+  VMA fit83/select73、VJ fit60/select26；分母分别1288与161。视频长短不等，这不是计算完成率。
   完整dense总量2,923,485 clips；本轮UR-DMU开发头尚未开始3000步训练，不能报检测质量。
 - P04已经完整确认且未通过，停止该干预分支。真实结果、10,000次视频级bootstrap与独立点值
-  复核见F03；没有据此实现插件或启动LoRA。Time/VJ补齐原128个fit视频的观察输入已准备，
-  最短210帧、两个原生窗口均支持；未消耗新的confirm样本。
+  复核见F03；没有据此实现插件或启动LoRA。Time/VJ补齐原128个fit视频的观察已实际入队，
+  guard13203/13204均为fotile且完整argv匹配，当前等待GPU lease；尚未开始新的GPU观察。
+  最短210帧、两个原生窗口均支持；128个raw SHA均已复算，未消耗新的confirm样本。
 - A100 dense-only clip计时的新冻结源`f25d79e`已经安全上传，native CPU验收19项通过。
   唯一独占guard14261等待无其他计算PID且取得lease的卡；未停止现有提取，尚无A100正式数字。
 - XD三尾卷均已CRC解压完成，测试raw800齐备，训练仍有4个原始坏成员。全800坐标审计的
-  最近快照为checked374/passed371/failed3。三项失败的stderr均为精确的QuickTime章节轨缺失
+  最近快照为checked581/passed578/failed3。三项失败的stderr均为精确的QuickTime章节轨缺失
   诊断，视频PTS数量与container帧数一致；不能直接称为视频解码损坏。
 - 已补producer和下游sealed-coordinate consumer的精确metadata诊断分类，只允许已观测的
   那一行且ffprobe exit0，保留stderr/SHA并继续要求完整PTS/24fps/OpenCV解码。其它诊断、
@@ -23,9 +24,36 @@
   回执为该工作区`outputs/icassp2027/control/qt-metadata-native-validation-20260918-a02/receipt.json`。
   最初诊断脚本误按archive顺序取index，独立a01失败保留；a02改用正式auditor相同canonical join。
   当前9b4e1f2全量审计继续原冻结规则，没有替换其在运行源码或修改旧缓存，完整800尚未封存。
+- 唯一XD复审等待队列PID23888已核实在运行，等待旧审计自然结束；只有终态及全部失败均满足
+  已复验的精确QT诊断条件，才会在node2用1b6bd26新目录重审完整800，并检查CPU lease与磁盘。
+  不复用或重写旧实现的cache身份；若出现其他错误、身份变化或空间不足则停在needs_review。
 - 旧TopKMIL coordinator已实时确认research_protocol_hold=true、无子进程；未读取任何官方
-  模型测试分数。当前可用磁盘约80.2GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
+  模型测试分数。当前可用磁盘约78.7GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
   可操作性质、同源TF/LoRA和完整detector效率仍未完成，Goal保持active。
+
+## 本轮继续：观察入队与实测写入开销（2026-09-18）
+
+- Time/VJ观察使用`code-f25d79e/outputs/icassp2027/control/`
+  `cross-encoder-fit-explore-20260918-a01`，每模型原fit128、64正常/64含异常、8窗口，
+  共1024 clips。authoritative plan/cohort/manifest SHA分别为`6fe7ad49…64d`、
+  `6766efa3…3d5`、`742ec3d4…6fb`。runner重新绑定完整UCF authority、逐原视频SHA、
+  真实native sys.prefix、模型窗口及原角色；源代码和脚本均冻结记录。只选GPU6/5/7/2等待lease，
+  allocator fraction0.5，至少24GiB空闲；正式计时继续独占guard14261等待，未抢占任何健康任务。
+- 两个探索统计入口已核查：仅分析完整run，分别用各自原生窗口的fit-normal控制拟合motion/brightness，
+  不复制V2的16帧阈值；Time不支持的分离attention统计及VJ无CLS项保持N/A，保留全部阴性。
+  public matched分组统计只能作探索描述；后续确认仍需预登记且按视频在bin内bootstrap，不能回写成确认。
+- 新的真实64条FeatureStore写入CPU诊断绑定Time select中已经完整发布的`Abuse012_x264`首块。
+  读前后源tree SHA均`0ea4d232…23b5`；独立诊断目录只写637,059 bytes。64次逐条upsert导致
+  2,016次旧FeatureRecord解析、64次索引发布；共享node3高负载下wall为3.661秒，仅定位工程开销，
+  不能推算正式速度或总提取占比。node2只读SSH超时未重试，r01启动路径错误与有效r02分开保留。
+- 基于该证据新增`FeatureStore.write_many`：同一锁内一次读/发布index，继续使用原blob、schema、
+  fingerprint与单条upsert语义。提取按micro-batch提交，完整视频恢复按64条提交，块上限仍64。
+  批内重复、后项无效、blob/index失败及跨块失败均不能发布部分video/root；不可达blob保留。
+  首轮回归发现恢复路径尚用旧私有接口，已修正；最终提取/恢复/常规store联合81 passed，
+  新边界负例加UR-DMU训练/评分43 passed，Ruff、compileall及diff check通过。
+  正在准备新冻结代码的native真实数组重放；现有八路运行仍保持2d9d1a0，未原地换代码。
+- 只读审查确认现有resume仅接受同一完整身份的一个来源，不能把健康fit任务直接拆到额外GPU。
+  本轮不新建跨store assembler，不把工程子集拼成完整训练，后续释放卡先用于已登记的观察与计时。
 
 ## 新执行任务接手（2026-09-18）
 

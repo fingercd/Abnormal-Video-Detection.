@@ -832,7 +832,7 @@ def test_extraction_stops_after_first_failure_without_processing_later_videos(tm
     def fail_write(*_args, **_kwargs):
         raise ValueError("synthetic systemic serializer failure")
 
-    monkeypatch.setattr(extraction, "_write_pooled_record", fail_write)
+    monkeypatch.setattr(extraction, "_pooled_record_input", fail_write)
     result = extract_pooled_features(
         _spec(representation, sampling, kind="uniform_full"), adapter=adapter,
         manifest=records, dataset_root=tmp_path, output_root=tmp_path / "runs",

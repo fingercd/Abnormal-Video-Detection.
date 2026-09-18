@@ -1,7 +1,7 @@
 """Pooled-only paper feature extraction over the existing adapter contract.
 
 This is intentionally a small execution layer, not a second extraction
-engine.  It supplies paper samplers to ``build_clip_batch``, strips labels
+engine.  It uses the existing validated clip reader with paper samplers, strips labels
 before ``adapter.encode``, and persists only one pooled vector per clip.
 """
 
@@ -708,8 +708,7 @@ def _frozen_adapter(adapter: Any) -> Iterable[None]:
             module.training = mode
 
 
-def _write_pooled_record(
-    store: FeatureStore | _VideoShardWriter,
+def _pooled_record_input(
     *,
     row: int,
     record: VideoManifestRecord,
@@ -725,11 +724,11 @@ def _write_pooled_record(
     token_dtype: str,
     pooled_dtype: str,
     reduction_execution: Mapping[str, Any] | None = None,
-) -> FeatureRecord:
+) -> dict[str, Any]:
     clip_index, frame_start, frame_end, sample_metadata = _sample_metadata(sample)
     if not (0 <= frame_start < frame_end):
         raise ValueError("sampler produced an invalid score frame interval")
-    return store.write(
+    return dict(
         video_id=record.video_id,
         clip_id=f"{record.video_id}:clip-{clip_index:06d}",
         clip_index=clip_index,
@@ -829,14 +828,17 @@ class _VideoShardWriter:
         self.blocks: list[Path] = []
         self.store: FeatureStore | None = None
 
-    def write(self, **kwargs: Any) -> FeatureRecord:
-        if self.count % 64 == 0:
-            block = self.root / "blocks" / f"{self.count // 64:06d}"
-            self.blocks.append(block)
-            self.store = FeatureStore(block)
-        result = self.store.write(**kwargs)
-        self.count += 1
-        return result
+    def write_many(self, items: Sequence[dict[str, Any]]) -> None:
+        offset = 0
+        while offset < len(items):
+            if self.count % 64 == 0:
+                block = self.root / "blocks" / f"{self.count // 64:06d}"
+                self.blocks.append(block)
+                self.store = FeatureStore(block)
+            end = min(len(items), offset + 64 - self.count % 64)
+            self.store.write_many(items[offset:end])
+            self.count += end - offset
+            offset = end
 
     def publish(self, expected: int) -> None:
         if self.count != expected:
@@ -1020,9 +1022,8 @@ def extract_pooled_features(
                     )
                     if reduction_execution is not None and reduction_execution.get("gathered_tokens") != token_count:
                         raise ValueError("reducer suffix token count differs from the actual adapter output")
-                    for row, sample in enumerate(group):
-                        _write_pooled_record(
-                            shard_store,
+                    items = [
+                        _pooled_record_input(
                             row=row,
                             record=record,
                             sample=sample,
@@ -1038,8 +1039,14 @@ def extract_pooled_features(
                             pooled_dtype=pooled_dtype,
                             reduction_execution=reduction_execution,
                         )
-                        written += 1
-                        decoded_clips += 1
+                        for row, sample in enumerate(group)
+                    ]
+                    before = shard_store.count
+                    try:
+                        shard_store.write_many(items)
+                    finally:
+                        written += shard_store.count - before
+                        decoded_clips += shard_store.count - before
                 shard_store.publish(len(samples))
                 shard_dirs.append(shard)
         except Exception as exc:

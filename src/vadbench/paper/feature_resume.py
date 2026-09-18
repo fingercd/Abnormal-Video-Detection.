@@ -281,6 +281,7 @@ class FeatureResumeSource:
         snapshot.write_bytes(index_bytes)
         index_digest = hashlib.sha256(index_bytes).hexdigest()
         store = _VideoShardWriter(destination)
+        pending = []
         for line, row, bundle in validated:
             metadata = dict(row.metadata)
             metadata["runtime_reference"] = dict(runtime_reference)
@@ -296,7 +297,7 @@ class FeatureResumeSource:
                 "record_sha256": hashlib.sha256(line).hexdigest(),
                 "arrays_sha256": {name: ref.sha256 for name, ref in row.arrays.items()},
             }
-            store.write(
+            pending.append(dict(
                 video_id=row.video_id,
                 clip_id=row.clip_id,
                 clip_index=row.clip_index,
@@ -309,6 +310,10 @@ class FeatureResumeSource:
                 frame_end=row.frame_end,
                 metadata=metadata,
                 overwrite=False,
-            )
+            ))
+            if len(pending) == 64:
+                store.write_many(pending)
+                pending.clear()
+        store.write_many(pending)
         store.publish(len(samples))
         return len(validated)
