@@ -499,6 +499,23 @@ def _raw_digest(path: Path) -> tuple[str, str, int]:
     return digest.hexdigest(), f"{crc & 0xFFFFFFFF:08x}", size
 
 
+def _receipt_has_expected_video_count(receipt: Mapping[str, Any]) -> bool:
+    """Accept the legacy all-video receipt or a verified skipped-directory receipt."""
+    member_count = receipt.get("member_count")
+    if "video_member_count" not in receipt and "skipped_directory_entries" not in receipt:
+        return type(member_count) is int and member_count == VIDEO_COUNT
+    video_count = receipt.get("video_member_count")
+    skipped_directories = receipt.get("skipped_directory_entries")
+    return (
+        type(member_count) is int
+        and type(video_count) is int
+        and type(skipped_directories) is int
+        and video_count == VIDEO_COUNT
+        and skipped_directories > 0
+        and member_count == video_count + skipped_directories
+    )
+
+
 def _read_volume_receipt(
     request: RawAlignmentRequest, root: Path, index: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any] | None:
@@ -512,7 +529,7 @@ def _read_volume_receipt(
         ):
             _require(
                 receipt.get("volume") == "test_videos"
-                and receipt.get("member_count") == VIDEO_COUNT,
+                and _receipt_has_expected_video_count(receipt),
                 "RAW_VOLUME_IDENTITY_OR_COUNT",
             )
             _require(

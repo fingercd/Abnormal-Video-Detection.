@@ -301,6 +301,45 @@ def test_complete_computed_audit_publishes_evaluator_compatible_seal(pipeline, m
     assert len(evaluator.verify_raw_coordinates(evaluation_request).manifest) == 2
 
 
+def test_directory_entry_receipt_keeps_verified_video_count(pipeline):
+    request, probe, calls = pipeline
+    receipt = json.loads(Path(request.volume_receipt).read_text(encoding="utf8"))
+    receipt.update(member_count=3, video_member_count=2, skipped_directory_entries=1)
+    _write(Path(request.volume_receipt), receipt)
+    result = audit.run_raw_alignment_audit(
+        request, probe=probe, runtime_factory=lambda _: {"cpu_synthetic": True}
+    )
+    assert result["status"] == "sealed" and len(calls) == 2
+
+
+@pytest.mark.parametrize(
+    "member_count,video_member_count,skipped_directory_entries",
+    [(3, 1, 2), (3, 2, 0), (2, 1, 1), (3, 2, True), (3, 2, 1.0)],
+)
+def test_directory_entry_receipt_rejects_wrong_or_forged_counts(
+    pipeline, member_count, video_member_count, skipped_directory_entries
+):
+    request, _, _ = pipeline
+    receipt = json.loads(Path(request.volume_receipt).read_text(encoding="utf8"))
+    receipt.update(
+        member_count=member_count,
+        video_member_count=video_member_count,
+        skipped_directory_entries=skipped_directory_entries,
+    )
+    _write(Path(request.volume_receipt), receipt)
+    with pytest.raises(audit.XDAlignmentError, match="RAW_VOLUME_IDENTITY_OR_COUNT"):
+        audit._read_volume_receipt(
+            request,
+            Path(request.output_root) / "receipt-check",
+            [
+                {
+                    "central_directory_sha256": "d" * 64,
+                    "uncompressed_size": receipt["uncompressed_bytes"],
+                }
+            ],
+        )
+
+
 def test_missing_volume_proof_never_opens_raw_or_gt(pipeline, monkeypatch):
     request, probe, calls = pipeline
     Path(request.volume_receipt).unlink()
