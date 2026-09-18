@@ -34,6 +34,32 @@
 - 完整开发fit/select四模型预检共2,923,485 clips。现有FeatureStore分配估算约52GiB，
   另留4GiB缓存/日志；XD当前剩余归档及raw写入约49.48GiB，预计保留约32GiB磁盘余量，
   后续以实际增长复核。此为容量预算，不是实测提取速度或正式效率数字。
+- 提取/训练入口及P04预登记已本地提交为 `2d9d1a0`，bundle SHA
+  `a953133b0f1183b657063b6eb2093e4a92ff6398019223a5e6cbc626526349a5`。
+  服务器新冻结工作区为 `/users/fotile/icassp2027-runs/code-2d9d1a0`，native compileall、
+  原角色consumer和P04的64视频/512行cohort物化均通过。首次旧主仓库缺bundle前置提交，
+  在任何GPU启动前失败；随后从实际持有866674c的冻结仓库建立新工作区，没有修改运行源。
+- **八卡实际运行已开始**：GPU0–3分别为V2/Time/VMA/VJ完整fit dense，GPU4–6为
+  V2/Time/VMA select dense；GPU7先P04独立确认，再接VJ select。普通共享任务均持物理卡
+  lease、allocator fraction=0.5，启动时至少24GiB可用显存，不作为正式计时。
+  主control为新工作区下 `outputs/icassp2027/control/development-baseline-20260918-a01`。
+  七条dense已产生真实完整视频shard；fit完成后各自执行seed0的固定3000步开发头训练，
+  尚无开发质量或正式frame指标。
+- P04首次在GPU7设置CUDA allocator预算时OOM，发生于探针前、未产生任何P04统计；保留
+  `a01`失败。重新核验空余并显式初始化设备的 `development-slot7-20260918-a02` 已运行，
+  同一冻结样本与设置不变。最近进度为155/512 clips、19/64完整视频，尚不解释部分结果。
+- UR-DMU开发评分与全key/value精确query分块推理已实现。原完整attention默认不变，分块需
+  显式启用并保留原作者位置先验实际广播；它是等价执行优化，不计作视觉插件创新。
+  ROOT `.venv` 联合后端/分块/评分/训练验证49项通过，随后真实fit身份修正的评分12项通过；
+  Ruff与compileall通过。目标GPU数值等价仍待验证，未据CPU测试宣称长视频显存达标。
+  新评分拒绝同维但异encoder、不同采样、缺失select或不完整训练QA；官方test路径在新v3
+  方法冻结合同建立前明确拒绝，旧原型冻结回执不能解锁它。
+- XD三尾卷已完成归档恢复。已核实并保留旧失败status后，按独立ZIP大小/SHA/成员CRC证据
+  更新监督器的恢复标记；train2805现在515/515 raw-ready。原监督器因test卷合法`videos/`
+  目录条目而失败，其日志保留；新唯一监督器已按路径/类型/重复/软链接负例验证后恢复，
+  正在实际解压test，随后train3320。800 raw坐标auditor继续原实例等待，没有重复启动。
+- 四个源坏成员仍未解决，公开raw镜像也缺失相同四项。已向用户询问可访问的作者原始备份/
+  官方网盘入口；UCF继续进行。完整XD3954仍不能声明ready，未用重新编码或部分数据替代。
 
 ## 用户七点澄清后的最新执行决定
 
