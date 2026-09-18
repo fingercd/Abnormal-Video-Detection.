@@ -9,48 +9,65 @@
 已补入执行计划和方法约束；模型适配仅限布局/坐标/位置等原生约束，不允许各骨干另换评分或算子。
 当前F04仅是V2/Time探索，不构成四模型统一方法的确定依据。
 
-## 当前运行快照（本轮接手后的最新状态）
+## 当前运行快照（2026-09-19）
 
-- node3最近实际快照epoch1789745433：完整视频分片V2 fit179/select97、Time fit184/select104、
-  VMA fit263/原select79、VJ fit89/select70，原fit/select分母为1288/161；视频长短不等，不能作为计算完成率。
-  原VMA select在完整79视频边界暂停；唯一handoff监视器已按Time完成/VJ失败终态派发resume guard17046。
-  新resume正在复制/恢复原完整分片，当前目录16个完整shard不能算作16个新增视频；保留原完整身份和旧79分片。
-  其余七路native进程仍存活。完整dense总量2,923,485 clips；UR-DMU开发头尚未开始3000步训练。
-- Time原128个fit视频、64正常/64含异常、8窗口共1024 clips的完整观察已完成：
-  `code-f25d79e/outputs/icassp2027/runs/probe-20260918T132416783598Z-94424de8`，guard13203 exit0。
-  已重新核对完整cohort、raw SHA、几何/parity和controls；code-deda86e的10,000次视频级
-  fixed-min-count matched bootstrap已完成，输出`timesformer-fit128-video-bootstrap-20260918-a01`。
-  独立审计确认1,119一级签名=1,095可用+24 N/A，140,160有限video行、128视频每个8clip；
-  control仅用Time自己的64个fit-normal拟合。全族/跨深度方向混合，不能概括为全局通用规律，
-  也不排除特定site的待确认候选。Time旧P10/P11缺少局部attention实现，不等于科学阴性。
-- VJ原观察guard13204随后取得GPU6，但在CUDA初始化前因剩余磁盘预算不足退出；没有probe数据。
-  已按原56GiB完整dense预算加1GiB VMA resume副本预留修复容量缺口，不降低15GiB安全余量。
-  VJ新观察将采用修正后的probability hook：native Transformers4.57.3默认仅返回context，
-  旧fallback会误报token族；现已修正为明确P10/P11/P13 unavailable，不强制切换生产attention后端。
-  tiny fixture明确请求output_attentions以核验真实第二项；本地两组受影响测试共39通过，Ruff/compileall通过；冻结0192fad已上传，native也39 passed。
-- A100 dense-only clip计时a02四模型均已完成，guard28110 exit0；独占GPU6、FP32、cuDNN/TF32关闭。
-  独立审计已核验B1/B8、warmup5/repeats30、纯模型/adapter/单clip解码口径；没有计入UR-DMU后端，
-  不能将其称为完整视频detector质量或完整长序列端到端效率。完整审核数字另行归档。
-  a01首个Conv3d的cuDNN loading失败原样保留；其之前UR-DMU四例GPU operator equivalence已通过，
-  含D768/D1024及明确synthetic repetition的N1025/Q128，max abs差最高8.94e-08、权重未变。
-- Time局部attention只读实现已完成本地36项验证；native a01/a03含VJ的组合测试因classic环境无该类失败，
-  a02 foundation组合35通过/1失败，后者已由旧f25同环境复现为VJ tiny fixture缺少output_attentions=True。
-  a03实际Time相关28项通过；独立a04已用真实Time预训练权重和两个fit视频完成B1/B2 source clip归约、
-  hooks/identity parity及参数不变验收；模型前后SHA均3ad0137b…eef9d，CUDA未初始化。上述失败保留。
-- XD三尾卷已CRC解压，测试raw800齐备，训练仍缺4个原始坏成员。旧9b4e1f2全800审计最终794通过/6失败，
-  六个失败均为原冻结规则拒绝的精确QT chapter metadata诊断，不改写旧结果。新1b6bd26完整800复审
-  b01因launcher缺PYTHONPATH退出；b02已在node2真实运行，PID132797，最近590/800通过、0失败、0复用。
-  仍需完成全部PTS/24fps/OpenCV解码及sealed门禁，不能提前宣布新增0598/0599/0600完整通过。
-- XD四坏源的官方OneDrive页面可访问下载按钮，但工具无法把浏览器下载定向到D盘；等待用户完成已提出的
-  临时下载目录设置或提供直接原始文件链接，没有启动约15GB到C盘的下载。UCF研究不等待该人工步骤。
-- 磁盘门禁实测缺口2,460,884,992 bytes（仍预留完整56GiB dense、2GiB XD、4GiB probe、1GiB resume
-  副本及15GiB安全余量）。按用户既有条件清理授权，只移除了未被active配置或可读计算进程引用的
-  `weights/videochat-flash/model.safetensors`：4,143,085,560 bytes，SHA8d7599e4…70b475，单硬链接、非symlink。
-  其配置、源码、tokenizer、training_args、锁/缓存及历史产物保留；该inactive模型以后重跑须先恢复权重。
-  初次审计因sshd的proc权限有限而停止，复核仅为低内存SSH传输进程后a02执行；未绕过系统权限。
-  回执`/users/fotile/icassp2027-runs/control/inactive-flash-weight-cleanup-20260918-a02/receipt.json`，
-  清理后实际free=79,340,277,760 bytes。原TopKMIL coordinator仍保持研究协议hold，
-  未读取官方模型测试分数。可操作性质、同源TF/LoRA、正式完整train三seed和最终质量矩阵尚未完成，Goal active。
+- node3 实际快照 epoch1789754837：完整 fit 视频分片为 VideoMAEv2 299/1288、
+  TimeSformer 313/1288、VideoMAE 369/1288、V-JEPA 2 197/1288；均仍处于 dense 提取。
+  视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
+- VideoMAEv2、TimeSformer 的 development-select 均已完成 161/161 视频（80正常/81含异常）。
+  独立审计逐一验证 65,862 / 131,814 个 blob、数组 SHA/shape/dtype/finite、原生窗口和视频完整覆盖，
+  无缺失、重复或外来视频。结果在 `outputs/icassp2027/control/development-select-completion-audit-20260919/`。
+  这些是开发基线特征，不是检测质量、官方测试或已训练后端。
+- VideoMAE select 已在空出的 GPU4 恢复，唯一新控制目录为
+  `code-0192fad/outputs/icassp2027/control/research-priority-handoff-20260919-a03`；
+  native27567 存活，当前 102/161 完整分片，其中原79个为严格校验后的复用，不计作新增提取。
+  旧等待监视器24916已核验退役，旧源与已取消的重复复制产物保留。
+- V-JEPA 2 select 的独立a03任务也已核验存活：native20861，start ticks1342814834，
+  owner/argv与`--encoder vjepa2 --role select`精确匹配；其自身receipt/provenance均为extract_dense。
+  node3 18:15:01 UTC快照为105/161完整视频、13,008 clips；该控制目录中的P04已先完成，
+  不能因早先另一个slot7曾失败就排除当前select。只读盘点v1曾误作排除，已保留错误版本并以v2更正。
+  回执在`outputs/icassp2027/control/dense-state-20260919-current/snapshot-v2.json`；四fit句柄也已逐一核对。
+  v2的fit元数据快照为V2 299/80,868、Time313/171,306、VMA369/111,749、VJ198/13,617
+  （完整视频/clip）；partial仅记录状态，不计入完整结果。
+- TimeSformer 主观察及补充 P10/P11 观察均为完整 128 fit 视频 × 8 窗口，并已完成 10,000 次
+  视频级 bootstrap。补充观察有480可用签名；统计与语义审查见下节，不构成统一压缩规则。
+- V-JEPA 2 完整8探针观察在 GPU6 运行：epoch1789754806 为502/1024窗口、62/128完整视频；
+  guard24800/native14237 的 owner、argv、start ticks 均匹配。CPU监视器13537仍在等待其完整成功。
+- VideoMAE 同128个fit视频的共享早期层切片已预登记并在 GPU5 运行：P02/P04、depth=0.25，
+  同一快照为358/1024窗口、44/128完整视频。登记见
+  [VideoMAE共享切片](decisions/videomae-early-structure-fit-check-v1.md)。它是fit探索，不是独立确认。
+  两项观察均不读取或解释未完成的性质子集。
+  VideoMAE完整统计已排入独立CPU队列a02（monitor8874，start ticks1345312277）；
+  只有原run全128视频/1024窗口及SHA、签名覆盖等门禁通过后才执行10,000视频bootstrap。
+  队列采用原CPU flock和内存阈值。旧a01在waiting且无子进程/结果时正常退役，原回执保留。
+  源进程收尾增加120秒落盘宽限；worker仍有poll与身份读取间的极小退出竞态，若误报needs_review，
+  应先检查原worker终态和完整产物，不据监视器状态盲目重算。
+- 四个 fit 的新旧 native 表示/采样兼容盘点已经完成；批量写入迁移仍处于准备和审查阶段，
+  尚未取消旧fit或启动Time迁移。单独的inactive权重备份仍在传输，尚未完整SHA验证，服务器原文件保留。
+  新迁移必须再次满足容量门禁、源完整视频验证及新进程接管检查，不能把准备脚本写成完成。
+- XD 测试原视频800份的新坐标审计已sealed并通过独立proof和consumer检查，详情见下节。
+  训练仍有4个原始坏成员未修复；有界公开镜像检索没有找到可用原始payload。
+  官方OneDrive浏览器下载仍待已提出的D盘目录设置/直接原始文件链接，尚未启动约15GB到C盘的下载。
+  UCF研究继续推进。官方模型测试分数未读取，最终TF/LoRA方法与完整三seed质量矩阵尚未完成。
+
+## TimeSformer补充attention完整描述（2026-09-19）
+
+- 全量保留 spatial/temporal × 4深度 × 12 heads × 5指标 × weak/matched 共960行对比；
+  fit-only、未多重校正、不选择head。weak区间对应Hedges g，matched区间对应原始差值。
+- 语义判定分别处理outgoing与incoming：P10只有entropy下降且top-4 mass上升才称集中；
+  P11还要求gini上升。反向才称分散，其余uncertain。不能把不同指标的符号直接混为方向，
+  也不能将P11的三个相依描述计作三个独立性质。
+- raw与matched共同支持的模式局限于部分head：spatial layer2的outgoing集中2/分散1、
+  incoming集中3；spatial layer5 outgoing分散2；spatial layer8 incoming集中1；
+  temporal layer8 outgoing集中3/incoming集中5；temporal layer11 incoming集中1。
+  全部96个domain×depth×head组合及uncertain结果保留，未据此选择层或形成候选。
+- spatial是在每帧197 keys、32 sampled queries上的局部分布，temporal是每空间轨迹8 keys/
+  8 queries上的局部分布，再按原生group等权汇总。它们不能直接与V2的全局attention数值混池，
+  不提供全局CLS或异常token结论。产物与语义修订在
+  `outputs/icassp2027/control/timesformer-attention-descriptive-20260919/`。
+  root已从960行CI独立重建全部96项语义分类及8×18汇总计数，完全一致。
+- 实际CPU分析exit0、66次资源采样，峰值RSS 3,628,580,864 bytes，未触发资源停止。
+  这是分析资源回执，不是encoder正式效率数字。
 
 ## 最新完成回执（2026-09-19）
 
