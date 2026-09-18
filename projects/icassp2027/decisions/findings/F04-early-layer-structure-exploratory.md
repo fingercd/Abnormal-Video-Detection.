@@ -2,16 +2,17 @@
 
 日期：2026-09-19。状态：`exploratory_not_confirmed`。
 
-在同一批 UCF-Crime fit 视频中，VideoMAEv2 与 TimeSformer 的第 3 个 block 输入
-（`block.2.input`，零起始索引）出现方向一致的组间差异：含异常视频的采样 token
-激活范数、中心化有效秩较低，空间邻近 token 的余弦相似度较高。加入输入亮度标准差
-匹配后，这些探索区间仍不跨零。局部相似度减去同一时间索引下非邻近相似度的增量也为正。
+四个encoder的完整fit结果现已齐备。在固定相对深度0.25的输入站点，含异常视频组的
+local cosine和`uniform_representative_coverage_k4`更高；原始、motion×brightness匹配及
+加入输入亮度标准差的敏感性区间均保持同方向。它们是相关的相似度描述，不是独立性质。
 
-VideoMAE 的同家族补充现已完成，支持下述有效秩、局部相似度及局部相对非局部增量的探索方向；
-它只采集预登记的早期 P02/P04 切片，没有新增范数证据。V-JEPA 2 仍待完整结果。
+**有效秩下降与local−nonlocal额外增量未在V-JEPA 2复现：对应区间跨0。** 因此当前证据
+不支持“四encoder共同低秩下降”或“共同具有额外局部优势”的说法，也不能排除整体方向性
+或场景等因素。保留完整50个共有签名及全部负向、跨零和缺失结果。
 
-这些结果来自方法开发所用的 fit 数据，经过全网格探索后才形成当前检查，未进行多重比较
-校正，不能称为独立确认、四 encoder 通用性质、异常 token 定位或可压缩性证据。
+以下保留两模型与VideoMAE补充阶段的原表，并给出四模型修订。全部来自相同128个fit视频，
+经过探索网格后形成，未做多重比较校正；不是独立确认、异常token定位、因果或压缩性证据。
+VideoMAE与VideoMAEv2属于同家族；不同原生输入窗口和处理阶段不被当成完全等价。
 
 ## 数据与统计身份
 
@@ -50,7 +51,7 @@ P02 2 条、P04 6 条、P16 4 条。所有未满足项仍保留；该筛查未�
 它们不能构成额外的 P16 证据。本记录与 F01 的相对 attention 更新指标具有不同定义，
 不改变 F01 原有确认身份。
 
-## 第 3 个 block 输入处的敏感性结果
+## 两模型第3个block输入处的原敏感性结果
 
 下表全部为加入亮度标准差后的 matched 原始差值及探索性 95% CI，不是 Hedges g。
 
@@ -69,7 +70,7 @@ P02 2 条、P04 6 条、P16 4 条。所有未满足项仍保留；该筛查未�
 对最初 22 条筛入签名，完整保留 13 个异常类别的既有对比及逐个排除正类类别的点值敏感性。
 该操作保持 64 个正常视频不变，没有新 bootstrap 或独立验证主张；不能按类别挑选较好的结果。
 
-![两个encoder的早期层fit探索图](../../../../outputs/icassp2027/control/cross-encoder-early-structure-20260919/early_structure_fit_diagnostic.png)
+两模型阶段的原图保留于[早期探索图](../../../../outputs/icassp2027/control/cross-encoder-early-structure-20260919/early_structure_fit_diagnostic.png)。
 
 ## VideoMAE 同家族补充（2026-09-19）
 
@@ -106,13 +107,67 @@ local cosine、block.2.input的nonlocal cosine及coverage_k4。它们存在尺�
 及原匹配区间在三模型都为正，MLP残差前分支的TimeSformer区间跨0。不能推广为任意站点规律。
 加入本模型64个fit-normal视频的平均brightness_std三分位后，主站点matched增量为
 +0.01375 [+0.00625, +0.02132]，保留59正常/52含异常、19分层、质量39。它是事后fit敏感性，
-并非因果控制或纯去均值；本次未重算VideoMAE有效秩的三字段敏感性。
+并非因果控制或纯去均值；该补充阶段未计算VideoMAE有效秩三字段敏感性，后续补齐见下节。
 
-![三个encoder主站点的fit探索](../../../../outputs/icassp2027/control/cross-encoder-early-structure-20260919/three-encoder-a02/early_structure_three_encoder.png)
+前三模型阶段的原图保留于[三模型探索图](../../../../outputs/icassp2027/control/cross-encoder-early-structure-20260919/three-encoder-a02/early_structure_three_encoder.png)。
 
 新图全部使用原motion×brightness匹配；三个模型不混池。PNG/SVG由真实审核CSV生成并实际
 查看，9组点/区间绑定输入SHA。VideoMAE是同家族补充，三者使用相同fit视频且窗口不同，
-不是三次独立数据确认。V-JEPA 2、剩余独立确认和中立压缩干预仍是后续门槛。
+不是三次独立数据确认。四模型更新见下节；独立确认和中立压缩干预仍未完成。
+
+## 四模型完整结果与V-JEPA 2的限制（2026-09-19）
+
+V-JEPA 2的新run完整完成128视频、1024个逻辑窗口：805,888条available记录对应787个
+可用签名，12,288条unavailable记录对应12个缺失签名；CPU分析为10,000视频bootstrap。
+root复核全部1024条真实几何/parity记录：64帧、256²、32×16×16网格、8192 tokens、D1024、
+24 blocks；65,536个源帧索引均按冻结中心采样独立重建，observer/identity的features与pooled
+最大绝对差均为0。SDPA未返回原生概率，四个probability sites缺失；P10/P11/P13保留NA，
+且模型无CLS，不把context张量当概率或制造CLS结论。本次不构成新的梯度或缩短路径验收。
+
+两个短视频（Normal_Videos155_x264、RoadAccidents069_x264，一正常一含异常）各有2个
+边界clamp造成的重复输入窗口。因此1024个逻辑窗口对应1020个按video内源帧索引去重的
+窗口。这里的去重依据是源帧索引，不是像素内容；统计单位始终是128个视频，
+保持原定每视频8个逻辑区间权重，没有因结果删除短视频。
+
+全部100,736行video×signature值有限；各主统计64/64，原匹配9分层、min-count质量54
+（其余三模型为56）。root独立重建787个raw g及787个matched点和覆盖，最大差4.6088e-14。
+下载的四个主统计文件均与completed worker SHA绑定；一次误取的VideoMAE controls被保留并
+隔离，正确VJ controls SHA为`5158d640…1776e`，未用错误controls计算任何VJ敏感性。
+
+按已冻结的相对深度对齐后，四模型共有的50个P02/P04、head为空的签名全部保留。只有5条
+在四模型raw及原matched共8个区间均为正：input、mlp.pre_norm.input、norm2、output的
+local cosine，以及input的coverage_k4。它们也通过新三字段敏感性的方向检查，但站点相关，
+不能称5条独立确认。`coverage_k4`是在至多256个采样token中，取4个均匀位置的代表，计算
+每个非零token与代表集合的最大余弦，再平均；它不是覆盖百分比、四token压缩实验或重构误差。
+
+V-JEPA 2主站点为`block.5.input`（零起始），对应12-block模型的`block.2.input`。下表
+均为matched原始正减正常均值差；两/三字段匹配的人群不同，不能直接归因于新增变量。
+
+| V-JEPA 2指标 | 原motion×brightness匹配及95% CI | 加亮度标准差后及95% CI |
+|---|---:|---:|
+| 中心化有效秩 | +0.03542 [−1.11367, +1.19177] | +0.63262 [−0.25021, +1.51103] |
+| local cosine | +0.00744 [+0.00398, +0.01086] | +0.00668 [+0.00399, +0.00942] |
+| coverage_k4 | +0.00380 [+0.00176, +0.00588] | +0.00407 [+0.00245, +0.00566] |
+| 每视频local−nonlocal cosine | +0.00305 [−0.00604, +0.01246] | −0.00172 [−0.00824, +0.00487] |
+
+VJ有效秩的raw g为+0.05231 [−0.28528,+0.40589]；local−nonlocal的raw g为+0.05047
+[−0.29623,+0.38720]，也不支持前三模型的共同下降或额外局部增量。local显著而nonlocal
+区间跨0，不等于二者差异显著；配对差值已实际计算，没有对两个区间相减。
+
+新的四模型输入反差诊断保留全部50签名×4模型×两种匹配共400行。三字段分别保留：
+Time59/56、20分层/质量40；V2及VMA59/52、19分层/质量39；VJ61/54、21分层/质量39。
+本次统一补齐VMA的rank三字段敏感性，不改变原阶段表；诊断使用新的固定seed序列，旧原始
+和两字段区间仍保留原身份。新二字段点与原主统计完全一致，三字段仍为post-hoc fit诊断。
+
+VJ local−nonlocal诊断另外保留全部41个可配对站点×两种匹配=82行，含20个与Time/V2
+相对深度可比站点，其中5个也属于本次VMA切片。主站点结果跨0不代表所有VJ站点或深度
+都没有差异；完整表保留且未另挑一个VJ层来挽救主切片结论。root重建全部派生点与覆盖，
+最大差1.9568e-15；四模型400行匹配点独立复核最大差2.2205e-15。
+
+![四模型固定相对深度的完整fit比较](../../../../outputs/icassp2027/control/cross-encoder-early-structure-20260919/four-encoder-a03/early_structure_four_encoder.png)
+
+图中b是零起始的原生block编号；只画原两字段matched差值，不混入三字段人群。VJ的rank和
+local−nonlocal跨零区间完整显示。四个模型共享同一组视频，图不构成四份独立统计样本。
 
 ## 限制与下一步门槛
 
@@ -127,14 +182,19 @@ VideoMAEv2、TimeSformer、VideoMAE为12 blocks，V-JEPA 2为24 blocks。原探�
 `ceil(relative_depth × block_count) − 1`使0.25分别对应前三者的block.2和V-JEPA 2的block.5；
 0.5/0.75/1.0同理分别为5/8/11与11/17/23。保持实际层号、完整site后缀及sublayer/domain，
 不会把TimeSformer局部attention与全局attention混池，也不因VJ结果改变主切片深度。
-该映射只核验结构元数据，不证明处理阶段语义完全等价；VJ完成后仍需检查其实际architecture
-回执与24-block映射一致。映射回执为`outputs/icassp2027/control/`
+该映射只核验结构元数据，不证明处理阶段语义完全等价；当前VJ全部1024条architecture
+回执已确认24-block映射一致。映射回执为`outputs/icassp2027/control/`
 `cross-encoder-depth-alignment-20260919/alignment.json`（SHA adfc2cc8…cd15f）。
 
-V-JEPA 2 的完整fit观察仍在执行。TimeSformer局部attention补充已完成，局部head方向不一致，
+四模型的当前fit性质探针与统计均已完成。TimeSformer局部attention补充中的局部head方向不一致，
 不能与本卡的token结构统计合并为一个全局attention规律。
 剩余未用于原两轮确认的 UCF confirm 容量仅为 33 个视频（16 正常/17 正视频）。后续确认方案
 必须在读取这些视频的目标统计前固定假设、匹配与覆盖门槛，不能因结果改变分箱或降低要求。
+
+后续若推进，优先评审一个主性质（固定相对深度输入处的local cosine）；coverage_k4只作相关
+辅助描述，不把当前跨零的rank/local−nonlocal登记成第二条四模型共同主性质。此为就绪度建议，
+当前尚未注册或执行新确认。33视频下匹配稀疏与单例风险必须先纳入冻结的覆盖门槛；不足时
+报告不可评估，不因确认结果合bin、换层、换指标、删control或降低门槛。
 
 通过独立确认后，仍须用同预算中立干预检验当前层可用的局部统计是否真能指导压缩。
 在此之前，不确定 token 单位、selector、插入层、预算或 LoRA 配置，也没有插件质量/效率结论。
@@ -168,3 +228,18 @@ V-JEPA 2 的完整fit观察仍在执行。TimeSformer局部attention补充已完
 - `outputs/icassp2027/control/cross-encoder-early-structure-20260919/three-encoder-a02/`：新增三模型图、
   figure-data、输入/输出SHA与视觉检查回执。初次使用项目解释器缺matplotlib，未安装依赖；
   改用先前已工作的本机pytorch解释器完成渲染。
+
+- `outputs/icassp2027/control/vjepa2-fit128-descriptive-20260919/`：完整VJ四文件原字节镜像、
+  正确controls/resource/worker回执及root-mirror-verification；contrast SHA
+  `1418b655291bd40a78df1a0c1b269da18b6b3416ed0dd882afef815217ed0057`，video SHA
+  `f03a421cae4030f648a3b88536ec0cbf5035599a54a90d3a7a87f485d6655024`。
+- `outputs/icassp2027/control/vjepa2-fit128-integrity-20260919/`：全几何、parity、源帧与787点复核；
+  geometry receipt SHA `fda27651bd7b9b70c11ed4ea08d6b87a44fe44f76aad0f42f7b43f4fd9641ba3`。
+- `outputs/icassp2027/control/relative-depth-comparison-20260919/a05_four_completed/`：四模型全
+  union及50共有签名长表，模型、实际site、相对深度、状态、点、区间和来源分别保留。
+- `outputs/icassp2027/control/four-encoder-input-contrast-20260919/`：400行完整敏感性，results SHA
+  `f30a3ae819b00010bc68f261fe6ebfc7715db71d29d2ceb493e0e8cafd440d26`。
+- `outputs/icassp2027/control/vjepa2-local-excess-fit-20260919/a01_verified/`：41站点82行派生诊断，
+  results SHA `d978b0e232477cd7b5b1615002b47b419a249df182556d94dee25402e2fd1584`。
+- `outputs/icassp2027/control/cross-encoder-early-structure-20260919/four-encoder-a03/`：12点/区间
+  绑定的PNG/SVG及实际视觉检查；PNG SHA `61554cb715c26df6205ecafac48af7c271b984d3c557115375c61dc4aca1cd2e`。

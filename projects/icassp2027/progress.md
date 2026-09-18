@@ -7,12 +7,13 @@
 
 2026-09-19 用户再次强调：最终四个encoder必须使用同一种压缩机制，TF/LoRA两版也同源。
 已补入执行计划和方法约束；模型适配仅限布局/坐标/位置等原生约束，不允许各骨干另换评分或算子。
-当前F04含V2/Time探索及VideoMAE同家族补充，仍不构成四模型统一方法的确定依据。
+当前F04已包含四模型完整fit观察；绝对local cosine方向一致，但rank下降与local−nonlocal额外增量
+未在VJ复现。仍无新独立确认或压缩有效性结论，不能直接确定统一方法。
 
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
-- node3实际快照epoch1789758095：完整fit视频分片为VideoMAEv2 333/1288、
-  TimeSformer 344/1288、VideoMAE 409/1288、V-JEPA 2 225/1288；四条native的owner/argv/startticks
+- node3实际快照epoch1789765120：完整fit视频分片为VideoMAEv2 399/1288、
+  TimeSformer 398/1288、VideoMAE 497/1288、V-JEPA 2 299/1288；四条native的owner/argv/startticks
   均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a02/`。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
 - VideoMAEv2、TimeSformer 的 development-select 均已完成 161/161 视频（80正常/81含异常）。
@@ -31,28 +32,60 @@
   审计使用CPU flock、CUDA=-1、两线程nice15，实际max RSS 1,135,532 KiB；未运行模型或评分。
   原receipt的wait_seconds实际含审计时长，旁置root-review明确字段局限，未修改原回执。
   旧等待监视器24916已核验退役，旧源与已取消的重复复制产物保留。
-- V-JEPA 2 select 的独立a03任务也已核验存活：native20861，start ticks1342814834，
-  owner/argv与`--encoder vjepa2 --role select`精确匹配；其自身receipt/provenance均为extract_dense。
-  node3 epoch1789758095快照为149/161完整视频，真实native仍在推进；该控制目录中的P04已先完成，
-  不能因早先另一个slot7曾失败就排除当前select。只读盘点v1曾误作排除，已保留错误版本并以v2更正。
-  回执在`outputs/icassp2027/control/dense-state-20260919-current/snapshot-v2.json`；四fit句柄也已逐一核对。
-  v2的fit元数据快照为V2 299/80,868、Time313/171,306、VMA369/111,749、VJ198/13,617
-  （完整视频/clip）；partial仅记录状态，不计入完整结果。
+- V-JEPA 2 select 的独立a03任务现已完成并通过全量审计：161视频（80正常/81含异常）、
+  16,400原生dense clips（每视频3–2,217），根index已发布，原native20861及dispatcher24884已退出。
+  逐blob SHA、features(1,1024)/pooled(1024,)的<f4/shape/finite、原角色/manifest/model/sampling
+  均通过；四个SELECT现全部完成。这不是检测头训练或测试分数。
+  回执镜像`outputs/icassp2027/control/vjepa2-select-completion-audit-20260919/remote-a02-receipt.json`，
+  SHA `1d7824da94cf2e4ba93d264a5f8c13597d17706b7f5953a15b08f7e9b40721b5`。
+  CPU审计nice15、CUDA=-1、两线程、max RSS292,172 KiB。原lock_wait_seconds混用epoch和monotonic，
+  无法还原真实等锁时长；旁置timing-field-companion保留说明，原回执未改、未重复运行payload。
+  同时钟的审计walltime为14.1407秒，仅为缓存核查用时，不能作模型效率数字。
 - TimeSformer 主观察及补充 P10/P11 观察均为完整 128 fit 视频 × 8 窗口，并已完成 10,000 次
   视频级 bootstrap。补充观察有480可用签名；统计与语义审查见下节，不构成统一压缩规则。
-- V-JEPA 2 完整8探针观察在 GPU6 运行：epoch1789757320为724/1024窗口、90/128完整视频；
-  guard24800/native14237 的 owner、argv、start ticks 均匹配。CPU监视器13537仍在等待其完整成功。
+- V-JEPA 2完整8探针观察已完成128视频/1024逻辑窗口，guard24800 exit0；CPU a03 worker2160
+  随即完成10,000视频bootstrap、exit0，父monitor13537也已正常结束。787可用+12不可用签名完整保留。
+  全量几何/parity/源帧及787项统计点复核通过，四文件原字节镜像与worker输出SHA一致；科学更新见下节。
 - VideoMAE同128个fit视频的早期P02/P04切片已完整完成：1024窗口，GPU5 guard exit0。
   CPU队列a02随即完成10,000次视频级bootstrap，worker28963与monitor8874均正常退出，
   13次资源采样、max RSS 600,162,304 B、无资源中止。原a01退役记录及a02运行身份保留。
   统计、几何与输出等价性完成独立复核，全部缺失项保留；科学结果见下节及更新的F04。
 - 四个 fit 的新旧 native 表示/采样兼容盘点已经完成；批量写入迁移仍处于准备和审查阶段，
-  尚未取消旧fit或启动Time迁移。单独的inactive权重备份仍在传输，尚未完整SHA验证，服务器原文件保留。
+  尚未取消旧fit或启动Time迁移。单独的inactive权重备份已完成4,957,392,176 B传输与完整SHA验证，
+  verified-stream-a03回执绑定本地/远端同一SHA90e6a81a…5b0aa；服务器原文件仍保留，未据此删除权重。
   新迁移必须再次满足容量门禁、源完整视频验证及新进程接管检查，不能把准备脚本写成完成。
 - XD 测试原视频800份的新坐标审计已sealed并通过独立proof和consumer检查，详情见下节。
   训练仍有4个原始坏成员未修复；有界公开镜像检索没有找到可用原始payload。
   官方OneDrive浏览器下载仍待已提出的D盘目录设置/直接原始文件链接，尚未启动约15GB到C盘的下载。
   UCF研究继续推进。官方模型测试分数未读取，最终TF/LoRA方法与完整三seed质量矩阵尚未完成。
+
+## 四模型性质观察完成：保留异质性（2026-09-19）
+
+- 当前完整VJ原生run为`code-0192fad/outputs/icassp2027/runs/probe-20260918T163038291972Z-a4fc7f17`，
+  805,888条available/12,288条unavailable；分析输出`vjepa2-fit128-video-bootstrap-20260919-a02`。
+  原生24 blocks，.25实际b5；全1024条架构记录的真实32×16×16几何、65,536源帧索引和
+  observer/identity零差值通过独立复核。SDPA未返回概率，P10/P11/P13缺失保留，且没有CLS。
+- 1024是逻辑窗口数。Normal_Videos155与RoadAccidents069各有2个边界clamp复用，按video内
+  源帧索引去重后共1020窗口；一正常一含异常。仍按原8逻辑区间取video均值，以128视频bootstrap，
+  不把窗口或token当独立样本。CPU分析64次采样的最大RSS 5,259,964,416 B，无资源中止。
+- 787项raw g与787项matched点/覆盖已独立重建（最大差4.6088e-14）。VJ原匹配64/64、9分层、
+  质量54；其它三个模型质量56。原始完整导出和错取后隔离的VideoMAE controls均保留，正确VJ
+  controls SHA5158d640…1776e已与原worker绑定，未用错取文件生成VJ诊断。
+- 四模型主切片共有50个P02/P04无head签名，全部保留。仅5条在四模型raw/原matched和新
+  三字段敏感性均为正：4个早期站点的local cosine与input的coverage_k4；它们相互相关，
+  不能计成5条独立性质。coverage_k4是4个均匀代表的平均最大余弦，不是四token压缩实验。
+- VJ主站点原matched rank +0.03542 [−1.11367,+1.19177]、local−nonlocal +0.00305
+  [−0.00604,+0.01246]均跨0。因此前三模型的rank下降和额外局部增量未得到四模型支持，
+  不改换VJ层来挽救结论。local cosine仍为+0.00744 [+0.00398,+0.01086]，coverage_k4
+  为+0.00380 [+0.00176,+0.00588]；这还不能证明何种token可以压缩。
+- 新输入反差诊断完整保留50签名×4模型×两种匹配=400行。VJ三字段local +0.00668
+  [+0.00399,+0.00942]、coverage_k4 +0.00407 [+0.00245,+0.00566]仍正，rank与local−nonlocal
+  仍跨0。三字段VJ保留61/54、21分层/质量39，不能与原64/64人群混淆。
+  VJ全41个local−nonlocal站点的82行诊断亦保留；root对400/82行点与覆盖的独立重建均通过。
+- [F04完整更新](decisions/findings/F04-early-layer-structure-exploratory.md)保留历史2/3模型原表、
+  原F01/F03身份及剩余33个confirm边界；四模型图显示VJ跨0区间，已实际查看并通过独立审查。
+  下一步只评审一个主性质local cosine的独立确认，coverage_k4作相关辅助；当前尚未注册/运行新确认，
+  未读剩余33视频的目标性质或controls，未选择selector/预算或启动LoRA。
 
 ## VideoMAE完整观察与三模型探索证据（2026-09-19）
 
@@ -82,9 +115,9 @@
 TimeSformer和VideoMAE三个12-block模型的0.25/0.5/0.75/1.0对应2/5/8/11；24-block
 V-JEPA 2对应5/11/17/23（均零起始）。
 保留原观察公式和主切片0.25；未来比较保留实际层号、site后缀、sublayer和attention domain，
-不直接按block编号混为同深度，不根据结果换层。这里只读结构元数据，没有读取未完成VJ的性质统计。
+不直接按block编号混为同深度，不根据结果换层。这里只读结构元数据时未读取未完成VJ的性质统计。
 `outputs/icassp2027/control/cross-encoder-depth-alignment-20260919/alignment.json`绑定15个VJ
-和其余三模型的完整后层执行回执；VJ当前probe完成后还需核验自身block_count一致。
+和其余三模型的完整后层执行回执；现已由VJ当前全部1024条probe架构记录核验自身block_count一致。
 
 ## 完整结果比较与第四组select审计准备（2026-09-19）
 
