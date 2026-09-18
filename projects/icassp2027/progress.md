@@ -1,6 +1,6 @@
 # ICASSP 2027 当前进度
 
-更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
+更新日期：2026-09-19。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
 当前位于`RESEARCH_PLAN_V2.md`的**第2/7步：开发期dense基线、性质证据与方法冻结**。
 第1步四组native工程验收通过；第3步正式完整train三seed、最终TF/LoRA比较及论文结果尚未完成。
@@ -14,14 +14,16 @@
   其余七路native进程仍存活。完整dense总量2,923,485 clips；UR-DMU开发头尚未开始3000步训练。
 - Time原128个fit视频、64正常/64含异常、8窗口共1024 clips的完整观察已完成：
   `code-f25d79e/outputs/icassp2027/runs/probe-20260918T132416783598Z-94424de8`，guard13203 exit0。
-  已重新核对完整cohort、raw SHA、几何/parity和controls后，code-deda86e正在执行10,000次视频级
-  fixed-min-count matched bootstrap，输出`timesformer-fit128-video-bootstrap-20260918-a01`。
-  完成前不解释部分统计；Time旧P10/P11缺少局部attention实现，不等于科学阴性。
+  已重新核对完整cohort、raw SHA、几何/parity和controls；code-deda86e的10,000次视频级
+  fixed-min-count matched bootstrap已完成，输出`timesformer-fit128-video-bootstrap-20260918-a01`。
+  独立审计确认1,119一级签名=1,095可用+24 N/A，140,160有限video行、128视频每个8clip；
+  control仅用Time自己的64个fit-normal拟合。全族/跨深度方向混合，不能概括为全局通用规律，
+  也不排除特定site的待确认候选。Time旧P10/P11缺少局部attention实现，不等于科学阴性。
 - VJ原观察guard13204随后取得GPU6，但在CUDA初始化前因剩余磁盘预算不足退出；没有probe数据。
-  正在审计原56GiB完整dense预算及未计入schedule根的VMA resume额外副本，不降低15GiB安全余量。
+  已按原56GiB完整dense预算加1GiB VMA resume副本预留修复容量缺口，不降低15GiB安全余量。
   VJ新观察将采用修正后的probability hook：native Transformers4.57.3默认仅返回context，
   旧fallback会误报token族；现已修正为明确P10/P11/P13 unavailable，不强制切换生产attention后端。
-  tiny fixture明确请求output_attentions以核验真实第二项；本地两组受影响测试共39通过，Ruff/compileall通过。
+  tiny fixture明确请求output_attentions以核验真实第二项；本地两组受影响测试共39通过，Ruff/compileall通过；冻结0192fad已上传，native也39 passed。
 - A100 dense-only clip计时a02四模型均已完成，guard28110 exit0；独占GPU6、FP32、cuDNN/TF32关闭。
   独立审计已核验B1/B8、warmup5/repeats30、纯模型/adapter/单clip解码口径；没有计入UR-DMU后端，
   不能将其称为完整视频detector质量或完整长序列端到端效率。完整审核数字另行归档。
@@ -33,7 +35,7 @@
   hooks/identity parity及参数不变验收；模型前后SHA均3ad0137b…eef9d，CUDA未初始化。上述失败保留。
 - XD三尾卷已CRC解压，测试raw800齐备，训练仍缺4个原始坏成员。旧9b4e1f2全800审计最终794通过/6失败，
   六个失败均为原冻结规则拒绝的精确QT chapter metadata诊断，不改写旧结果。新1b6bd26完整800复审
-  b01因launcher缺PYTHONPATH退出；b02已在node2真实运行，PID132797，最近355/800通过、0失败、0复用。
+  b01因launcher缺PYTHONPATH退出；b02已在node2真实运行，PID132797，最近590/800通过、0失败、0复用。
   仍需完成全部PTS/24fps/OpenCV解码及sealed门禁，不能提前宣布新增0598/0599/0600完整通过。
 - XD四坏源的官方OneDrive页面可访问下载按钮，但工具无法把浏览器下载定向到D盘；等待用户完成已提出的
   临时下载目录设置或提供直接原始文件链接，没有启动约15GB到C盘的下载。UCF研究不等待该人工步骤。
@@ -45,6 +47,30 @@
   回执`/users/fotile/icassp2027-runs/control/inactive-flash-weight-cleanup-20260918-a02/receipt.json`，
   清理后实际free=79,340,277,760 bytes。原TopKMIL coordinator仍保持研究协议hold，
   未读取官方模型测试分数。可操作性质、同源TF/LoRA、正式完整train三seed和最终质量矩阵尚未完成，Goal active。
+
+## 新观察恢复与科学审查（2026-09-19）
+
+- 新冻结`0192fadcfcb6f4c0a677aeca65730681e0a89b51`，bundle SHA
+  `c492d95db06ed0f2ff17630a6cb4d6ea6a36adee573e20e085f31fe3341f3564`，native39项全部通过。
+  不改变生产VJ后端/forward；仅缺失原生概率时明确缺失，不把context挂在probs site上报token证据。
+- 在该工作区`outputs/icassp2027/control/cross-encoder-fit-explore-20260918/recovery-0192fad`
+  已创建唯一新队列：VJ guard24800完整8探针，Time guard24836仅P10/P11，仍为原128 fit、每视频8窗口。
+  原cohort/manifest/plan小元数据按SHA复制到新项目内以满足resolver路径合同；原视频和角色没有改变。
+  node3 epoch1789746696：Time已获GPU6，真实run`probe-20260918T155022550042Z-94a7dc2c`
+  26/1024 clips，VJ仍等待lease；不读取或解释未完成子集。
+- 旧VMA select resume当时仍只在复制原79个完整视频，当前已见的62个目录全部属于原79集合，
+  没有开始新的视频提取。核验owner/argv/startticks、原完整source SHA及当前copy语义后，唯一新monitor24916
+  经原guard cancel停止该重复复制，guard17046随后cancelled/exit-15且native18448退出；原79完整shards保留。
+  两项新观察都completed后，monitor将从原79唯一source用0192新batch writer恢复完整select；若观察失败则
+  停在needs_review供修复，不自动切走研究卡。其它七路dense不受本次让卡影响。
+- 新旧VMA resume已有真实CPU兼容验收：adapter/native model/processor摘要、representation、semantic runtime、
+  encoder fingerprint均一致。原真实reader等价18组RGB/mask/索引/时间戳验证、64数组single/batch writer
+  等价回执也绑定到新handoff plan；不把实现Git不同混为表示不同，也不放松严格resume消费门禁。
+  只有原source完整视频可复用；新copy目录的partial记录未被当作source。受影响的只是I/O实现与调度。
+- Time完整fit分析审计在ignored `outputs/icassp2027/control/timesformer-fit128-descriptive-20260918/`，
+  analysis receipt SHA`6df22038…441b53`、video summary SHA`3c624157…a3e713`、contrast SHA`de66a737…812fb`。
+  weak CI继续解释为Hedges g，matched CI为motion×brightness固定min-count的raw delta；全网格未多重校正。
+  正在对全部共享签名做完整描述和类别敏感性，不据少数显著cell锁定层、head、方法或直接进入LoRA。
 
 ## 已审核的A100固定clip dense基线（2026-09-18）
 
