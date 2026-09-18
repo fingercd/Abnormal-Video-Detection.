@@ -2,6 +2,37 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+## 当前正式口径与执行（UTC 2026-09-18 07 时）
+
+- 用户在预训练权重调查后的最新决定：每个ViT encoder只配一个固定检测后端，允许为
+  公开预训练encoder训练匹配的dense头后冻结比较。当前4种配对均采用UR-DMU；
+  原前三encoder为主，VideoMAE为同家族补充。CLIP多检测后端仅为未采用的建议，
+  不进入active profile。四个encoder公开pinned权重文件已实时核对非gated及LFS SHA。
+- 新UR-DMU backend根代理实际复验10 tests passed/5.33秒。新的完整dense训练特征入口
+  已实现，复用原extractor/FeatureStore/严格resume与采样，工程subset单独标记，未调用
+  detector训练或评分；控制器5 tests passed/10.24秒，包括真实NPZ发布/失败不发布合同。
+  这些是工程验证；完整训练view和新后端正式GPU训练仍未完成。
+- 用户已确认官方划分主实验、直接插入为主、重训头和XD隔离子集为补充，无指定WSVAD
+  论文，执行者核验选择UR-DMU。正式后端预算、来源和门禁见
+  [协议v2](decisions/official-detector-protocol-v2.md)。下方历史TopKMIL/1288/1598及队列
+  “启用”记录描述当时状态；当前旧64项正式评分队列保持research hold，未产生官方模型分数。
+- 四encoder均为通用视频预训练表示：V2/VMA/VJ为自监督权重，Time为K400动作分类权重。
+  旧弱监督训练仅作用于新增TopKMIL；新UR-DMU必须在各自dense表示上重新训练。
+  公开I3D检测权重不能凭维数相同当作已适配四encoder。
+- 原作者两套UR-DMU权重已取得，weights_only安全读取均34 tensors/6,492,929元素，
+  strict load无缺失/多余key，现有CPU环境合成输入和重载检查通过。正式可复用loader正在
+  接入；原作者公开特征尚未取得，不能声称复现了论文分数。
+- node3八卡已实际启动本轮工程任务，显式共享的六个child使用0.5 allocator fraction；
+  既有其他用户进程保留。新主训练将使用完整dense序列及原作者200bin聚合，旧32片段
+  产物不冒充同样时间覆盖。正在核算真实官方训练集提取量，安排有序切换。
+- V100四encoder clip计时已全部完成并独立重算96配置/2880samples，9216项数值一致。
+  2184份真实缩短/执行回执通过；4项负端到端加速及72个非dense配置峰值allocated未降
+  全部保留。该结果是V100参考，不替代A100主计时和完整detector质量/效率结果。
+- XD当前三下载卷仍未ready。最新检查test已有686个校验分块+1.229GB前缀，train2805有
+  128块+11.616GB前缀；train3320旧PID132714因BrokenPipe/503重试耗尽退出，原253块
+  和7.116GB前缀保留。核实错误、源SHA、旧进程退出及无重复writer后，新v2 PID83455
+  续用同一已校验存储；test105262/train2805 105261仍在运行。无新完整卷发布主张。
+
 ## 最新执行与资源决定（2026-09-18）
 
 - 用户删除goal后已按原任务恢复，现有进程和产物没有重启或清空。用户随后明确指定后续使用
