@@ -13,10 +13,10 @@ import inspect
 import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from contextlib import contextmanager, nullcontext
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 import numpy as np
 
@@ -48,6 +48,21 @@ from .compatibility import (
 from .stages import clean_encoder_batch
 
 SamplingKind = Literal["uniform_full", "dense"]
+
+
+class ExtractionEncodeContext(Protocol):
+    """A native-forward intervention whose actual suffix execution is checked."""
+
+    def validate_execution(self) -> Mapping[str, Any]: ...
+
+
+class EncodeContextFactory(Protocol):
+    """Bind an intervention to its representation identity before extraction."""
+
+    @property
+    def reducer_identity(self) -> Mapping[str, Any]: ...
+
+    def __call__(self, clean_batch: Any) -> AbstractContextManager[ExtractionEncodeContext]: ...
 
 
 def _positive(value: int, name: str) -> int:
@@ -707,6 +722,7 @@ def _write_pooled_record(
     token_count: int,
     token_dtype: str,
     pooled_dtype: str,
+    reduction_execution: Mapping[str, Any] | None = None,
 ) -> FeatureRecord:
     clip_index, frame_start, frame_end, sample_metadata = _sample_metadata(sample)
     if not (0 <= frame_start < frame_end):
@@ -738,6 +754,7 @@ def _write_pooled_record(
                 "pooled_dtype": pooled_dtype,
                 "stored_dtype": pooled.dtype.str,
             },
+            "reduction_execution": None if reduction_execution is None else dict(reduction_execution),
             "paper_identity": dict(paper_identity),
             "source": {"split": record.split.value, "is_anomaly": record.is_anomaly},
             "source_video": dict(source_video),
@@ -806,6 +823,7 @@ def extract_pooled_features(
     output_root: str | Path,
     run_id: str | None = None,
     backend: Any | None = None,
+    encode_context_factory: EncodeContextFactory | None = None,
 ) -> PooledExtractionResult:
     """Run one isolated pooled-only paper extraction attempt.
 
@@ -816,6 +834,12 @@ def extract_pooled_features(
 
     if not isinstance(spec, PooledExtractionSpec):
         raise TypeError("spec must be a PooledExtractionSpec")
+    reducer = dict(spec.representation.reducer)
+    if encode_context_factory is None:
+        if reducer.get("name") != "identity":
+            raise ValueError("a nonidentity representation requires its bound encode context")
+    elif dict(encode_context_factory.reducer_identity) != reducer:
+        raise ValueError("encode context reducer identity differs from the representation")
     records = validate_manifest(manifest)
     root = Path(dataset_root).expanduser().resolve()
     data_evidence = make_data_content_evidence(records, dataset_root=root)
@@ -903,12 +927,20 @@ def extract_pooled_features(
                 )
                 clean = clean_encoder_batch(batch)
                 validate_clip_for_capabilities(clean, capabilities, train=False)
+                reduction_execution = None
                 with _frozen_adapter(adapter):
-                    output = adapter.encode(clean, train=False)
+                    if encode_context_factory is None:
+                        output = adapter.encode(clean, train=False)
+                    else:
+                        with encode_context_factory(clean) as intervention:
+                            output = adapter.encode(clean, train=False)
+                            reduction_execution = dict(intervention.validate_execution())
                 validate_encoder_output(output, clean)
                 pooled, token_count, token_dtype, pooled_dtype = _checked_pooled_output(
                     output, spec.representation
                 )
+                if reduction_execution is not None and reduction_execution.get("gathered_tokens") != token_count:
+                    raise ValueError("reducer suffix token count differs from the actual adapter output")
                 for row, sample in enumerate(group):
                     _write_pooled_record(
                         shard_store,
@@ -941,6 +973,7 @@ def extract_pooled_features(
                         token_count=token_count,
                         token_dtype=token_dtype,
                         pooled_dtype=pooled_dtype,
+                        reduction_execution=reduction_execution,
                     )
                     written += 1
             if len(shard_store.records()) != len(samples):
@@ -984,6 +1017,8 @@ def extract_pooled_features(
 
 
 __all__ = [
+    "EncodeContextFactory",
+    "ExtractionEncodeContext",
     "PooledExtractionResult",
     "PooledExtractionSpec",
     "SamplingKind",

@@ -105,13 +105,41 @@ class _Adapter:
         self.seen_batches.append(batch)
         values = np.asarray(batch.frame_indices, dtype=np.float32).mean(axis=1)
         pooled = np.stack([values + offset for offset in range(4)], axis=1)
-        features = np.repeat(pooled[:, None, :], 3, axis=1)
-        starts = np.zeros((batch.batch_size, 3), dtype=np.float32)
-        ends = np.ones((batch.batch_size, 3), dtype=np.float32)
+        tokens = getattr(self, "context_tokens", 3)
+        features = np.repeat(pooled[:, None, :], tokens, axis=1)
+        starts = np.zeros((batch.batch_size, tokens), dtype=np.float32)
+        ends = np.ones((batch.batch_size, tokens), dtype=np.float32)
         timeline = TokenTimeline(
             start_s=starts, end_s=ends, valid_mask=np.ones_like(starts, dtype=bool)
         )
         return EncoderOutput(features=features, pooled=pooled, timeline=timeline)
+
+
+class _EncodeFactory:
+    reducer_identity = {"name": "token_merge"}
+
+    def __init__(self, adapter, *, reported_tokens=2):
+        self.adapter = adapter
+        self.reported_tokens = reported_tokens
+        self.batches = []
+        self.exits = 0
+
+    def __call__(self, batch):
+        assert all(item.startswith("sample-") for item in batch.video_ids)
+        assert set(batch.metadata) <= {"source_num_frames", "source_fps"}
+        self.batches.append(batch.batch_size)
+        return self
+
+    def __enter__(self):
+        self.adapter.context_tokens = 2
+        return self
+
+    def __exit__(self, *_args):
+        del self.adapter.context_tokens
+        self.exits += 1
+
+    def validate_execution(self):
+        return {"native_input_tokens": 3, "gathered_tokens": self.reported_tokens}
 
 
 def _record(video_id: str, *, split: str, anomaly: bool, frames: int = 64) -> VideoManifestRecord:
@@ -224,19 +252,26 @@ def test_pooled_uniform_and_dense_extraction_feed_detector(tmp_path: Path) -> No
         run_id="train",
         backend=_CV2(64),
     )
+    eval_adapter = _Adapter()
+    context_factory = _EncodeFactory(eval_adapter)
     eval_result = extract_pooled_features(
         _spec(eval_representation, eval_sampling, kind="dense", stride=2),
-        adapter=_Adapter(),
+        adapter=eval_adapter,
         manifest=test,
         dataset_root=tmp_path,
         output_root=tmp_path / "runs",
         run_id="dense",
         backend=_CV2(64, counts_by_name={"short.mp4": 3}),
+        encode_context_factory=context_factory,
     )
 
     assert train_result.completed and eval_result.completed
     assert train_result.records_written == 64
     assert eval_result.records_written == 31
+    assert context_factory.batches == [7, 7, 7, 7, 3]
+    assert context_factory.exits == 5 and not hasattr(eval_adapter, "context_tokens")
+    eval_rows = FeatureStore(eval_result.feature_root).records()
+    assert all(row.metadata["reduction_execution"]["gathered_tokens"] == 2 for row in eval_rows)
     assert train_result.encoder_fingerprint != eval_result.encoder_fingerprint
     store = FeatureStore(train_result.feature_root)
     row = store.records()[0]
@@ -715,3 +750,36 @@ def test_same_manifest_with_changed_video_bytes_rejects_sampling_identity(tmp_pa
             run_id="changed-bytes",
             backend=_CV2(64),
         )
+
+
+@pytest.mark.parametrize("failure", ["missing", "wrong_identity", "wrong_shape"])
+def test_encode_context_requires_bound_identity_and_actual_suffix(tmp_path: Path, failure: str) -> None:
+    records = [_record("context-input", split="train", anomaly=False)]
+    _touch(tmp_path, records)
+    adapter = _Adapter()
+    representation = _representation(adapter, reducer="token_merge")
+    sampling = _sampling(records, root=tmp_path, regime="train_32", clips=32)
+    factory = None if failure == "missing" else _EncodeFactory(adapter, reported_tokens=3)
+    if failure == "wrong_identity":
+        factory.reducer_identity = {"name": "some_other_reducer"}
+    kwargs = dict(
+        adapter=adapter,
+        manifest=records,
+        dataset_root=tmp_path,
+        output_root=tmp_path / "runs",
+        run_id="context-check",
+        backend=_CV2(64),
+        encode_context_factory=factory,
+    )
+    spec = _spec(representation, sampling, kind="uniform_full")
+    if failure != "wrong_shape":
+        with pytest.raises(ValueError, match="encode context"):
+            extract_pooled_features(spec, **kwargs)
+        assert not adapter.seen_batches
+        assert not (tmp_path / "runs").exists()
+    else:
+        result = extract_pooled_features(spec, **kwargs)
+        assert not result.completed and result.feature_root is None
+        assert not (Path(result.run_dir) / "index.jsonl").exists()
+        assert "suffix token count" in result.failures[0]["message"]
+        assert factory.exits == 1 and not hasattr(adapter, "context_tokens")

@@ -389,6 +389,11 @@ def validate_compatibility(declaration: CompatibilityDeclaration) -> dict[str, s
             "'test_dense'"
         )
     if declaration.sampling_change == "train32_to_testdense":
+        for name in ("short_video_policy", "implementation"):
+            if declaration.training_sampling.frame_selection.get(name) != declaration.evaluation_sampling.frame_selection.get(name):
+                raise ValueError(
+                    f"train32_to_testdense must preserve the sampler contract: {name}"
+                )
         for name in ("window", "stride", "padding", "projection"):
             if getattr(declaration.training_sampling, name) != getattr(
                 declaration.evaluation_sampling, name

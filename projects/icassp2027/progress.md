@@ -4,6 +4,21 @@
 
 ## 最新执行回执（UTC 2026-09-17 23 时）
 
+- node2 重新核验后存在独立空闲 V100，已在不同 UUID 租约启动 V2/TimeSformer/VideoMAE
+  完整fit1288/select161的dense基线，冻结 `cd39a5d`，各自独立FeatureStore。64clip实测确认
+  batch8/FP32可运行，约0.201/0.653/0.812秒每clip（含读取与adapter，不是纯模型正式计时）。
+  这些是启动及工程吞吐事实，head/质量仍待真正完成；V-JEPA2全量尚待专用微基准。
+- 原neutral26的四模型现均52/52完成。前三模型已审查结果不支持P16/P07高低排序优于局部
+  随机保留；V-JEPA2也同方向，完整统计正在归档。均值/线性加权pair原型已实现，核心审查
+  修复了真实坐标变化时的缓存误用、padding绕过和FP16零门舍入差异。首次真实训练工程验证
+  尚待运行，不能把合成测试当作插件已有效。新pair pilot只四个forward/clip，单例训练QA另行执行。
+- 新pair核心、只读CLI和engineer训练CLI定向测试为34 passed；另核心/runtime/index controls
+  为39 passed、1 CUDA skip，提取context身份与兼容检查32 passed。数字有重叠，不相加。
+- 四模型独立确认现已全部完成。V-JEPA2 run `probe-20260917T213446427749Z-6b75566a`
+  为512/512、64/64、exit0；P16 g=0.292 [-0.190,0.808]、P07 g=-0.192 [-0.743,0.278]，
+  原始和运动×亮度匹配条件都未通过。两条四encoder共同性质均 `not_confirmed`，仅V2的
+  P16通过模型内固定门禁。全部导出绑定同一候选/校准/64视频/审核v3脚本，见
+  `outputs/icassp2027/analysis/confirm-four-v3-20260917T234419Z/`，不把4模型计作256独立视频。
 - UCF 官方原始视频 1900/1900 下载和成员 CRC 核验已完成；原始 train1610 的 metadata 已全部
   生成。固定角色锁 seed20260918 保持 fit1288、confirm161、select161。原测试严格审计另有
   5 个标注终点超出解码帧数（3 个 +1、2 个 +2），不把下载完成写成 frame metric audit 通过。

@@ -195,3 +195,13 @@ def test_same_regime_cannot_hide_undeclared_frame_selection_change():
         validate_compatibility(
             _declaration(train_sampling=train, eval_sampling=evaluation, sampling_change="none")
         )
+
+
+@pytest.mark.parametrize("field", ["short_video_policy", "implementation"])
+def test_train32_to_dense_cannot_change_short_policy_or_sampler_code(field: str):
+    train = _sampling(source_digest="fit", regime="train_32", clips=32)
+    evaluation = _sampling(source_digest="evaluation", regime="test_dense", clips=128)
+    train = replace(train, frame_selection={**train.frame_selection, field: "frozen-source"})
+    evaluation = replace(evaluation, frame_selection={**evaluation.frame_selection, field: "changed-target"})
+    with pytest.raises(ValueError, match="sampler contract"):
+        validate_compatibility(_declaration(train_sampling=train, eval_sampling=evaluation))

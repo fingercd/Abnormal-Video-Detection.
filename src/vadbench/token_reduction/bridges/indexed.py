@@ -7,6 +7,7 @@ replaces a model's ``forward`` method or its input preprocessing.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -47,10 +48,13 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
     depth: int
     indices: torch.Tensor
     layout: TokenLayout
+    transform: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] | None = None
+    record_position_masks: bool = True
     _handles: list[Any] = field(default_factory=list, init=False, repr=False)
     gathered_shape: tuple[int, ...] | None = field(default=None, init=False)
     suffix_shapes: dict[int, tuple[int, ...]] = field(default_factory=dict, init=False)
     suffix_position_masks: dict[int, torch.Tensor] = field(default_factory=dict, init=False)
+    position_injections: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         self.bridge._validate_depth(self.depth)
@@ -124,6 +128,7 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
         self.gathered_shape = None
         self.suffix_shapes.clear()
         self.suffix_position_masks.clear()
+        self.position_injections = 0
         try:
             block = self.bridge._blocks[self.depth]
             self._handles.append(block.register_forward_hook(self._gather_after_block))
@@ -156,7 +161,23 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
                 "native block output does not match the dense layout supplied to indexed intervention"
             )
         indices = self.indices.to(hidden.device, dtype=torch.long)
-        gathered = hidden.gather(1, indices.unsqueeze(-1).expand(-1, -1, hidden.shape[-1]))
+        if self.transform is None:
+            gathered = hidden.gather(
+                1, indices.unsqueeze(-1).expand(-1, -1, hidden.shape[-1])
+            )
+        else:
+            gathered = self.transform(hidden, indices)
+            if (
+                not isinstance(gathered, torch.Tensor)
+                or gathered.shape != (
+                    hidden.shape[0], self.indices.shape[1], hidden.shape[-1]
+                )
+                or gathered.device != hidden.device
+                or gathered.dtype != hidden.dtype
+            ):
+                raise IndexedInterventionError(
+                    "indexed transform 必须返回同 device/dtype 的 [B,K,D] tensor"
+                )
         self.gathered_shape = tuple(gathered.shape)
         return self.bridge.replace_block_output_tensor(
             self.depth, output, gathered, allow_sequence_shrink=True
@@ -166,7 +187,9 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
         if not inputs:
             raise IndexedInterventionError("V-JEPA2 suffix did not receive hidden states")
         positions = self.indices.to(inputs[0].device, dtype=torch.long)
-        self.suffix_position_masks[len(self.suffix_position_masks)] = positions.detach().cpu()
+        self.position_injections += 1
+        if self.record_position_masks:
+            self.suffix_position_masks[self.position_injections - 1] = positions.detach().cpu()
         return (inputs[0], positions, *inputs[2:])
 
     def _record_suffix_shape(self, depth: int):
@@ -192,9 +215,7 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
             raise IndexedInterventionError(
                 "indexed gather or one or more native suffix blocks did not execute"
             )
-        if self.bridge.receipt().encoder_id == "vjepa2" and len(self.suffix_position_masks) != len(
-            expected
-        ):
+        if self.bridge.receipt().encoder_id == "vjepa2" and self.position_injections != len(expected):
             raise IndexedInterventionError(
                 "V-JEPA2 suffix did not receive original RoPE position indices"
             )
@@ -208,15 +229,30 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
                 str(depth): list(shape) for depth, shape in self.suffix_shapes.items()
             },
             "vjepa2_original_rope_positions": self.bridge.receipt().encoder_id == "vjepa2",
+            "vjepa2_position_injections": self.position_injections,
+            "recorded_position_masks": self.record_position_masks,
         }
 
 
 def indexed_gather(
-    bridge: EncoderBridge, depth: int, indices: torch.Tensor, layout: TokenLayout
+    bridge: EncoderBridge,
+    depth: int,
+    indices: torch.Tensor,
+    layout: TokenLayout,
+    *,
+    transform: Callable[[torch.Tensor, torch.Tensor], torch.Tensor] | None = None,
+    record_position_masks: bool = True,
 ) -> IndexedTokenIntervention:
-    """Create an explicit external-index gather intervention."""
+    """Create an explicit native-index gather, optionally transforming its block output."""
 
-    return IndexedTokenIntervention(bridge, depth, indices, layout)
+    return IndexedTokenIntervention(
+        bridge,
+        depth,
+        indices,
+        layout,
+        transform=transform,
+        record_position_masks=record_position_masks,
+    )
 
 
 __all__ = [
