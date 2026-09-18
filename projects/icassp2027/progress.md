@@ -60,6 +60,24 @@
   正在实际解压test，随后train3320。800 raw坐标auditor继续原实例等待，没有重复启动。
 - 四个源坏成员仍未解决，公开raw镜像也缺失相同四项。已向用户询问可访问的作者原始备份/
   官方网盘入口；UCF继续进行。完整XD3954仍不能声明ready，未用重新编码或部分数据替代。
+- 随后三尾卷全部raw-ready：train2805=515、test=800、train3320=635视频，恢复监督器正常
+  退出。新的receipt区分801个ZIP entry与800个视频；consumer已提交`9b4e1f2`，本地
+  30 passed/1 skipped（无ffprobe），服务器native联合raw audit/backend/精确分块48 passed，
+  包含真实FFprobe/OpenCV测试。SHA绑定上传到新冻结工作区后，核实并终止仅等待旧receipt的
+  auditor20108，保留旧记录；新CPU auditor25629实际开始全800 raw坐标审计，最近17条通过。
+  它不读取模型分数。监督器完成后磁盘约86GiB可用；4个坏训练成员仍令完整3954不可用。
+- P04的a02随后在160/512处失败：profile中的旧UCF根目录缺`Normal_Videos551_x264`。
+  并非官方完整视图缺文件。a03只修正输入根，按完整authority逐SHA核对固定64个文件后重跑，
+  原样本/签名/阈值不变；旧partial保留且不进入确认统计。a03 run为
+  `probe-20260918T110111264470Z-a9e80f00`。未读取任何partial性质值来调整规则。
+- P04主量精确定义为“至多256个固定采样非零token的全部非对角对中，cos≥0.90的比例”，
+  不是局部邻接或冗余token比例。分析复用旧v3的标签内视频重采样与固定min-count匹配权重；
+  通用analyzer的等权匹配组bootstrap不用于本次门禁。新的有源SHA绑定wrapper已通过合成
+  完整/篡改/partial输入测试，待完整真实run后执行。
+- dense提取新增每视频复用原OpenCV reader，采样、microbatch和FeatureStore语义不变。
+  ROOT受影响提取/严格resume42项通过；服务器两个固定fit视频、8/16/64帧、18组的RGB、
+  帧索引、mask、timestamps、metadata均逐位相等。共享CPU下耗时方向不一致，不宣称加速；
+  当前健康长作业继续原2d9d1a0冻结版本，新实现留给后续运行，不为未证实收益反复重启。
 
 ## 用户七点澄清后的最新执行决定
 

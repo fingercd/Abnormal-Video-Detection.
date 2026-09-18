@@ -29,7 +29,7 @@ from vadbench.data.dense_sampling import (
     sample_uniform_full_clips,
 )
 from vadbench.data.manifest import VideoManifestRecord, validate_manifest
-from vadbench.data.video import OpenCVVideoReader, VideoIOError, build_clip_batch
+from vadbench.data.video import OpenCVVideoReader, VideoIOError, _batch_from_reader
 from vadbench.features import (
     ArrayReference,
     FeatureRecord,
@@ -964,85 +964,84 @@ def extract_pooled_features(
             path = record.resolve_path(root)
             with OpenCVVideoReader(path, backend=backend) as reader:
                 info = reader.info
-            if spec.strict_manifest_info and record.num_frames is not None and record.num_frames != info.num_frames:
-                raise VideoIOError("manifest num_frames differs from OpenCV probe")
-            if spec.strict_manifest_info and record.fps is not None and not math.isclose(
-                record.fps, info.fps, rel_tol=1e-3
-            ):
-                raise VideoIOError("manifest fps differs from OpenCV probe")
-            samples = _samples(spec, info.num_frames)
-            source_video = {
-                "manifest_path": record.path,
-                "actual_num_frames": info.num_frames,
-                "actual_fps": info.fps,
-                "width": info.width,
-                "height": info.height,
-                "summary_fingerprint": compute_encoder_fingerprint(
-                    {"manifest_path": record.path, "num_frames": info.num_frames,
-                     "fps": info.fps, "width": info.width, "height": info.height}
-                ),
-                "content_sha256": evidence_by_video[record.video_id]["sha256"],
-                "content_size_bytes": evidence_by_video[record.video_id]["size_bytes"],
-            }
-            if resume is not None:
-                copied = resume.copy_video(
-                    record=record, samples=samples, source_video=source_video,
-                    destination=shard, runtime_reference=runtime_reference,
-                )
-                if copied:
-                    reused_videos += 1
-                    reused_clips += copied
-                    written += copied
-                    shard_dirs.append(shard)
-                    continue
-            decoded_videos += 1
-            shard_store = _VideoShardWriter(shard)
-            for group in _chunked(samples, spec.micro_batch_size):
-                batch = build_clip_batch(
-                    path,
-                    record.video_id,
-                    [item.clip for item in group],
-                    backend=backend,
-                    metadata={"source_num_frames": info.num_frames, "source_fps": info.fps},
-                )
-                clean = clean_encoder_batch(batch)
-                validate_clip_for_capabilities(clean, capabilities, train=False)
-                reduction_execution = None
-                with _frozen_adapter(adapter):
-                    if encode_context_factory is None:
-                        output = adapter.encode(clean, train=False)
-                    else:
-                        with encode_context_factory(clean) as intervention:
-                            output = adapter.encode(clean, train=False)
-                            reduction_execution = dict(intervention.validate_execution())
-                validate_encoder_output(output, clean)
-                pooled, token_count, token_dtype, pooled_dtype = _checked_pooled_output(
-                    output, spec.representation
-                )
-                if reduction_execution is not None and reduction_execution.get("gathered_tokens") != token_count:
-                    raise ValueError("reducer suffix token count differs from the actual adapter output")
-                for row, sample in enumerate(group):
-                    _write_pooled_record(
-                        shard_store,
-                        row=row,
-                        record=record,
-                        sample=sample,
-                        fps=info.fps,
-                        encoder_fingerprint=encoder_fingerprint,
-                        paper_identity=paper_identity,
-                        runtime=runtime,
-                        runtime_reference=runtime_reference,
-                        source_video=source_video,
-                        pooled=pooled,
-                        token_count=token_count,
-                        token_dtype=token_dtype,
-                        pooled_dtype=pooled_dtype,
-                        reduction_execution=reduction_execution,
+                if spec.strict_manifest_info and record.num_frames is not None and record.num_frames != info.num_frames:
+                    raise VideoIOError("manifest num_frames differs from OpenCV probe")
+                if spec.strict_manifest_info and record.fps is not None and not math.isclose(
+                    record.fps, info.fps, rel_tol=1e-3
+                ):
+                    raise VideoIOError("manifest fps differs from OpenCV probe")
+                samples = _samples(spec, info.num_frames)
+                source_video = {
+                    "manifest_path": record.path,
+                    "actual_num_frames": info.num_frames,
+                    "actual_fps": info.fps,
+                    "width": info.width,
+                    "height": info.height,
+                    "summary_fingerprint": compute_encoder_fingerprint(
+                        {"manifest_path": record.path, "num_frames": info.num_frames,
+                         "fps": info.fps, "width": info.width, "height": info.height}
+                    ),
+                    "content_sha256": evidence_by_video[record.video_id]["sha256"],
+                    "content_size_bytes": evidence_by_video[record.video_id]["size_bytes"],
+                }
+                if resume is not None:
+                    copied = resume.copy_video(
+                        record=record, samples=samples, source_video=source_video,
+                        destination=shard, runtime_reference=runtime_reference,
                     )
-                    written += 1
-                    decoded_clips += 1
-            shard_store.publish(len(samples))
-            shard_dirs.append(shard)
+                    if copied:
+                        reused_videos += 1
+                        reused_clips += copied
+                        written += copied
+                        shard_dirs.append(shard)
+                        continue
+                decoded_videos += 1
+                shard_store = _VideoShardWriter(shard)
+                for group in _chunked(samples, spec.micro_batch_size):
+                    batch = _batch_from_reader(
+                        reader,
+                        record.video_id,
+                        [item.clip for item in group],
+                        metadata={"source_num_frames": info.num_frames, "source_fps": info.fps},
+                    )
+                    clean = clean_encoder_batch(batch)
+                    validate_clip_for_capabilities(clean, capabilities, train=False)
+                    reduction_execution = None
+                    with _frozen_adapter(adapter):
+                        if encode_context_factory is None:
+                            output = adapter.encode(clean, train=False)
+                        else:
+                            with encode_context_factory(clean) as intervention:
+                                output = adapter.encode(clean, train=False)
+                                reduction_execution = dict(intervention.validate_execution())
+                    validate_encoder_output(output, clean)
+                    pooled, token_count, token_dtype, pooled_dtype = _checked_pooled_output(
+                        output, spec.representation
+                    )
+                    if reduction_execution is not None and reduction_execution.get("gathered_tokens") != token_count:
+                        raise ValueError("reducer suffix token count differs from the actual adapter output")
+                    for row, sample in enumerate(group):
+                        _write_pooled_record(
+                            shard_store,
+                            row=row,
+                            record=record,
+                            sample=sample,
+                            fps=info.fps,
+                            encoder_fingerprint=encoder_fingerprint,
+                            paper_identity=paper_identity,
+                            runtime=runtime,
+                            runtime_reference=runtime_reference,
+                            source_video=source_video,
+                            pooled=pooled,
+                            token_count=token_count,
+                            token_dtype=token_dtype,
+                            pooled_dtype=pooled_dtype,
+                            reduction_execution=reduction_execution,
+                        )
+                        written += 1
+                        decoded_clips += 1
+                shard_store.publish(len(samples))
+                shard_dirs.append(shard)
         except Exception as exc:
             failures.append(
                 {"video_id": record.video_id, "type": type(exc).__name__, "message": str(exc)}
