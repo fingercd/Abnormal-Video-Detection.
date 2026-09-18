@@ -2,7 +2,31 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
-## 最新执行回执（UTC 2026-09-18 01 时）
+## 最新执行回执（UTC 2026-09-18 02 时）
+
+- 元数据修复已冻结为 `a710ce4` 并部署。TimeSformer 在 node2 V100 实际完成 identity、
+  global_uniform、paired_random、pair_linear 各两个 fit 视频 ×32 clips 的写入/读取，均64
+  records、runtime reference SHA 与 paper identity 一致；每路径两步 TopKMIL 的非零梯度、
+  参数更新、磁盘重载完全一致 QA 通过。dense representation 与旧 `96e4631` 完全相同。
+  成功 control 为 `timesformer-roundtrip-a710ce4-20260918T141500Z`，最初单视频不满足
+  detector 训练契约的 `140000Z` 失败仍保留，不能混为成功。
+- Time 完整基线已在 node2 GPU1 重启（guard106181 / child106211）。12个后续方法任务
+  已启动跨节点独立协调器，首个 V2 global_uniform 在 node3 GPU4 实际运行。协调器仅在
+  无 compute PID、空闲显存检查和共享 GPU lease 通过时领取任务；同一任务原子领取一次。
+  其他三条既有基线继续，无正式测试分数或 head 完成主张。
+- TARGET 四encoder的768步校准与部署 preflight 全部通过，四模型均768步非零有限梯度、
+  权重真实变化、主干无梯度、磁盘reload最大误差0。三epoch平均相对pooled MSE：
+  V2 0.164965/0.113355/0.098779；Time 0.054734/0.046339/0.044095；
+  VMA 0.003742/0.002302/0.002003；VJ 0.014988/0.012835/0.012312。
+  这些是fit校准损失，不是检测质量或独立泛化结果。原始receipt归档及摘要位于
+  `outputs/icassp2027/analysis/target-calibration-complete-20260918T015500Z/`。
+- 同一次采集保留了两台主机各自时钟：node2 UTC01:54:50、node3 UTC01:47:16，约差7分34秒。
+  不能用不同主机的 wall-clock timestamp 相减作为运行耗时。最新dense train完整视频分片：
+  V2 1236/1288、VMA566/1288、VJ123/1288；Time新run当时仍metadata准备。部分分片单列，
+  未终结运行的 failed_count=0 不等同于已验证零失败。完整回执在
+  `outputs/icassp2027/control/next-method-queue-a710ce4-20260918/receipts/`。
+
+## 此前执行回执（UTC 2026-09-18 01 时）
 
 - TimeSformer `96e4631` np 基线的 train1288、validation161 均因 FeatureStore 单条元数据
   超过 2048 项上限而写入失败，0 records，未训练成功。完整 runtime 重复嵌入每条记录是
