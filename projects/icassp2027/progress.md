@@ -4,6 +4,12 @@
 
 ## 当前审阅门禁与连接验收
 
+- **四组A100真实工程闭环已全部通过**，guard-a02最终completed/exit0；原记录中的
+  “其余三组正在运行”已成为历史快照。每encoder两步UR-DMU训练、七组件参数变化和
+  严格重载通过，同一冻结head接四条路径均输出有限且时序长度一致。四组每路径20/42/
+  20/5 clips，合计348次提取仍只有两个独立fit视频，不是正式质量结果。
+  [汇总回执](../../outputs/icassp2027/control/native-urdmu-gpu-acceptance-20260918/summary.json)
+  已从服务器取回并逐SHA核验。新任务仍等待用户审阅计划后创建。
 - 用户最新要求先解释新旧情况、交付计划，确认后才新建任务并设Goal执行。
   [新计划](RESEARCH_PLAN_V2.md)、[拟用Goal正文](GOAL_NEXT_TASK.txt)、
   [交接清单](NEXT_TASK_HANDOFF.md)已经准备；目前未创建新任务、未修改当前Goal文字，

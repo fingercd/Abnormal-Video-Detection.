@@ -62,8 +62,11 @@ node3 PID20108，等待完整test卷，不访问模型分数。
 `outputs/icassp2027/control/native-urdmu-gpu-acceptance-20260918/`；计划control为
 `code-866674c/outputs/icassp2027/control/native-urdmu-acceptance-20260918T085000Z`。
 验收只用Assault038_x264与Normal_Videos157_x264两个旧fit短视频，四方法完整dense序列、
-UR两步工程训练及同一冻结head的四路径。开始新任务时读实际guard/progress/receipt，
-不要根据“脚本存在”声称验收完成；正式模型测试分数当前未访问。
+UR两步工程训练及同一冻结head的四路径。**四组实际全部完成、guard-a02 exit0**。
+本地summary.json已按aggregate与各receipt SHA逐份复验；aggregate SHA为
+`16fa0a7a56b7fe4084e2fee2f4633ca0db6da7d87792ca2eaf016929adbcaa6c`。
+四组每条方法各20/42/20/5 clips，合计348次提取，仍仅两个独立视频。
+开始新任务时核对实际回执，不重复这项已完成工程验收；正式模型测试分数当前未访问。
 
 ## 资源与交付边界
 
