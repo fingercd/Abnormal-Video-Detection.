@@ -122,6 +122,15 @@ local cosine、block.2.input的nonlocal cosine及coverage_k4。它们存在尺�
 F03 的 embedding 全 token 高相似比例假设仍未通过原预登记确认。本卡的站点和统计定义不同，
 将来若推进必须另行预登记并取得新的独立确认，不能改写 F03 或沿用其确认样本作为新证据。
 
+跨模型以既定相对深度对齐，不按同编号block直接匹配。已完成的四模型native后层回执显示：
+VideoMAEv2、TimeSformer、VideoMAE为12 blocks，V-JEPA 2为24 blocks。原探针公式
+`ceil(relative_depth × block_count) − 1`使0.25分别对应前三者的block.2和V-JEPA 2的block.5；
+0.5/0.75/1.0同理分别为5/8/11与11/17/23。保持实际层号、完整site后缀及sublayer/domain，
+不会把TimeSformer局部attention与全局attention混池，也不因VJ结果改变主切片深度。
+该映射只核验结构元数据，不证明处理阶段语义完全等价；VJ完成后仍需检查其实际architecture
+回执与24-block映射一致。映射回执为`outputs/icassp2027/control/`
+`cross-encoder-depth-alignment-20260919/alignment.json`（SHA adfc2cc8…cd15f）。
+
 V-JEPA 2 的完整fit观察仍在执行。TimeSformer局部attention补充已完成，局部head方向不一致，
 不能与本卡的token结构统计合并为一个全局attention规律。
 剩余未用于原两轮确认的 UCF confirm 容量仅为 33 个视频（16 正常/17 正视频）。后续确认方案

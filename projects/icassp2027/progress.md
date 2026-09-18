@@ -20,7 +20,15 @@
   这些是开发基线特征，不是检测质量、官方测试或已训练后端。
 - VideoMAE select 已在空出的 GPU4 恢复，唯一新控制目录为
   `code-0192fad/outputs/icassp2027/control/research-priority-handoff-20260919-a03`；
-  native27567 存活，node3 epoch1789756813为152/161完整分片，其中原79个为严格校验后的复用，不计作新增提取。
+  node3 epoch1789757320已核验guard/native正常完成、根index发布、161分片无partial，共65,862 clips。
+  其中79视频/40,244 clips为严格复用，82视频/25,618 clips为新提取；未将复用写成新增计算。
+  extraction contract SHA `bf26ad197459d8e0e11863a0ea8ea9c52374955435b7259e337c080544ce18dd`。
+  全量独立审计已通过：161视频（80正常/81含异常）原select角色、原生dense窗口和数据指纹一致；
+  65,862个blob SHA及每项features(1,768)/pooled(768,)的<f4/shape/finite均通过，无缺失或重复。
+  回执`outputs/icassp2027/control/videomae-select-completion-audit-20260919/receipt.json`，
+  SHA `586ac40a037f9bf5b66d68436e4e0114fa0e1705cce2dc089c309a8b0d8b978f`。
+  审计使用CPU flock、CUDA=-1、两线程nice15，实际max RSS 1,135,532 KiB；未运行模型或评分。
+  原receipt的wait_seconds实际含审计时长，旁置root-review明确字段局限，未修改原回执。
   旧等待监视器24916已核验退役，旧源与已取消的重复复制产物保留。
 - V-JEPA 2 select 的独立a03任务也已核验存活：native20861，start ticks1342814834，
   owner/argv与`--encoder vjepa2 --role select`精确匹配；其自身receipt/provenance均为extract_dense。
@@ -31,7 +39,7 @@
   （完整视频/clip）；partial仅记录状态，不计入完整结果。
 - TimeSformer 主观察及补充 P10/P11 观察均为完整 128 fit 视频 × 8 窗口，并已完成 10,000 次
   视频级 bootstrap。补充观察有480可用签名；统计与语义审查见下节，不构成统一压缩规则。
-- V-JEPA 2 完整8探针观察在 GPU6 运行：epoch1789756813为677/1024窗口、84/128完整视频；
+- V-JEPA 2 完整8探针观察在 GPU6 运行：epoch1789757320为724/1024窗口、90/128完整视频；
   guard24800/native14237 的 owner、argv、start ticks 均匹配。CPU监视器13537仍在等待其完整成功。
 - VideoMAE同128个fit视频的早期P02/P04切片已完整完成：1024窗口，GPU5 guard exit0。
   CPU队列a02随即完成10,000次视频级bootstrap，worker28963与monitor8874均正常退出，
@@ -66,6 +74,16 @@
   的线程环境，原8站点16行全部保留。root重建派生raw/matched点，最大差1.7764e-15。
 - [F04](decisions/findings/F04-early-layer-structure-exploratory.md)已加入完整范围、负/缺失项和
   三模型原匹配图。PNG/SVG已实际渲染查看，数值来自审核CSV；VJ仍待完成，未注册候选或启动LoRA。
+
+## 跨encoder相对层深度核验（2026-09-19）
+
+只读复核已完成的四模型native后层执行回执，SHA与原aggregate绑定一致。VideoMAEv2、
+TimeSformer和VideoMAE三个12-block模型的0.25/0.5/0.75/1.0对应2/5/8/11；24-block
+V-JEPA 2对应5/11/17/23（均零起始）。
+保留原观察公式和主切片0.25；未来比较保留实际层号、site后缀、sublayer和attention domain，
+不直接按block编号混为同深度，不根据结果换层。这里只读结构元数据，没有读取未完成VJ的性质统计。
+`outputs/icassp2027/control/cross-encoder-depth-alignment-20260919/alignment.json`绑定15个VJ
+和其余三模型的完整后层执行回执；VJ当前probe完成后还需核验自身block_count一致。
 
 ## 提取迁移准备与当前资源门禁（2026-09-19）
 
