@@ -48,16 +48,16 @@ def ready_guard(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> tuple[Path, 
 def test_probe_gpu_requires_parseable_empty_compute_listing() -> None:
     replies = iter(
         [
-            "0, GPU-test, 42\n1, GPU-other, 900\n",
+            "0, GPU-test, 42, 40000\n1, GPU-other, 900, 32000\n",
             "",
         ]
     )
 
     snapshot = guard.probe_gpu(0, command_runner=lambda _command: next(replies))
 
-    assert snapshot == guard.GpuSnapshot(0, "GPU-test", 42, frozenset())
+    assert snapshot == guard.GpuSnapshot(0, "GPU-test", 42, frozenset(), 40000)
 
-    bad_replies = iter(["0, GPU-test, 42\n", "GPU-test, not-a-pid\n"])
+    bad_replies = iter(["0, GPU-test, 42, 40000\n", "GPU-test, not-a-pid\n"])
     with pytest.raises(guard.GuardError, match="invalid compute PID"):
         guard.probe_gpu(0, command_runner=lambda _command: next(bad_replies))
 
@@ -113,7 +113,7 @@ def test_compute_pid_blocks_launch_even_when_memory_is_low(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     cwd, expected = ready_guard(monkeypatch, tmp_path)
-    unsafe = guard.GpuSnapshot(0, "GPU-busy", 12, frozenset({99}))
+    unsafe = guard.GpuSnapshot(0, "GPU-busy", 12, frozenset({99}), 40000)
     launched = False
     ticks = iter([0.0, 0.0, 1.0])
 
@@ -318,3 +318,238 @@ def test_contention_waits_for_own_exit_after_escalation(
     status = json.loads((tmp_path / "out" / "status.json").read_text(encoding="utf-8"))
     assert status["state"] == "interrupted_contention"
     assert status["exit_code"] == 143
+
+
+def test_probe_requests_actual_free_memory_and_keeps_real_compute_pids() -> None:
+    commands: list[list[str]] = []
+    replies = iter(["3, GPU-shared, 24576, 16384\n", "GPU-shared, 99\nGPU-other, 101\n"])
+
+    def command_runner(command):
+        commands.append(list(command))
+        return next(replies)
+
+    snapshot = guard.probe_gpu(3, command_runner=command_runner)
+
+    assert "--query-gpu=index,uuid,memory.used,memory.free" in commands[0]
+    assert snapshot == guard.GpuSnapshot(3, "GPU-shared", 24576, frozenset({99}), 16384)
+
+
+@pytest.mark.parametrize("free", ["N/A", "not-a-number", "-1"])
+def test_probe_rejects_invalid_free_memory(free: str) -> None:
+    replies = iter([f"0, GPU-shared, 24576, {free}\n", "GPU-shared, 99\n"])
+    with pytest.raises(guard.GuardError):
+        guard.probe_gpu(0, command_runner=lambda _command: next(replies))
+
+
+@pytest.mark.parametrize("free,threshold", [(None, 16384), (0, 16384), (16383, 16384), (20000, 24576)])
+def test_sharing_requires_measured_free_memory_before_acquiring_lease(
+    free: int | None, threshold: int,
+) -> None:
+    snapshot = guard.GpuSnapshot(0, "GPU-shared", 24576, frozenset({99}), free)
+    leases_requested = []
+
+    def acquire(uuid):
+        leases_requested.append(uuid)
+        return FakeLease()
+
+    selected = guard._candidate(
+        [0], lambda _index: snapshot, acquire,
+        allow_sharing=True, min_free_memory_mib=threshold,
+    )
+
+    assert selected is None
+    assert leases_requested == []
+
+
+def test_sharing_accepts_threshold_equality_only_after_lease_and_second_probe() -> None:
+    first = guard.GpuSnapshot(0, "GPU-shared", 24000, frozenset({99}), 17000)
+    second = guard.GpuSnapshot(0, "GPU-shared", 24616, frozenset({99, 101}), 16384)
+    replies = iter([first, second])
+    lease = FakeLease()
+    events = []
+
+    def probe(index):
+        events.append(("probe", index))
+        return next(replies)
+
+    def acquire(uuid):
+        events.append(("lease", uuid))
+        return lease
+
+    selected = guard._candidate(
+        [0], probe, acquire, allow_sharing=True, min_free_memory_mib=16384,
+    )
+
+    assert selected == (second, lease)
+    assert events == [("probe", 0), ("lease", "GPU-shared"), ("probe", 0)]
+    assert lease.released is False
+    lease.release()
+
+
+@pytest.mark.parametrize("race", ["free_memory", "uuid"])
+def test_sharing_second_probe_race_releases_lease(race: str) -> None:
+    first = guard.GpuSnapshot(0, "GPU-shared", 12000, frozenset({99}), 28000)
+    second = (
+        guard.GpuSnapshot(0, "GPU-shared", 25000, frozenset({99, 101}), 15000)
+        if race == "free_memory"
+        else guard.GpuSnapshot(0, "GPU-replaced", 12000, frozenset({99}), 28000)
+    )
+    lease = FakeLease()
+
+    selected = guard._candidate(
+        [0], snapshots(first, second), lambda _uuid: lease,
+        allow_sharing=True, min_free_memory_mib=16384,
+    )
+
+    assert selected is None
+    assert lease.released
+
+
+def test_sharing_leased_second_probe_error_releases_lease() -> None:
+    first = guard.GpuSnapshot(0, "GPU-shared", 12000, frozenset({99}), 28000)
+    lease = FakeLease()
+    count = 0
+
+    def probe(_index):
+        nonlocal count
+        count += 1
+        if count == 1:
+            return first
+        raise guard.GuardError("snapshot became unreadable")
+
+    with pytest.raises(guard.GuardError, match="unreadable"):
+        guard._candidate(
+            [0], probe, lambda _uuid: lease,
+            allow_sharing=True, min_free_memory_mib=16384,
+        )
+    assert lease.released
+
+
+def test_sharing_continues_with_foreign_pids_and_records_actual_observations(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    cwd, expected = ready_guard(monkeypatch, tmp_path)
+    first = guard.GpuSnapshot(0, "GPU-shared", 12000, frozenset({99}), 28000)
+    second = guard.GpuSnapshot(0, "GPU-shared", 13000, frozenset({99, 101}), 27000)
+    running = guard.GpuSnapshot(0, "GPU-shared", 35000, frozenset({99, 101, 456, 777}), 5000)
+    lease = FakeLease()
+    killed = []
+
+    state = guard.run_guard(
+        cwd=cwd, expected_commit=expected, output_dir=tmp_path / "out",
+        lease_dir=tmp_path / "leases", gpu_indices=[0], poll_seconds=30, max_wait_seconds=60,
+        child_argv=["python", "train.py"], allow_sharing=True, min_free_memory_mib=16384,
+        probe=snapshots(first, second, running), lease_factory=lambda _uuid: lease,
+        popen=lambda *_args, **_kwargs: FakeProcess(456, [None, 0]),
+        sleep=lambda _seconds: None, getpgid=lambda pid: pid,
+        killpg=lambda pgid, signum: killed.append((pgid, signum)),
+    )
+
+    assert state == "completed"
+    assert killed == []
+    assert lease.released
+    status = json.loads((tmp_path / "out/status.json").read_text(encoding="utf-8"))
+    assert status["allow_sharing"] is True
+    assert status["min_free_memory_mib"] == 16384
+    assert status["formal_timing_eligible"] is False
+    assert status["gpu_memory_free_mib_before_start"] == 27000
+    assert status["gpu_compute_pids_before_start"] == [99, 101]
+    rows = [json.loads(line) for line in (tmp_path / "out/sharing-observations.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(rows) >= 2
+    assert any(
+        row["memory_used_mib"] == 13000 and row["memory_free_mib"] == 27000
+        and row["compute_pids"] == [99, 101] and row["uuid"] == "GPU-shared"
+        for row in rows
+    )
+    assert any(
+        row["memory_used_mib"] == 35000 and row["memory_free_mib"] == 5000
+        and row["compute_pids"] == [99, 101, 456, 777] and row["uuid"] == "GPU-shared"
+        for row in rows
+    )
+
+
+def test_sharing_cancellation_signals_only_own_child_process_group(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    cwd, expected = ready_guard(monkeypatch, tmp_path)
+    shared = guard.GpuSnapshot(0, "GPU-shared", 12000, frozenset({99, 777}), 28000)
+    lease = FakeLease()
+    killed = []
+
+    def popen(*_args, **_kwargs):
+        (tmp_path / "out/cancel").touch()
+        return FakeProcess(456, [None, 143])
+
+    state = guard.run_guard(
+        cwd=cwd, expected_commit=expected, output_dir=tmp_path / "out",
+        lease_dir=tmp_path / "leases", gpu_indices=[0], poll_seconds=30, max_wait_seconds=60,
+        child_argv=["python", "train.py"], allow_sharing=True,
+        probe=snapshots(shared, shared), lease_factory=lambda _uuid: lease, popen=popen,
+        getpgid=lambda pid: pid, killpg=lambda pgid, signum: killed.append((pgid, signum)),
+    )
+
+    assert state == "cancelled"
+    assert killed == [(456, guard.signal.SIGTERM)]
+    assert lease.released
+    status = json.loads((tmp_path / "out/status.json").read_text(encoding="utf-8"))
+    assert status["state"] == "cancelled"
+    assert status["formal_timing_eligible"] is False
+    assert status["gpu_compute_pids_before_start"] == [99, 777]
+
+
+def test_sharing_is_rejected_for_formal_timing_before_any_probe_or_launch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    cwd, expected = ready_guard(monkeypatch, tmp_path)
+    calls = []
+
+    with pytest.raises(guard.GuardError, match="formal"):
+        guard.run_guard(
+            cwd=cwd, expected_commit=expected, output_dir=tmp_path / "out",
+            lease_dir=tmp_path / "leases", gpu_indices=[0], poll_seconds=30, max_wait_seconds=60,
+            child_argv=["python", "benchmark.py"], allow_sharing=True, formal_timing=True,
+            probe=lambda index: calls.append(("probe", index)),
+            popen=lambda *_args, **_kwargs: calls.append(("popen", None)),
+            getpgid=lambda pid: pid, killpg=lambda _pgid, _signum: None,
+        )
+
+    assert calls == []
+
+
+def test_sharing_cli_is_explicit_and_preserves_exclusive_defaults() -> None:
+    required = [
+        "--cwd", "/checkout", "--expected-commit", "a" * 40,
+        "--output-dir", "/out", "--lease-dir", "/leases", "--gpu-index", "0",
+        "--poll-seconds", "30", "--max-wait-seconds", "60",
+    ]
+    default = guard.parse_args([*required, "--", "python", "train.py"])
+    assert default.allow_sharing is False
+    assert default.formal_timing is False
+    assert default.min_free_memory_mib == 16384
+    selected = guard.parse_args([
+        *required, "--allow-sharing", "--min-free-memory-mib", "20480", "--", "python", "train.py",
+    ])
+    assert selected.allow_sharing is True
+    assert selected.min_free_memory_mib == 20480
+    assert selected.child_argv == ["python", "train.py"]
+
+
+def test_main_forwards_explicit_sharing_and_formal_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = {}
+
+    def run_guard(**kwargs):
+        seen.update(kwargs)
+        return "completed"
+
+    monkeypatch.setattr(guard, "run_guard", run_guard)
+    result = guard.main([
+        "--cwd", "/checkout", "--expected-commit", "a" * 40,
+        "--output-dir", "/out", "--lease-dir", "/leases", "--gpu-index", "0",
+        "--poll-seconds", "30", "--max-wait-seconds", "60",
+        "--allow-sharing", "--min-free-memory-mib", "24576", "--formal-timing",
+        "--", "python", "train.py",
+    ])
+    assert result == 0
+    assert seen["allow_sharing"] is True
+    assert seen["min_free_memory_mib"] == 24576
+    assert seen["formal_timing"] is True

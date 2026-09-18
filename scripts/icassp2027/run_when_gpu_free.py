@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Start one command only after a verified, exclusively leased idle GPU is available.
+"""Start one command after a verified GPU satisfies its explicit resource policy.
 
 This is deliberately a launcher rather than a scheduler.  It never submits a job,
 changes an environment, or retries a completed child process.  A GPU is eligible
-only when ``nvidia-smi`` reports both low used memory and no compute PID, before
-and after taking an advisory lease for that physical GPU UUID.
+by default only when ``nvidia-smi`` reports low used memory and no compute PID.
+An explicitly authorized sharing mode instead requires minimum free memory;
+both policies recheck after taking one advisory lease for the physical UUID.
+Sharing is for ordinary workloads and is never eligible for formal timing.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ except ImportError:  # pragma: no cover - exercised only on non-POSIX hosts
 
 MAX_IDLE_MEMORY_MIB = 1024
 RUNNING_POLL_SECONDS = 2
+SHARING_OBSERVATION_SECONDS = 60
 TERMINATE_GRACE_SECONDS = 10
 KILL_GRACE_SECONDS = 10
 KILL_SIGNAL = getattr(signal, "SIGKILL", 9)
@@ -48,6 +51,7 @@ class GpuSnapshot:
     uuid: str
     memory_used_mib: int
     compute_pids: frozenset[int]
+    memory_free_mib: int | None = None
 
     @property
     def idle(self) -> bool:
@@ -116,22 +120,23 @@ def probe_gpu(
         command_runner(
             [
                 "nvidia-smi",
-                "--query-gpu=index,uuid,memory.used",
+                "--query-gpu=index,uuid,memory.used,memory.free",
                 "--format=csv,noheader,nounits",
             ]
         ),
         "GPU",
-        3,
+        4,
     )
     matching = [row for row in gpu_rows if row[0] == str(index)]
     if len(matching) != 1:
         raise GuardError(f"GPU index {index} was not uniquely reported")
-    _, uuid, memory_text = matching[0]
+    _, uuid, memory_text, free_text = matching[0]
     try:
         memory_used_mib = int(memory_text)
+        memory_free_mib = int(free_text)
     except ValueError as exc:
-        raise GuardError(f"GPU {index} reported an invalid used-memory value") from exc
-    if not uuid or memory_used_mib < 0:
+        raise GuardError(f"GPU {index} reported an invalid memory value") from exc
+    if not uuid or memory_used_mib < 0 or memory_free_mib < 0:
         raise GuardError(f"GPU {index} reported invalid identity data")
 
     pid_rows = _csv_rows(
@@ -157,7 +162,8 @@ def probe_gpu(
             raise GuardError(f"GPU {index} reported a non-positive compute PID")
         pids.add(pid)
     return GpuSnapshot(
-        index=index, uuid=uuid, memory_used_mib=memory_used_mib, compute_pids=frozenset(pids)
+        index=index, uuid=uuid, memory_used_mib=memory_used_mib, compute_pids=frozenset(pids),
+        memory_free_mib=memory_free_mib,
     )
 
 
@@ -234,10 +240,21 @@ def _candidate(
     indices: Iterable[int],
     probe: Callable[[int], GpuSnapshot],
     lease_factory: Callable[[str], Lease | None],
+    *,
+    allow_sharing: bool = False,
+    min_free_memory_mib: int = 16384,
 ) -> tuple[GpuSnapshot, Lease] | None:
+    def eligible(snapshot: GpuSnapshot) -> bool:
+        if allow_sharing:
+            return (
+                snapshot.memory_free_mib is not None
+                and snapshot.memory_free_mib >= min_free_memory_mib
+            )
+        return snapshot.idle
+
     for index in indices:
         first = probe(index)
-        if not first.idle:
+        if not eligible(first):
             continue
         lease = lease_factory(first.uuid)
         if lease is None:
@@ -246,13 +263,44 @@ def _candidate(
             second = probe(index)
             # A changed UUID means the index cannot safely be trusted.  Requiring
             # the same UUID also binds CUDA_VISIBLE_DEVICES to the leased card.
-            if second.uuid == first.uuid and second.idle:
+            if second.uuid == first.uuid and eligible(second):
                 return second, lease
         except Exception:
             lease.release()
             raise
         lease.release()
     return None
+
+
+def _sharing_observation(snapshot: GpuSnapshot, *, phase: str) -> dict[str, Any]:
+    processes = []
+    for pid in sorted(snapshot.compute_pids):
+        owner = uid = None
+        try:
+            import pwd
+
+            uid = (Path("/proc") / str(pid)).stat().st_uid
+            owner = pwd.getpwuid(uid).pw_name
+        except (ImportError, FileNotFoundError, ProcessLookupError, PermissionError, KeyError):
+            # The original PID remains in the observation even if it exits
+            # before its owner can be resolved. It never becomes an idle PID set.
+            pass
+        processes.append({"pid": pid, "owner": owner, "uid": uid})
+    return {
+        "phase": phase,
+        "observed_at_epoch": time.time(),
+        "index": snapshot.index,
+        "uuid": snapshot.uuid,
+        "memory_used_mib": snapshot.memory_used_mib,
+        "memory_free_mib": snapshot.memory_free_mib,
+        "compute_pids": sorted(snapshot.compute_pids),
+        "compute_processes": processes,
+    }
+
+
+def _append_sharing_observation(output_dir: Path, observation: dict[str, Any]) -> None:
+    with (output_dir / "sharing-observations.jsonl").open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(observation, sort_keys=True) + "\n")
 
 
 def _wait_for_exit(
@@ -372,6 +420,9 @@ def run_guard(
     poll_seconds: int,
     max_wait_seconds: int,
     child_argv: Sequence[str],
+    allow_sharing: bool = False,
+    min_free_memory_mib: int = 16384,
+    formal_timing: bool = False,
     probe: Callable[[int], GpuSnapshot] = probe_gpu,
     lease_factory: Callable[[str], Lease | None] | None = None,
     popen: Callable[..., ProcessLike] = subprocess.Popen,
@@ -398,6 +449,10 @@ def run_guard(
         raise GuardError("gpu-index values must be unique")
     if not child_argv:
         raise GuardError("a child command after -- is required")
+    if min_free_memory_mib <= 0:
+        raise GuardError("min_free_memory_mib must be positive")
+    if allow_sharing and formal_timing:
+        raise GuardError("formal timing requires exclusive GPU mode; sharing is not allowed")
     if output_dir.exists():
         raise GuardError(f"output-dir must be new: {output_dir}")
 
@@ -415,22 +470,37 @@ def run_guard(
     lease_factory = lease_factory or (lambda uuid: acquire_lease(lease_dir, uuid))
     started_wait = monotonic()
     cancel_file = output_dir / "cancel"
-    _status(output_dir, "waiting", gpu_indices=list(gpu_indices), max_wait_seconds=max_wait_seconds)
+    policy = {
+        "allow_sharing": allow_sharing,
+        "min_free_memory_mib": min_free_memory_mib if allow_sharing else None,
+        "formal_timing_requested": formal_timing,
+        "formal_timing_eligible": not allow_sharing,
+    }
+    _status(
+        output_dir, "waiting", gpu_indices=list(gpu_indices),
+        max_wait_seconds=max_wait_seconds, **policy,
+    )
 
     while True:
         if cancel_file.exists():
-            _status(output_dir, "cancelled", phase="waiting")
+            _status(output_dir, "cancelled", phase="waiting", **policy)
             return "cancelled"
         if monotonic() - started_wait >= max_wait_seconds:
-            _status(output_dir, "timed_out", phase="waiting")
+            _status(output_dir, "timed_out", phase="waiting", **policy)
             return "timed_out"
         try:
-            selected = _candidate(gpu_indices, probe, lease_factory)
+            selected = _candidate(
+                gpu_indices, probe, lease_factory,
+                allow_sharing=allow_sharing, min_free_memory_mib=min_free_memory_mib,
+            )
         except GuardError as exc:
-            _status(output_dir, "failed_preflight", reason=str(exc))
+            _status(output_dir, "failed_preflight", reason=str(exc), **policy)
             return "failed_preflight"
         if selected is None:
-            _status(output_dir, "waiting", reason="no leased GPU passed both idle checks")
+            _status(
+                output_dir, "waiting",
+                reason="no leased GPU passed both resource-policy checks", **policy,
+            )
             sleep(poll_seconds)
             continue
 
@@ -439,7 +509,10 @@ def run_guard(
             try:
                 verify_worktree(cwd.resolve(), expected_commit)
             except GuardError as exc:
-                _status(output_dir, "failed_preflight", reason=str(exc), gpu_uuid=snapshot.uuid)
+                _status(
+                    output_dir, "failed_preflight", reason=str(exc),
+                    gpu_uuid=snapshot.uuid, **policy,
+                )
                 return "failed_preflight"
             command = [item.replace("{device}", "cuda:0") for item in child_argv]
             environment = os.environ.copy()
@@ -450,7 +523,10 @@ def run_guard(
                 "gpu_index": snapshot.index,
                 "gpu_uuid": snapshot.uuid,
                 "gpu_memory_used_mib_before_start": snapshot.memory_used_mib,
-                "idle_memory_limit_mib": MAX_IDLE_MEMORY_MIB,
+                "gpu_memory_free_mib_before_start": snapshot.memory_free_mib,
+                "gpu_compute_pids_before_start": sorted(snapshot.compute_pids),
+                "idle_memory_limit_mib": None if allow_sharing else MAX_IDLE_MEMORY_MIB,
+                **policy,
                 "command": redact_command(command),
                 "environment": {
                     key: environment[key]
@@ -458,6 +534,13 @@ def run_guard(
                     if key in environment
                 },
             }
+            last_observation_at = monotonic()
+            last_observed_pids = snapshot.compute_pids
+            if allow_sharing:
+                observation = _sharing_observation(snapshot, phase="before_start")
+                metadata["initial_gpu_observation"] = observation
+                metadata["latest_gpu_observation"] = observation
+                _append_sharing_observation(output_dir, observation)
             try:
                 with log_path.open("x", encoding="utf-8") as log_file:
                     log_file.write(json.dumps(metadata, ensure_ascii=False, sort_keys=True) + "\n")
@@ -515,7 +598,10 @@ def run_guard(
                     current = probe(snapshot.index)
                     if current.uuid != snapshot.uuid:
                         raise GuardError("GPU index no longer resolves to the leased UUID")
-                    external = _external_compute_pids(current, process.pid, getpgid)
+                    external = (
+                        set() if allow_sharing
+                        else _external_compute_pids(current, process.pid, getpgid)
+                    )
                 except GuardError as exc:
                     exit_code, signal_name = _terminate_until_exited(
                         process,
@@ -539,6 +625,16 @@ def run_guard(
                         **metadata,
                     )
                     return "interrupted_contention"
+                if allow_sharing and (
+                    current.compute_pids != last_observed_pids
+                    or monotonic() - last_observation_at >= SHARING_OBSERVATION_SECONDS
+                ):
+                    observation = _sharing_observation(current, phase="running")
+                    metadata["latest_gpu_observation"] = observation
+                    _append_sharing_observation(output_dir, observation)
+                    _status(output_dir, "running", pid=process.pid, **metadata)
+                    last_observation_at = monotonic()
+                    last_observed_pids = current.compute_pids
                 if external:
                     exit_code, signal_name = _terminate_until_exited(
                         process,
@@ -576,6 +672,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--gpu-index", required=True, type=int, action="append")
     parser.add_argument("--poll-seconds", required=True, type=int)
     parser.add_argument("--max-wait-seconds", required=True, type=int)
+    parser.add_argument(
+        "--allow-sharing", action="store_true",
+        help="explicitly allow existing compute processes; never use for formal timing",
+    )
+    parser.add_argument("--min-free-memory-mib", type=int, default=16384)
+    parser.add_argument("--formal-timing", action="store_true", help="require exclusive GPU mode")
     parser.add_argument("child_argv", nargs=argparse.REMAINDER, help="command after --")
     args = parser.parse_args(argv)
     if args.child_argv[:1] == ["--"]:
@@ -595,6 +697,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             poll_seconds=args.poll_seconds,
             max_wait_seconds=args.max_wait_seconds,
             child_argv=args.child_argv,
+            allow_sharing=args.allow_sharing,
+            min_free_memory_mib=args.min_free_memory_mib,
+            formal_timing=args.formal_timing,
         )
     except GuardError as exc:
         print(f"gpu guard refused to start: {exc}", file=sys.stderr)
