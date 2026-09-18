@@ -1,8 +1,14 @@
-"""Formal net timing of the four frozen reducers on one fit-only clip group.
+"""Formal frozen-reducer or original-dense timing on one fit-only clip group.
 
 The command is deliberately dry-run by default.  ``--execute`` requires CUDA
 and an already-completed fit128 calibration for ``pair_linear``.  It reads no
 test manifest, frame annotation, score, detector head, or FeatureStore.
+
+``--dense-only`` is an explicit, narrower path for the current original-
+encoder baseline. It retains the exact fit manifest and role-lock checks but
+runs identity only; it neither reads a pair-linear calibration nor loads a
+reducer deployment. Its clip-level ``end_to_end`` scope is decode + adapter
+encoding + pooled readout, never a UR-DMU detector benchmark.
 """
 
 from __future__ import annotations
@@ -30,6 +36,7 @@ from vadbench.checkpoints import sha256_file
 from vadbench.data.dense_sampling import sample_uniform_full_clips
 from vadbench.data.manifest import DatasetSplit, VideoManifestRecord, load_manifest_jsonl
 from vadbench.data.video import build_clip_batch, probe_video
+from vadbench.environment_registry import resolve_encoder_runtime
 from vadbench.features import atomic_write_json
 from vadbench.integrations.common import select_feature_tensor
 from vadbench.orchestration import encoder_identity
@@ -202,6 +209,77 @@ def _method_specs(calibration_root: Path) -> tuple[tuple[str, str, Path | None],
     )
 
 
+def _selected_method_specs(
+    *, dense_only: bool, calibration_root: Path
+) -> tuple[tuple[str, str, Path | None], ...]:
+    """Keep the legacy four-method plan unchanged unless dense-only is explicit."""
+
+    if dense_only:
+        return (("current_original_encoder_dense_baseline", "identity", None),)
+    return _method_specs(calibration_root)
+
+
+def _runtime_receipt(
+    *, encoder: str, runtime_origin: Path, selection: str
+) -> dict[str, Any]:
+    """Resolve the native environment from its canonical origin, never this checkout."""
+
+    runtime = resolve_encoder_runtime(encoder, project_root=runtime_origin)
+    expected = runtime.python.resolve()
+    expected_prefix = runtime.group.prefix.resolve()
+    actual_executable = Path(sys.executable).resolve()
+    actual_prefix = Path(sys.prefix).resolve()
+    if actual_executable != expected or actual_prefix != expected_prefix:
+        raise RuntimeError(
+            "benchmark must be launched with the encoder runtime resolved from "
+            "--runtime-origin: "
+            f"expected executable={expected}, prefix={expected_prefix}; "
+            f"got executable={actual_executable}, prefix={actual_prefix}"
+        )
+    return {
+        "selection": selection,
+        "origin": str(runtime_origin),
+        "encoder": runtime.encoder_id,
+        "group": runtime.group.id,
+        "overlay": None if runtime.overlay is None else str(runtime.overlay),
+        "actual_runtime": {
+            "sys_executable": str(actual_executable),
+            "sys_prefix": str(actual_prefix),
+        },
+        "expected_runtime": {
+            "python_executable": str(expected),
+            "prefix": str(expected_prefix),
+        },
+    }
+
+
+def _execution_runtime_receipt(
+    *, encoder: str, dense_only: bool, runtime_origin: Path | None
+) -> dict[str, Any]:
+    """Keep legacy caller-managed execution while making dense-only explicit."""
+
+    if runtime_origin is None:
+        if dense_only:
+            raise ValueError("--dense-only --execute requires --runtime-origin")
+        return {
+            "selection": "legacy_caller_managed",
+            "origin": None,
+            "encoder": encoder,
+            "group": None,
+            "overlay": None,
+            "actual_runtime": {
+                "sys_executable": str(Path(sys.executable).resolve()),
+                "sys_prefix": str(Path(sys.prefix).resolve()),
+            },
+            "expected_runtime": None,
+        }
+    return _runtime_receipt(
+        encoder=encoder,
+        runtime_origin=runtime_origin.resolve(),
+        selection="dense_only_origin_verified" if dense_only else "legacy_explicit_origin_verified",
+    )
+
+
 def _assert_pooled_parity(route: NativeRoute, adapter: Any, batch: Any, deployment: Any | None) -> dict[str, Any]:
     """Setup-only native/adapter parity for exactly one method and batch size."""
 
@@ -327,6 +405,19 @@ def _args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--role-lock", type=Path, help="exact fit128 role-lock paired with --fit-manifest")
     parser.add_argument("--fit-video-id", help="explicit preselected video ID from the frozen fit128 manifest")
     parser.add_argument("--calibration-root", type=Path, default=DEFAULT_CALIBRATION_ROOT)
+    parser.add_argument(
+        "--dense-only",
+        action="store_true",
+        help="explicitly time identity only as the current original-encoder dense baseline",
+    )
+    parser.add_argument(
+        "--runtime-origin",
+        type=Path,
+        help=(
+            "canonical v2 environment registry root; required by --dense-only --execute "
+            "(server: /users/fotile/VAD), optional legacy verification"
+        ),
+    )
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--output", type=Path)
@@ -338,10 +429,28 @@ def main(argv: list[str] | None = None) -> int:
     args = _args(argv)
     if args.threads <= 0:
         raise ValueError("--threads must be positive")
+    method_specs = _selected_method_specs(
+        dense_only=args.dense_only,
+        calibration_root=args.calibration_root / args.encoder,
+    )
+    benchmark_identity = {
+        "kind": (
+            "current_original_encoder_dense_baseline"
+            if args.dense_only
+            else "legacy_frozen_reducer_comparison"
+        ),
+        "reducer": "identity" if args.dense_only else None,
+        "analysis_hooks_enabled": False,
+        "clip_scopes": ["pure_model", "adapter", "end_to_end"],
+        "not_a_urdmu_detector_benchmark": True,
+        "not_a_new_reducer_or_method": True,
+    }
     plan = {
         "schema_version": EFFICIENCY_SCHEMA_VERSION,
         "encoder": args.encoder,
-        "methods": [name for name, _reducer, _calibration in _method_specs(args.calibration_root / args.encoder)],
+        "dense_only": bool(args.dense_only),
+        "benchmark_identity": benchmark_identity,
+        "methods": [name for name, _reducer, _calibration in method_specs],
         "batch_sizes": [1, 8],
         "scopes": ["pure_model", "adapter", "end_to_end"],
         "timing": {"warmup": 5, "repeat": 30, "primary_duration": "synchronized_wall_clock",
@@ -356,7 +465,8 @@ def main(argv: list[str] | None = None) -> int:
         "role_lock_expected_sha256": FROZEN_ROLE_LOCK_SHA256,
         "dataset_root": None if args.dataset_root is None else str(args.dataset_root),
         "fit_video_id": args.fit_video_id,
-        "calibration_root": str(args.calibration_root),
+        "calibration_root": None if args.dense_only else str(args.calibration_root),
+        "runtime_origin": None if args.runtime_origin is None else str(args.runtime_origin.resolve()),
         "execute": bool(args.execute),
     }
     if not args.execute:
@@ -364,6 +474,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.dataset_root is None or args.fit_manifest is None or args.role_lock is None or args.fit_video_id is None:
         raise ValueError("--execute requires --dataset-root, --fit-manifest, --role-lock, and --fit-video-id")
+    runtime_receipt = _execution_runtime_receipt(
+        encoder=args.encoder,
+        dense_only=args.dense_only,
+        runtime_origin=args.runtime_origin,
+    )
     if torch is None:
         raise RuntimeError("--execute requires the existing PyTorch encoder runtime")
     if not str(args.device).lower().startswith("cuda") or not torch.cuda.is_available():
@@ -421,6 +536,7 @@ def main(argv: list[str] | None = None) -> int:
             "torch": str(torch.__version__),
             "torch_cuda": torch.version.cuda,
             "cuda_device": args.device,
+            "resolved_encoder_runtime": runtime_receipt,
             "nvidia_smi_host_device_provenance": _nvidia_smi(),
             "verified_encoder_identity": verified_identity,
             "constructor": constructor,
@@ -431,16 +547,31 @@ def main(argv: list[str] | None = None) -> int:
             "source": {"video_id": selected.video_id, "video_path": selected.path,
                        "num_frames": info.num_frames, "fps": info.fps,
                        "fit_manifest_sha256": manifest_sha256, "role_lock_sha256": role_lock_sha256},
-            "source_sha256": {"cli": sha256_file(Path(__file__)),
-                              "efficiency": sha256_file(Path(__import__("vadbench.paper.efficiency", fromlist=["x"]).__file__)),
-                              "reduction_setup": sha256_file(Path(__import__("vadbench.paper.reduction_setup", fromlist=["x"]).__file__)),
-                              "deployment": sha256_file(Path(__import__("vadbench.token_reduction.deployment", fromlist=["x"]).__file__))},
+            "source_sha256": {
+                "cli": sha256_file(Path(__file__)),
+                "efficiency": sha256_file(
+                    Path(__import__("vadbench.paper.efficiency", fromlist=["x"]).__file__)
+                ),
+            },
         }
+        if not args.dense_only:
+            resolved["source_sha256"].update(
+                {
+                    "reduction_setup": sha256_file(
+                        Path(__import__("vadbench.paper.reduction_setup", fromlist=["x"]).__file__)
+                    ),
+                    "deployment": sha256_file(
+                        Path(
+                            __import__("vadbench.token_reduction.deployment", fromlist=["x"]).__file__
+                        )
+                    ),
+                }
+            )
         atomic_write_json(output / "resolved.json", resolved)
         results: dict[str, Any] = {}
         settings = FrozenTimingSettings()
         dense_preflight = {str(size): _token_preflight(adapter, batch, None) for size, batch in batches.items()}
-        for method, reducer, calibration in _method_specs(args.calibration_root / args.encoder):
+        for method, reducer, calibration in method_specs:
             try:
                 deployment, setup = (None, None)
                 if reducer != "identity":
@@ -515,9 +646,15 @@ def main(argv: list[str] | None = None) -> int:
                 }
             results[method] = method_result
             atomic_write_json(output / "partial-results.json", results)
-        final = {"schema_version": EFFICIENCY_SCHEMA_VERSION,
-                 "status": "completed" if all(item["status"] == "completed" for item in results.values()) else "failed",
-                 "resolved": "resolved.json", "methods": results}
+        final = {
+            "schema_version": EFFICIENCY_SCHEMA_VERSION,
+            "status": "completed"
+            if all(item["status"] == "completed" for item in results.values())
+            else "failed",
+            "benchmark_identity": benchmark_identity,
+            "resolved": "resolved.json",
+            "methods": results,
+        }
         atomic_write_json(output / "result.json", final)
         atomic_write_json(output / "progress.json", {"status": final["status"], "completed_methods": list(results)})
         print(json.dumps({"status": final["status"], "output": str(output)}, ensure_ascii=False))

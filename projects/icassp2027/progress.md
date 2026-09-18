@@ -78,6 +78,19 @@
   ROOT受影响提取/严格resume42项通过；服务器两个固定fit视频、8/16/64帧、18组的RGB、
   帧索引、mask、timestamps、metadata均逐位相等。共享CPU下耗时方向不一致，不宣称加速；
   当前健康长作业继续原2d9d1a0冻结版本，新实现留给后续运行，不为未证实收益反复重启。
+- **P04的64视频/512片段确认已完整完成，预登记门槛未通过。** 原始高相似token对比例差
+  为+0.0060656（95%CI [−0.038622,+0.052196]），Hedges g=0.0630
+  [−0.437,+0.537]；motion×brightness匹配差为−0.0036728
+  [−0.037680,+0.033041]，保留32正常/29正视频。完整输入/权重/角色/采样身份审核通过，
+  主点值由独立CSV重算一致，未使用a02 partial。
+  见[F03 finding card](decisions/findings/F03-embedding-pair-density.md)和
+  [审核图](../../outputs/icassp2027/analysis/p04-heldout-confirm-v1-20260918-a02/audit/p04_video_level_confirmation.png)。
+  `analysis.json` SHA为`e71abbbe51b847ca5b01b23be5760fe17d482010e21e6f676c771ed81dc65913`。
+  按原登记停止P04干预，不以此启动LoRA；不把未确认解释为零效应或等价。
+- 当前A100已转为四fit＋四select dense提取。原encoder dense-only三层clip计时入口已新增，
+  与旧四原型入口分开记录，保留原fit/role SHA和FP32、B1/B8、warmup5/repeat30；
+  显式native环境核对同时验证解释器和sys.prefix。15项计时接口/统计测试通过。
+  它不读取旧gate校准、不是UR-DMU完整detector计时，A100独占执行尚未完成。
 
 ## 用户七点澄清后的最新执行决定
 
