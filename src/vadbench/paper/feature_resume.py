@@ -1,23 +1,87 @@
-"""Strict, read-only source validation for copying complete extraction shards."""
+"""Strict complete-video resume; optional hardlinks preserve source bytes.
+
+Hardlinks share the blob inode and change its link count/ctime. Source indexes,
+blob bytes and source directory entries are never written by this module.
+"""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
+import zipfile
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
-from vadbench.features import FeatureRecord, FeatureStore, compute_encoder_fingerprint
+from vadbench.features import (
+    FeatureRecord,
+    FeatureStore,
+    _slug,
+    atomic_write_json,
+    atomic_write_jsonl,
+    compute_encoder_fingerprint,
+)
+
+
+def _blob_state(path: Path, root: Path) -> dict[str, int | None]:
+    """Reject links in the source path before recording the regular inode."""
+    relative = path.relative_to(root)
+    if ".." in relative.parts:
+        raise ValueError("hardlink_npz source path escapes its store")
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("hardlink_npz source must not use symlinks")
+    value = path.lstat()
+    if not stat.S_ISREG(value.st_mode):
+        raise ValueError("hardlink_npz source must be a regular file")
+    return {
+        "device": value.st_dev,
+        "inode": value.st_ino,
+        "size_bytes": value.st_size,
+        "mtime_ns": value.st_mtime_ns,
+        "nlink": value.st_nlink,
+        "stat_ctime_ns": value.st_ctime_ns,
+        "allocated_bytes": value.st_blocks * 512 if hasattr(value, "st_blocks") else None,
+    }
+
+
+def _same_blob(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    # nlink/ctime may change when another clip references the same source inode.
+    return all(left[key] == right[key] for key in ("device", "inode", "size_bytes", "mtime_ns"))
+
+
+def _unaliased_destination(path: Path) -> Path:
+    """Check before mkdir/link; resolving first would conceal symlink parents."""
+    absolute = path.absolute()
+    if any(parent.is_symlink() for parent in (absolute, *absolute.parents)):
+        raise ValueError("hardlink_npz destination must not use symlinks")
+    resolved = absolute.resolve()
+    if resolved != absolute:
+        raise ValueError("hardlink_npz destination must use an unaliased canonical path")
+    return resolved
+
+
+def _hardlink_destination_root(destination: Path, source: Path) -> Path:
+    target = _unaliased_destination(destination)
+    source = source.expanduser().resolve()
+    if target.is_relative_to(source) or source.is_relative_to(target):
+        raise ValueError("hardlink_npz source and destination trees must not overlap")
+    return target
 
 
 class FeatureResumeSource:
     """Reuse only exact per-video samples under the existing cache identity.
 
     Source indexes and resolved bytes are retained verbatim in the new run.
-    No partial index is promoted, and no source file is ever written.
+    No partial index is promoted. Source bytes/indexes are preserved; optional
+    hardlinks share the inode and change source-visible nlink/ctime metadata.
     """
 
     def __init__(
@@ -27,11 +91,17 @@ class FeatureResumeSource:
         resolved: Mapping[str, Any],
         *,
         encode_context_factory: Any = None,
+        resume_transport: Literal["copy", "hardlink_npz"] = "copy",
     ):
         from .extraction import _semantic_runtime_identity
 
         self.source = source.expanduser().resolve()
         self.destination = destination
+        if resume_transport not in {"copy", "hardlink_npz"}:
+            raise ValueError("resume_transport must be copy or hardlink_npz")
+        self.transport = resume_transport
+        if self.transport == "hardlink_npz":
+            self.destination = _hardlink_destination_root(destination, self.source)
         source_bytes = (self.source / "resolved.json").read_bytes()
         self.source_sha256 = hashlib.sha256(source_bytes).hexdigest()
         self.resolved = json.loads(source_bytes)
@@ -55,6 +125,8 @@ class FeatureResumeSource:
         self.reduction_template = None
         representation = self.resolved["spec"]["representation"]
         reducer = representation["reducer"]
+        if self.transport == "hardlink_npz" and reducer.get("name") != "identity":
+            raise ValueError("hardlink_npz supports only identity representations")
         if reducer.get("name") != "identity":
             from vadbench.token_reduction.deployment import PairMergeDeployment
 
@@ -99,13 +171,114 @@ class FeatureResumeSource:
                 else 0,
                 "recorded_position_masks": context.record_position_masks,
             }
-        lineage = destination / "resume_lineage"
+        lineage = self.destination / "resume_lineage"
         lineage.mkdir()
         (lineage / "source_resolved.json").write_bytes(source_bytes)
         source_status = self.source / "status.json"
         if source_status.is_file():
             (lineage / "source_status.json").write_bytes(source_status.read_bytes())
         self.lineage = lineage
+        if self.transport == "hardlink_npz":
+            atomic_write_json(lineage / "transport.json", {
+                "transport": self.transport,
+                "source_blob_bytes_preserved": True,
+                "source_indexes_preserved": True,
+                "shared_blob_inodes": True,
+                "source_nlink_and_ctime_may_change": True,
+                "independent_blob_backup": False,
+                "stat_ctime_semantics": "platform stat field; inode status change time on Linux",
+            })
+
+    def _hardlink_source(self, store: FeatureStore, row: FeatureRecord):
+        if row.storage_format != "npz":
+            raise ValueError("hardlink_npz requires NPZ source storage")
+        references = row.arrays
+        if (
+            len({ref.path for ref in references.values()}) != 1
+            or len({ref.sha256 for ref in references.values()}) != 1
+            or any(ref.key not in {None, name} for name, ref in references.items())
+        ):
+            raise ValueError("hardlink_npz requires one NPZ and its named array members")
+        relative = references["features"].path
+        store._resolve(relative)  # Retain the store's path containment check.
+        path = store.root / relative
+        before = _blob_state(path, self.source)
+        if before["device"] != self.destination.stat().st_dev:
+            raise ValueError("hardlink_npz source and destination must share a filesystem")
+        with zipfile.ZipFile(path) as archive:
+            if sorted(item.filename for item in archive.infolist()) != ["features.npy", "pooled.npy"]:
+                raise ValueError("hardlink_npz requires exactly two unique ZIP members: features.npy, pooled.npy")
+        return path, before
+
+    def _publish_hardlinks(self, destination: Path, prepared: list, video_id: str) -> None:
+        """Publish new 64-row indexes over linked blobs; never call the NPZ writer."""
+        from .extraction import _merge_shards
+
+        destination = self._link_destination(destination)
+        destination.mkdir(parents=True, exist_ok=False)
+        journal = self._link_destination(self.lineage / "hardlinks" / f"{video_id}.jsonl")
+        journal.parent.mkdir(parents=True, exist_ok=True)
+        blocks = []
+        with journal.open("x", encoding="utf-8") as stream:
+            for offset in range(0, len(prepared), 64):
+                block = destination / "blocks" / f"{offset // 64:06d}"
+                blocks.append(block)
+                block_rows = []
+                for row, _bundle, metadata, link_source in prepared[offset : offset + 64]:
+                    source_path, validated_state = link_source
+                    # Same naming as FeatureStore, but validate the complete
+                    # destination chain BEFORE any mkdir or link operation.
+                    fingerprint = row.encoder_fingerprint.removeprefix("sha256:")[:16]
+                    directory = block / "blobs" / fingerprint / _slug(row.video_id, fallback="video")
+                    stem = f"{row.clip_index:08d}-{_slug(row.clip_id, fallback='clip')}"
+                    digest = row.arrays["features"].sha256
+                    target = self._link_destination(directory / f"{stem}-{digest[:20]}.npz")
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    self._link_destination(target)
+                    before = _blob_state(source_path, self.source)
+                    if not _same_blob(before, validated_state) or hashlib.sha256(source_path.read_bytes()).hexdigest() != digest:
+                        raise ValueError("hardlink_npz source changed after validation")
+                    if before["device"] != target.parent.stat().st_dev:
+                        raise ValueError("hardlink_npz source and destination must share a filesystem")
+                    # os.link never overwrites an existing target. All errors
+                    # propagate; copying is not a fallback for this transport.
+                    os.link(source_path, target, follow_symlinks=False)
+                    after = _blob_state(source_path, self.source)
+                    linked = _blob_state(target, self.destination)
+                    if (
+                        not _same_blob(before, after)
+                        or not _same_blob(before, linked)
+                        or after["nlink"] != before["nlink"] + 1
+                        or linked["nlink"] != after["nlink"]
+                        or hashlib.sha256(source_path.read_bytes()).hexdigest() != digest
+                        or hashlib.sha256(target.read_bytes()).hexdigest() != digest
+                    ):
+                        raise ValueError("hardlink_npz post-link inode/content verification failed")
+                    stream.write(json.dumps({
+                        "clip_id": row.clip_id, "transport": self.transport, "sha256": digest,
+                        "source_path": str(source_path),
+                        "target_path": target.relative_to(self.destination).as_posix(),
+                        "source_before": before, "source_after": after, "target_after": linked,
+                    }, sort_keys=True) + "\n")
+                    stream.flush()
+                    relative = target.relative_to(block).as_posix()
+                    block_rows.append(FeatureRecord(
+                        video_id=row.video_id, clip_id=row.clip_id, clip_index=row.clip_index,
+                        encoder_fingerprint=row.encoder_fingerprint, storage_format="npz",
+                        arrays={name: replace(ref, path=relative) for name, ref in row.arrays.items()},
+                        start_s=row.start_s, end_s=row.end_s,
+                        frame_start=row.frame_start, frame_end=row.frame_end, metadata=metadata,
+                    ))
+                os.fsync(stream.fileno())
+                atomic_write_jsonl(block / "index.jsonl", (row.to_dict() for row in block_rows))
+        if _merge_shards(destination, blocks) != len(prepared):
+            raise RuntimeError("hardlink_npz per-video merged index is incomplete")
+
+    def _link_destination(self, path: Path) -> Path:
+        target = _unaliased_destination(path)
+        if target == self.destination or not target.is_relative_to(self.destination):
+            raise ValueError("hardlink_npz target escapes its new destination run")
+        return target
 
     def _validate_reduction(
         self, execution: Any, *, clip_index: int, clip_count: int, token_count: int
@@ -241,6 +414,10 @@ class FeatureResumeSource:
             )
             if set(row.arrays) != {"features", "pooled"}:
                 raise ValueError("resume source arrays must be exactly features and pooled")
+            link_source = (
+                self._hardlink_source(source_store, row)
+                if self.transport == "hardlink_npz" else None
+            )
             # load_bundle checks the file hash; check every reference too (NPZ
             # references share bytes), and validate declared and actual layouts.
             bundle = source_store.load_bundle(row)
@@ -273,16 +450,15 @@ class FeatureResumeSource:
                 or not np.array_equal(bundle["features"][0], bundle["pooled"])
             ):
                 raise ValueError("resume source pooled layout is invalid")
-            validated.append((line, row, bundle))
+            validated.append((line, row, bundle, link_source))
         if len(rows) != len(samples):
             return 0  # Even valid partial clips are never copied.
         snapshot = self.lineage / "indexes" / f"{record.video_id}.jsonl"
         snapshot.parent.mkdir(parents=True, exist_ok=True)
         snapshot.write_bytes(index_bytes)
         index_digest = hashlib.sha256(index_bytes).hexdigest()
-        store = _VideoShardWriter(destination)
-        pending = []
-        for line, row, bundle in validated:
+        prepared = []
+        for line, row, bundle, link_source in validated:
             metadata = dict(row.metadata)
             metadata["runtime_reference"] = dict(runtime_reference)
             metadata["runtime"] = {
@@ -297,6 +473,15 @@ class FeatureResumeSource:
                 "record_sha256": hashlib.sha256(line).hexdigest(),
                 "arrays_sha256": {name: ref.sha256 for name, ref in row.arrays.items()},
             }
+            if self.transport == "hardlink_npz":
+                metadata["reused_from"]["transport"] = self.transport
+            prepared.append((row, bundle, metadata, link_source))
+        if self.transport == "hardlink_npz":
+            self._publish_hardlinks(destination, prepared, record.video_id)
+            return len(validated)
+        store = _VideoShardWriter(destination)
+        pending = []
+        for row, bundle, metadata, _link_source in prepared:
             pending.append(dict(
                 video_id=row.video_id,
                 clip_id=row.clip_id,

@@ -168,7 +168,7 @@ def _setup(tmp_path, kind="uniform_full"):
     return records, adapter, spec
 
 
-def _run(tmp_path, records, adapter, spec, name, source=None):
+def _run(tmp_path, records, adapter, spec, name, source=None, *, transport="copy"):
     return extract_pooled_features(
         spec,
         adapter=adapter,
@@ -178,6 +178,7 @@ def _run(tmp_path, records, adapter, spec, name, source=None):
         run_id=name,
         backend=_CV2(64),
         resume_source=source,
+        resume_transport=transport,
     )
 
 
@@ -202,7 +203,8 @@ def _legacy_rows(source, videos):
 
 @pytest.mark.parametrize("kind", ["uniform_full", "dense"])
 @pytest.mark.parametrize("legacy", [False, True])
-def test_complete_video_reused_partial_video_reexecuted_source_unchanged(tmp_path, kind, legacy):
+@pytest.mark.parametrize("transport", ["copy", "hardlink_npz"])
+def test_complete_video_reused_partial_video_reexecuted_source_unchanged(tmp_path, kind, legacy, transport):
     records, adapter, spec = _setup(tmp_path, kind)
     encode = adapter.encode
 
@@ -224,7 +226,7 @@ def test_complete_video_reused_partial_video_reexecuted_source_unchanged(tmp_pat
         _legacy_rows(source, ["one", "two"])
     before = _snapshot(source)
     adapter = _Adapter()
-    result = _run(tmp_path, records, adapter, spec, "resumed", source)
+    result = _run(tmp_path, records, adapter, spec, "resumed", source, transport=transport)
     assert result.completed, result.failures
     assert len(adapter.seen_batches) == 5  # only the incomplete second video
     status = json.loads(Path(result.status_path).read_text())
@@ -296,7 +298,8 @@ def test_complete_mixed_legacy_reference_store_uses_zero_encoder_calls(tmp_path)
         "duplicate",
     ],
 )
-def test_tampered_source_rejected_without_root_index(tmp_path, tamper):
+@pytest.mark.parametrize("transport", ["copy", "hardlink_npz"])
+def test_tampered_source_rejected_without_root_index(tmp_path, tamper, transport):
     records, adapter, spec = _setup(tmp_path)
     old = _run(tmp_path, records, adapter, spec, "complete")
     source = Path(old.run_dir)
@@ -340,7 +343,7 @@ def test_tampered_source_rejected_without_root_index(tmp_path, tamper):
     atomic_write_jsonl(index, rows)
     before = _snapshot(source)
     adapter = _Adapter()
-    result = _run(tmp_path, records, adapter, spec, "rejected", source)
+    result = _run(tmp_path, records, adapter, spec, "rejected", source, transport=transport)
     assert not result.completed
     assert not (Path(result.run_dir) / "index.jsonl").exists()
     assert adapter.seen_batches == []

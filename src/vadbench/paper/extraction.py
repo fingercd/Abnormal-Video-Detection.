@@ -858,6 +858,7 @@ def extract_pooled_features(
     backend: Any | None = None,
     encode_context_factory: EncodeContextFactory | None = None,
     resume_source: str | Path | None = None,
+    resume_transport: Literal["copy", "hardlink_npz"] = "copy",
 ) -> PooledExtractionResult:
     """Run one isolated pooled-only paper extraction attempt.
 
@@ -869,6 +870,12 @@ def extract_pooled_features(
     if not isinstance(spec, PooledExtractionSpec):
         raise TypeError("spec must be a PooledExtractionSpec")
     reducer = dict(spec.representation.reducer)
+    if resume_transport not in {"copy", "hardlink_npz"}:
+        raise ValueError("resume_transport must be copy or hardlink_npz")
+    if resume_transport == "hardlink_npz" and (
+        resume_source is None or reducer.get("name") != "identity"
+    ):
+        raise ValueError("hardlink_npz requires an identity resume source")
     if encode_context_factory is None:
         if reducer.get("name") != "identity":
             raise ValueError("a nonidentity representation requires its bound encode context")
@@ -908,7 +915,13 @@ def extract_pooled_features(
     selected_run_id = run_id or new_run_id("paper-extract")
     if not selected_run_id or any(char in selected_run_id for char in "/\\"):
         raise ValueError("run_id must be a non-empty basename")
-    run_dir = Path(output_root).expanduser().resolve() / selected_run_id
+    run_dir = Path(output_root).expanduser() / selected_run_id
+    if resume_transport == "hardlink_npz":
+        from .feature_resume import _hardlink_destination_root
+
+        run_dir = _hardlink_destination_root(run_dir, Path(resume_source))
+    else:
+        run_dir = run_dir.resolve()
     if run_dir.exists():
         raise FileExistsError(f"paper extraction run directory already exists: {run_dir}")
     run_dir.mkdir(parents=True)
@@ -932,6 +945,7 @@ def extract_pooled_features(
             "encoder_fingerprint": encoder_fingerprint,
             "paper_identity": paper_identity,
             "resume_source": None if resume_source is None else str(Path(resume_source).expanduser().resolve()),
+            "resume_transport": resume_transport,
         },
     )
     from vadbench.checkpoints import sha256_file
@@ -954,6 +968,7 @@ def extract_pooled_features(
                 Path(resume_source), run_dir,
                 json.loads((run_dir / "resolved.json").read_text(encoding="utf-8")),
                 encode_context_factory=encode_context_factory,
+                resume_transport=resume_transport,
             )
         except Exception as exc:
             failures.append({"video_id": "<resume>", "type": type(exc).__name__, "message": str(exc)})
@@ -1076,6 +1091,7 @@ def extract_pooled_features(
         "feature_root": feature_root,
         "encoder_fingerprint": encoder_fingerprint,
         "failures": failures,
+        "resume_transport": resume_transport,
         "resume": {
             "source_run": None if resume_source is None else str(Path(resume_source).expanduser().resolve()),
             "reused_videos": reused_videos,

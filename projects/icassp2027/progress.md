@@ -16,6 +16,10 @@
   TimeSformer 421/1288、VideoMAE 497/1288、V-JEPA 2 314/1288；四条native的owner/argv/startticks
   均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a04/`。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
+  VideoMAE停留497的原因已核实：当前Normal_Videos307含628,020帧、约5.815小时，需39,251
+  个dense窗口。epoch1789767169时块index已有28,880条记录（含当前块，非完整视频）；
+  同PID/startticks间隔132秒CPU增加15,751 ticks、wchar增加67,287,953 B，明确仍在写入。
+  `baseline-live-20260919-a04/vma-live-progress-verification.json`保存核验，不据此重启或报告模型速度。
 - VideoMAEv2、TimeSformer 的 development-select 均已完成 161/161 视频（80正常/81含异常）。
   独立审计逐一验证 65,862 / 131,814 个 blob、数组 SHA/shape/dtype/finite、原生窗口和视频完整覆盖，
   无缺失、重复或外来视频。结果在 `outputs/icassp2027/control/development-select-completion-audit-20260919/`。
@@ -54,6 +58,16 @@
   尚未取消旧fit或启动Time迁移。单独的inactive权重备份已完成4,957,392,176 B传输与完整SHA验证，
   verified-stream-a03回执绑定本地/远端同一SHA90e6a81a…5b0aa；服务器原文件仍保留，未据此删除权重。
   新迁移必须再次满足容量门禁、源完整视频验证及新进程接管检查，不能把准备脚本写成完成。
+  受限`resume_transport=hardlink_npz`现已实现：仅identity、完整视频、同文件系统的两成员NPZ，
+  保留原SHA/身份/shape/dtype检查，独立重建索引/lineage并记录共享inode；默认copy不变。
+  本机相关测试94 passed/3 skipped，skip均为Windows真实symlink权限；隔离拒绝分支通过。
+  compileall、限定五文件Ruff及diff-check通过。新模式尚未用于真实缓存，未修改旧helper门禁。
+  node3仅新建synthetic NPZ的文件系统canary证明link共享inode且字节不变；真实源只读首clip格式
+  样本符合两成员约束，不将其当全277,054个完整视频blob的验收。
+  当前Time源metadata扫描S=3,827,105,792 B，其中完整NPZ候选H=2,269,626,368 B；新journal、
+  三层索引、lineage和目录开销另计，不能简单按S−H宣称迁移容量够用。
+  八个普通dense store精确共2,923,485 clips，原始数组payload17.055GiB不是总占盘上界。
+  两项已结束FIT探针及CPU分析的剩余写入已核验为0；未来工作仍需另预算，15GiB safety保持。
 - XD 测试原视频800份的新坐标审计已sealed并通过独立proof和consumer检查，详情见下节。
   训练仍有4个原始坏成员未修复；有界公开镜像检索没有找到可用原始payload。
   官方OneDrive浏览器下载仍待已提出的D盘目录设置/直接原始文件链接，尚未启动约15GB到C盘的下载。
@@ -88,6 +102,8 @@ nice15、两线程、CUDA=-1、max RSS217,648 KiB，36次监测没有资源停�
 该有界审计在1288个原fit中排除了明确已用FIT128及其已知探索/校准子集，留下1160个角色上
 候选（576正常/584含异常）。没有完整跨本地/远端使用账本，因此不能称全局未使用或已证明独立；
 不据此自动重新划角色或启动确认。回执在`additional-property-validation-feasibility-20260919/`。
+随后补审三个指定远端根的一级probe resolved/cohort及初始debug8，未发现额外原fit使用ID，
+候选池不变；其他历史根、非probe手动运行和删除的run仍未覆盖，未知边界保留。
 
 - 当前完整VJ原生run为`code-0192fad/outputs/icassp2027/runs/probe-20260918T163038291972Z-a4fc7f17`，
   805,888条available/12,288条unavailable；分析输出`vjepa2-fit128-video-bootstrap-20260919-a02`。

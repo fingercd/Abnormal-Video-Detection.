@@ -45,6 +45,7 @@ class OfficialDenseExtractionRequest:
     resume_source: str | None = None
     engineering_video_ids: tuple[str, ...] = ()
     development_role: Literal["fit", "select"] | None = None
+    resume_transport: Literal["copy", "hardlink_npz"] = "copy"
 
     def __post_init__(self) -> None:
         if self.encoder not in {"videomaev2", "timesformer", "vjepa2", "videomae"}:
@@ -63,6 +64,12 @@ class OfficialDenseExtractionRequest:
             raise ValueError("development_role must be fit, select, or null")
         if self.development_role is not None and self.engineering_video_ids:
             raise ValueError("development role extraction cannot be combined with engineering video IDs")
+        if self.resume_transport not in {"copy", "hardlink_npz"}:
+            raise ValueError("resume_transport must be copy or hardlink_npz")
+        if self.resume_transport == "hardlink_npz" and (
+            self.resume_source is None or self.reducer != "identity"
+        ):
+            raise ValueError("hardlink_npz requires an identity resume source")
 
 
 def _bound_json(path: str | Path, expected: str) -> tuple[Path, dict[str, Any]]:
@@ -140,7 +147,13 @@ def run_official_dense_extraction(
     selected_run = request.run_id or new_run_id("official-dense-training-features")
     if not selected_run or any(c in selected_run for c in "/\\"):
         raise ValueError("run_id must be a basename")
-    run_dir = Path(request.output_root).expanduser().resolve() / selected_run
+    run_dir = Path(request.output_root).expanduser() / selected_run
+    if request.resume_transport == "hardlink_npz":
+        from .feature_resume import _hardlink_destination_root
+
+        run_dir = _hardlink_destination_root(run_dir, Path(request.resume_source))
+    else:
+        run_dir = run_dir.resolve()
     run_dir.mkdir(parents=True, exist_ok=False)
     with record_stage(
         run_dir,
@@ -232,6 +245,7 @@ def run_official_dense_extraction(
             backend=video_backend,
             encode_context_factory=factory,
             resume_source=request.resume_source,
+            resume_transport=request.resume_transport,
         )
         if not result.completed:
             failure = {
