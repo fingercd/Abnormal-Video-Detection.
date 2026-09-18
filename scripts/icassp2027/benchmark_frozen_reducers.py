@@ -62,7 +62,7 @@ class NativeRoute:
     """The model's real forward plus its adapter's existing pooled readout."""
 
     prepare: Callable[[Any], Any]
-    run: Callable[[Any, Any], tuple[torch.Tensor, torch.Tensor]]
+    run: Callable[[Any, Any], torch.Tensor]
     description: str
 
 
@@ -97,11 +97,11 @@ def _native_route(adapter: Any, encoder: str, native_model: torch.nn.Module) -> 
             parameter = next(backbone.parameters())
             return tensor_from_lists(clips).float().to(parameter.device)
 
-        def run(inputs: torch.Tensor, _batch: Any) -> tuple[torch.Tensor, torch.Tensor]:
-            tokens = backbone(pixel_values=inputs.float())
-            if not isinstance(tokens, torch.Tensor) or tokens.ndim != 3:
-                raise RuntimeError("VideoMAEv2 native backbone did not return [B,N,D] tokens")
-            return tokens, pool(tokens)
+        def run(inputs: torch.Tensor, _batch: Any) -> torch.Tensor:
+            # The pinned native backbone already pools and returns [B,D].
+            # Internal tokens are verified by the setup adapter/bridge; no
+            # observation hook belongs in this pure native timing route.
+            return pool(backbone(pixel_values=inputs.float()))
 
         return NativeRoute(prepare, run, "VideoMAEv2Encoder.backbone(pixel_values)+VideoMAEv2Encoder._pool")
 
@@ -114,7 +114,7 @@ def _native_route(adapter: Any, encoder: str, native_model: torch.nn.Module) -> 
         def prepare(batch: Any) -> tuple[Mapping[str, Any], np.ndarray]:
             return adapter._prepare_inputs(batch)
 
-        def run(inputs: tuple[Mapping[str, Any], np.ndarray], batch: Any) -> tuple[torch.Tensor, torch.Tensor]:
+        def run(inputs: tuple[Mapping[str, Any], np.ndarray], batch: Any) -> torch.Tensor:
             raw_inputs, lengths = inputs
             del lengths  # Input conversion has completed; it is not model work.
             raw = native_model(**raw_inputs, return_dict=True)
@@ -124,7 +124,7 @@ def _native_route(adapter: Any, encoder: str, native_model: torch.nn.Module) -> 
             # Both frozen Transformer configurations use mean pooling.  This
             # deliberately bypasses adapter timeline/metadata construction so
             # pure_model reports only native forward plus the same pooled rule.
-            return tokens, tokens.mean(dim=1)
+            return tokens.mean(dim=1)
 
         return NativeRoute(prepare, run, "native transformers forward+frozen mean(last_hidden_state) pooled readout")
 
@@ -136,7 +136,7 @@ def _native_route(adapter: Any, encoder: str, native_model: torch.nn.Module) -> 
         def prepare(batch: Any) -> Any:
             return worker._prepare_inputs(batch)
 
-        def run(inputs: Any, batch: Any) -> tuple[torch.Tensor, torch.Tensor]:
+        def run(inputs: Any, batch: Any) -> torch.Tensor:
             if not isinstance(inputs, Mapping):
                 raise RuntimeError("V-JEPA2 native processor did not return a keyword mapping")
             raw = native_model.get_vision_features(**inputs)
@@ -144,7 +144,7 @@ def _native_route(adapter: Any, encoder: str, native_model: torch.nn.Module) -> 
             if not isinstance(tokens, torch.Tensor) or tokens.ndim != 3:
                 raise RuntimeError("V-JEPA2 native vision route did not return [B,N,D] tokens")
             weights = tokens.new_ones((tokens.shape[0], tokens.shape[1], 1))
-            return tokens, (tokens * weights).sum(dim=1) / weights.sum(dim=1)
+            return (tokens * weights).sum(dim=1) / weights.sum(dim=1)
 
         return NativeRoute(prepare, run, "V-JEPA2 _get_vision_features+canonical token pooling")
     raise ValueError(f"unsupported active encoder: {encoder}")
@@ -208,19 +208,19 @@ def _assert_pooled_parity(route: NativeRoute, adapter: Any, batch: Any, deployme
     prepared = route.prepare(batch)
     with torch.inference_mode():
         if deployment is None:
-            tokens, pooled = route.run(prepared, batch)
+            pooled = route.run(prepared, batch)
             adapter_output = adapter.encode(batch, train=False)
             native_execution, adapter_execution = None, None
         else:
             with deployment(batch) as native_context:
-                tokens, pooled = route.run(prepared, batch)
+                pooled = route.run(prepared, batch)
                 native_execution = native_context.validate_execution()
             with deployment(batch) as adapter_context:
                 adapter_output = adapter.encode(batch, train=False)
                 adapter_execution = adapter_context.validate_execution()
         adapter_pooled = adapter_output.pooled
     torch.testing.assert_close(pooled, adapter_pooled, rtol=1e-5, atol=1e-6)
-    if any(value.dtype != torch.float32 for value in (tokens, pooled, adapter_output.features, adapter_pooled)):
+    if any(value.dtype != torch.float32 for value in (pooled, adapter_output.features, adapter_pooled)):
         raise RuntimeError("formal frozen-reducer timing requires float32 native and adapter outputs")
     receipt = {
         "native_pooled_shape": list(pooled.shape),
@@ -234,7 +234,7 @@ def _assert_pooled_parity(route: NativeRoute, adapter: Any, batch: Any, deployme
     }
     # Setup evidence is a CPU-only receipt.  Do not let either parity branch
     # become an accidental resident allocation in a formal peak measurement.
-    del tokens, pooled, adapter_pooled, adapter_output, prepared
+    del pooled, adapter_pooled, adapter_output, prepared
     return receipt
 
 
@@ -255,7 +255,7 @@ def _token_preflight(adapter: Any, batch: Any, deployment: Any | None) -> dict[s
 
 def _operation(
     *, scope: str, adapter: Any, route: NativeRoute, batch: Any, deployment: Any | None,
-    prepared: Any | None, source_path: Path, video_id: str, samples: Sequence[Any],
+    prepared: Any | None, source_path: Path, video_id: str, samples: Sequence[Any], verified_tokens: int,
 ) -> Callable[[], Mapping[str, Any]]:
     def run_with(batch_value: Any, *, raw_inputs: Any | None, clean_inside_boundary: bool) -> Mapping[str, Any]:
         clean = clean_encoder_batch(batch_value) if clean_inside_boundary else batch_value
@@ -263,7 +263,7 @@ def _operation(
             if deployment is None:
                 if scope == "pure_model":
                     assert raw_inputs is not None
-                    tokens, pooled = route.run(raw_inputs, clean)
+                    pooled = route.run(raw_inputs, clean)
                     execution = None
                 else:
                     output = adapter.encode(clean, train=False)
@@ -272,20 +272,25 @@ def _operation(
                 with deployment(clean) as context:
                     if scope == "pure_model":
                         assert raw_inputs is not None
-                        tokens, pooled = route.run(raw_inputs, clean)
+                        pooled = route.run(raw_inputs, clean)
                     else:
                         output = adapter.encode(clean, train=False)
                         tokens, pooled = output.features, output.pooled
                     execution = context.validate_execution()
-        if not isinstance(tokens, torch.Tensor) or tokens.ndim != 3 or not isinstance(pooled, torch.Tensor):
-            raise RuntimeError("native/adapter timing route did not produce tensor tokens and pooled readout")
-        receipt = {"actual_feature_tokens": int(tokens.shape[1]), "feature_dtype": str(tokens.dtype),
-                   "pooled_dtype": str(pooled.dtype), "reduction_execution": execution}
+        if not isinstance(pooled, torch.Tensor) or pooled.ndim != 2:
+            raise RuntimeError("native/adapter timing route did not produce [B,D] pooled readout")
+        if scope != "pure_model" and (not isinstance(tokens, torch.Tensor) or tokens.ndim != 3):
+            raise RuntimeError("adapter timing route did not expose [B,N,D] features")
+        receipt = {"verified_feature_tokens": verified_tokens,
+                   "token_verification": "setup adapter/bridge; reduced repeats also validate every actual suffix",
+                   "adapter_feature_tokens": None if scope == "pure_model" else int(tokens.shape[1]),
+                   "pooled_shape": list(pooled.shape), "pooled_dtype": str(pooled.dtype),
+                   "reduction_execution": execution}
         # The receipt is scalar/JSON data.  Dropping raw outputs before return
         # avoids retaining one repeat while the next repeat is timed.
         if scope != "pure_model":
-            del output
-        del tokens, pooled
+            del output, tokens
+        del pooled
         return receipt
 
     if scope == "pure_model":
@@ -343,7 +348,6 @@ def main(argv: list[str] | None = None) -> int:
                    "cuda_event_duration": "diagnostic"},
         "frozen_precision": "float32",
         "processor_tensor_type": "np" if args.encoder in {"timesformer", "videomae"} else None,
-        "videomaev2_use_half": False if args.encoder == "videomaev2" else None,
         "expected_output_dim": OUTPUT_DIMENSIONS[args.encoder],
         "native_clip_frames": CLIP_FRAMES[args.encoder],
         "fit_manifest": None if args.fit_manifest is None else str(args.fit_manifest),
@@ -396,8 +400,6 @@ def main(argv: list[str] | None = None) -> int:
         definition = dict(project.encoder(args.encoder)["definition"])
         constructor = dict(definition["constructor"])
         constructor["device"] = args.device
-        if args.encoder == "videomaev2":
-            constructor["use_half"] = False
         if args.encoder in {"timesformer", "videomae"}:
             constructor["processor_tensor_type"] = "np"
         definition["constructor"] = constructor
@@ -485,7 +487,8 @@ def main(argv: list[str] | None = None) -> int:
                             operation = _operation(scope=scope, adapter=adapter, route=route, batch=batch,
                                                    deployment=deployment, prepared=prepared_inputs, source_path=source_path,
                                                    video_id=selected.video_id,
-                                                   samples=[windows[0].clip] if size == 1 else [item.clip for item in windows])
+                                                   samples=[windows[0].clip] if size == 1 else [item.clip for item in windows],
+                                                   verified_tokens=batch_result["preflight_actual_tokens"]["after_reducer"]["actual_feature_tokens"])
                             batch_result["scopes"][scope] = measure_scope(
                                 operation, runtime=runtime, settings=settings, scope=scope, batch_size=size,
                                 sampled_frames=size * frames,

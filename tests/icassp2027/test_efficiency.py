@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -153,6 +154,37 @@ def test_failed_scope_keeps_null_statistics_instead_of_fake_zero():
     assert receipt["samples"] is None
     assert receipt["summary"] is None
     assert receipt["error"]["message"] == "native suffix failed"
+
+
+def test_native_videomaev2_route_accepts_its_real_pooled_backbone_contract():
+    import torch
+
+    from vadbench.integrations.videomaev2_encoder import VideoMAEv2Encoder
+
+    script = Path(__file__).resolve().parents[2] / "scripts/icassp2027/benchmark_frozen_reducers.py"
+    namespace = runpy.run_path(str(script))
+
+    class Backbone(torch.nn.Module):
+        def forward(self, *, pixel_values):
+            return pixel_values.mean(dim=(2, 3, 4))
+
+    class Worker(torch.nn.Module):
+        _pool = VideoMAEv2Encoder._pool
+
+        def __init__(self):
+            super().__init__()
+            self.backbone = Backbone()
+
+        def _tensor_from_rgb_lists(self, clips):
+            raise AssertionError("preparation must be outside this native forward test")
+
+    worker = Worker()
+    adapter = type("Adapter", (), {"encoder": worker})()
+    route = namespace["_native_route"](adapter, "videomaev2", worker)
+    inputs = torch.arange(48, dtype=torch.float32).reshape(2, 3, 2, 2, 2)
+    result = route.run(inputs, None)
+    assert result.shape == (2, 3)
+    assert torch.equal(result, worker._pool(worker.backbone(pixel_values=inputs)))
 
 
 def test_statistic_requires_observations_and_reports_requested_quantiles():
