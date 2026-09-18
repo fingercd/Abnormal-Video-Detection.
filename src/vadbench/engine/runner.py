@@ -76,6 +76,7 @@ class HeadOnlyTrainingConfig:
     overlap_reference: str = "token"
     assume_unannotated_is_normal: bool = True
     verify_training: bool = False
+    cache_sequences: bool = False
 
     def __post_init__(self) -> None:
         normalize_task_name(self.task)
@@ -91,6 +92,12 @@ class HeadOnlyTrainingConfig:
             raise ValueError("max_steps must be positive or None")
         if self.num_workers < 0:
             raise ValueError("num_workers must be non-negative")
+        if not isinstance(self.cache_sequences, bool):
+            raise TypeError("cache_sequences must be a bool")
+        if self.cache_sequences and self.feature_level != "clip":
+            raise ValueError("cache_sequences is only supported for clip-level head training")
+        if self.cache_sequences and self.num_workers != 0:
+            raise ValueError("cache_sequences requires num_workers=0")
         if self.expected_clips is not None and self.expected_clips <= 0:
             raise ValueError("expected_clips must be positive or None")
         object.__setattr__(self, "head_kwargs", dict(self.head_kwargs))
@@ -407,6 +414,7 @@ def train_feature_head(
         "min_overlap_fraction": settings.min_overlap_fraction,
         "overlap_reference": settings.overlap_reference,
         "assume_unannotated_is_normal": settings.assume_unannotated_is_normal,
+        "cache_sequences": settings.cache_sequences,
     }
     train_dataset = FeatureDataset(store, train_manifest, **dataset_options)
     if any(item.split != DatasetSplit.TRAIN for item in train_dataset.manifest_records):

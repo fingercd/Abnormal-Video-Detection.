@@ -227,6 +227,7 @@ class FeatureDataset(Sequence[dict[str, Any]]):
         min_overlap_fraction: float = 0.0,
         overlap_reference: Literal["token", "iou"] = "token",
         assume_unannotated_is_normal: bool = True,
+        cache_sequences: bool = False,
     ) -> None:
         self.feature_store = (
             feature_store
@@ -247,6 +248,14 @@ class FeatureDataset(Sequence[dict[str, Any]]):
         self.min_overlap_fraction = float(min_overlap_fraction)
         self.overlap_reference = overlap_reference
         self.assume_unannotated_is_normal = bool(assume_unannotated_is_normal)
+        if not isinstance(cache_sequences, bool):
+            raise TypeError("cache_sequences must be a bool")
+        if cache_sequences and self.feature_level != "clip":
+            raise ValueError("cache_sequences is only supported for clip-level features")
+        self.cache_sequences = cache_sequences
+        # This remains empty until a whole video has passed every existing
+        # FeatureStore bundle checksum and sequence validation below.
+        self._sequence_cache: dict[int, FeatureSequence] = {}
 
         manifests = list(_manifest_records(manifest))
         if split is not None:
@@ -593,7 +602,20 @@ class FeatureDataset(Sequence[dict[str, Any]]):
         )
 
     def __getitem__(self, index: int) -> dict[str, Any]:
-        return self._sequence(self._entries[index]).to_dict()
+        if not self.cache_sequences:
+            return self._sequence(self._entries[index]).to_dict()
+        sequence = self._sequence_cache.get(index)
+        if sequence is None:
+            sequence = self._sequence(self._entries[index])
+            self._sequence_cache[index] = sequence
+        # The cached sequence is immutable by convention, but NumPy arrays are
+        # still writable.  The collator currently copies them, yet returning
+        # independent arrays also keeps a future in-place consumer from
+        # changing a later epoch's input.
+        return {
+            name: value.copy() if isinstance(value, np.ndarray) else value
+            for name, value in sequence.to_dict().items()
+        }
 
 
 def _copy_row(destination: np.ndarray, row: int, value: Any, length: int) -> None:

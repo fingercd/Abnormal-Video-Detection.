@@ -105,6 +105,78 @@ def test_dataset_groups_by_video_and_sorts_clips_using_pooled_features(
     np.testing.assert_allclose(sample["timeline_end_s"], [1.0, 2.0])
 
 
+def test_sequence_cache_is_opt_in_reuses_validated_video_and_returns_copies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = FeatureStore(tmp_path / "features")
+    manifest = [_manifest("normal", anomaly=False), _manifest("abuse", anomaly=True)]
+    for record in manifest:
+        for clip_index in range(2):
+            _write_clip(
+                store,
+                video_id=record.video_id,
+                clip_index=clip_index,
+                value=float(clip_index),
+                anomaly=record.is_anomaly,
+            )
+
+    original_load_bundle = store.load_bundle
+    reads = 0
+
+    def counted_load_bundle(*args, **kwargs):
+        nonlocal reads
+        reads += 1
+        return original_load_bundle(*args, **kwargs)
+
+    monkeypatch.setattr(store, "load_bundle", counted_load_bundle)
+    legacy = FeatureDataset(store, manifest)
+    for _epoch in range(3):
+        for index in range(len(legacy)):
+            legacy[index]
+    assert reads == 12
+
+    reads = 0
+    cached = FeatureDataset(store, manifest, cache_sequences=True)
+    first = cached[0]
+    first["features"][:] = -1.0
+    first["feature_valid_mask"][:] = False
+    again = cached[0]
+    np.testing.assert_array_equal(again["features"], [[0, 0, 0], [1, 1, 1]])
+    np.testing.assert_array_equal(again["feature_valid_mask"], [True, True])
+    for _epoch in range(2):
+        for index in range(len(cached)):
+            cached[index]
+    assert reads == 4
+
+
+def test_sequence_cache_still_checks_first_feature_bundle_load(tmp_path: Path) -> None:
+    store = FeatureStore(tmp_path / "features")
+    _write_clip(store, video_id="normal", clip_index=0, value=1, anomaly=False)
+    record = store.records()[0]
+    bundle_path = store.root / record.feature_path
+    bundle_path.write_bytes(b"tampered")
+
+    cached = FeatureDataset(
+        store,
+        [_manifest("normal", anomaly=False)],
+        cache_sequences=True,
+    )
+    with pytest.raises(OSError, match="checksum mismatch"):
+        cached[0]
+
+
+def test_sequence_cache_rejects_token_arrays(tmp_path: Path) -> None:
+    store = FeatureStore(tmp_path / "features")
+    _write_clip(store, video_id="normal", clip_index=0, value=1, anomaly=False)
+    with pytest.raises(ValueError, match="clip-level"):
+        FeatureDataset(
+            store,
+            [_manifest("normal", anomaly=False)],
+            feature_level="token",
+            cache_sequences=True,
+        )
+
+
 def test_clip_fallback_pools_only_valid_tokens(tmp_path: Path) -> None:
     store = FeatureStore(tmp_path / "features")
     fingerprint = _fingerprint()

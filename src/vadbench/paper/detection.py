@@ -305,6 +305,9 @@ class DetectionConfig:
             seed=self.seed,
             expected_clips=self.expected_training_clips,
             verify_training=True,
+            # train_detector verifies this paper FeatureStore snapshot before
+            # entering the runner; cache its fully validated video sequences.
+            cache_sequences=True,
         )
 
 

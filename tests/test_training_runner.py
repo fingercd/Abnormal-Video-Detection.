@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from vadbench.data.features_dataset import FeatureDataset, collate_feature_batch
 from vadbench.data.manifest import VideoManifestRecord
 from vadbench.engine.runner import (
     TORCH_AVAILABLE,
@@ -13,6 +14,9 @@ from vadbench.engine.runner import (
     train_feature_head,
 )
 from vadbench.features import FeatureStore, compute_encoder_fingerprint
+
+if TORCH_AVAILABLE:
+    import torch
 
 
 def _manifest(video_id: str, *, anomaly: bool, split: str) -> VideoManifestRecord:
@@ -80,6 +84,14 @@ def test_nested_config_maps_task_head_and_training_options() -> None:
     assert config.learning_rate == 0.002
     assert config.max_steps == 5
     assert config.expected_clips == 32
+    assert config.cache_sequences is False
+
+
+def test_sequence_cache_is_restricted_to_single_process_clip_training() -> None:
+    with pytest.raises(ValueError, match="clip-level"):
+        HeadOnlyTrainingConfig(feature_level="token", cache_sequences=True)
+    with pytest.raises(ValueError, match="num_workers=0"):
+        HeadOnlyTrainingConfig(cache_sequences=True, num_workers=1)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch is an optional dependency")
@@ -142,3 +154,68 @@ def test_runner_rejects_strong_training_without_temporal_truth(tmp_path: Path) -
             output_dir=tmp_path / "run",
             device="cpu",
         )
+
+
+@pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch is an optional dependency")
+def test_cached_training_matches_legacy_and_reads_each_feature_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store, train, _validation, fingerprint = _store_dataset(tmp_path)
+    sample_batch = collate_feature_batch(
+        [FeatureDataset(store, train, encoder_fingerprint=fingerprint)[index] for index in range(2)]
+    )
+    original_load_bundle = store.load_bundle
+    reads = 0
+
+    def counted_load_bundle(*args, **kwargs):
+        nonlocal reads
+        reads += 1
+        return original_load_bundle(*args, **kwargs)
+
+    monkeypatch.setattr(store, "load_bundle", counted_load_bundle)
+
+    def config(*, cache_sequences: bool) -> HeadOnlyTrainingConfig:
+        return HeadOnlyTrainingConfig(
+            task="weak_mil",
+            head="topk",
+            head_kwargs={"k": 1, "dropout": 0.0},
+            task_kwargs={"ranking_weight": 0.0},
+            batch_size=2,
+            epochs=2,
+            learning_rate=0.01,
+            seed=17,
+            expected_clips=2,
+            cache_sequences=cache_sequences,
+        )
+
+    legacy = train_feature_head(
+        config(cache_sequences=False),
+        feature_store=store,
+        train_manifest=train,
+        output_dir=tmp_path / "legacy",
+        encoder_fingerprint=fingerprint,
+        device="cpu",
+    )
+    legacy_reads = reads
+    reads = 0
+    cached = train_feature_head(
+        config(cache_sequences=True),
+        feature_store=store,
+        train_manifest=train,
+        output_dir=tmp_path / "cached",
+        encoder_fingerprint=fingerprint,
+        device="cpu",
+    )
+    cached_reads = reads
+
+    assert legacy_reads == len(train) * 2 * 2
+    assert cached_reads == len(train) * 2
+    assert cached.history["epochs"] == legacy.history["epochs"]
+    for name, parameter in legacy.model.state_dict().items():
+        assert torch.equal(parameter, cached.model.state_dict()[name])
+    legacy.model.eval()
+    cached.model.eval()
+    with torch.no_grad():
+        legacy_logits = legacy.model.prediction_step(sample_batch).predictions.video_logits
+        cached_logits = cached.model.prediction_step(sample_batch).predictions.video_logits
+    assert torch.equal(legacy_logits, cached_logits)

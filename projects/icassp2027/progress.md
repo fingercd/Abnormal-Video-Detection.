@@ -2,6 +2,30 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+## 最新执行回执（UTC 2026-09-18 05 时前）
+
+- 四条中断运行的真实 native GPU 复用验收全部通过：每项两个完整视频、64条特征，复制
+  阶段零 encoder 调用，setup一次真实forward单独记录。旧source全文件SHA/大小/mtime
+  前后不变；当前bridge、部署回执、runtime、采样和完整1288数据身份全部匹配。汇总SHA为
+  `3b5877f181ee8ff9affc17f83c4e037dde36095efa55aaede65e86097202517b`。
+- 四个新run已在node3真实运行：V2 uniform GPU1/guard19272，VJ uniform GPU2/19273，
+  VJ dense GPU3/19275，VJ paired-random GPU4/19307。原VJ paired-random也是外部GPU
+  争用导致原guard中止，保留55完整视频与partial，不冒充健康完成。首批正式复用逐条核对了
+  新resolved SHA、旧index快照和数组来源；VJ learned另在GPU0/guard2795启动。
+- 两节点source训练协调器已恢复（node2 PID100288、node3 PID971），原失败与superseded
+  关系均有回执，node2 GPU3计时预留不变。V2、Time、VMA的fit1288/select161特征均完整；
+  V2的3350 clip工程canary已完成，head目录已建立。该runner在末尾才写history与QA，
+  因而没有head文件不能判定尚未开始训练；完成与否仍只依据最终QA/检查点。
+- 64项UCF官方评测/重复头/缓存评分的两节点真实parser与依赖审查通过，16个seed0
+  controller尚无完整head完成回执。队列暂未启用，等待head读取优化的新冻结源及native
+  验收；没有提前访问模型测试评分。完整视频效率控制也已部署并保持禁用等待依赖。
+- head训练增加仅paper显式开启的pooled序列内存复用。首次仍完整校验FeatureStore SHA
+  和序列，全部成功才缓存，返回独立数组防止后续修改。原通用入口默认关闭，token路径
+  与多worker缓存显式拒绝。两epoch小规模对照的loss、最终参数和logits逐位一致，
+  load_bundle次数从16减为8。包含既有UCF来源/质量导出的联动验证为
+  **72 passed / 199.66秒**，本机Python3.11、Torch2.13.0+cpu；服务器验收待执行。
+  这是训练I/O优化，不计入插件推理收益，也不修改当前运行中的冻结代码。
+
 ## 最新执行回执（UTC 2026-09-18 04 时）
 
 - 正式UCF评测、同seed head重复训练/缓存评分、视频配对质量导出和完整视频detector计时入口

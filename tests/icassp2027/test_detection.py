@@ -124,6 +124,14 @@ def _with_fit_digest(config: DetectionConfig, records: list[VideoManifestRecord]
     return replace(config, declaration=replace(config.declaration, training_identity=training_identity))
 
 
+def test_paper_detector_enables_validated_training_sequence_cache() -> None:
+    fingerprint = compute_encoder_fingerprint({"adapter": "paper-head-cache"})
+    settings = _config(fingerprint, fingerprint).training_config()
+    assert settings.cache_sequences is True
+    assert settings.feature_level == "clip"
+    assert settings.num_workers == 0
+
+
 def _identity(declaration: CompatibilityDeclaration, *, training: bool) -> dict[str, str]:
     representation = (
         declaration.training_representation if training else declaration.evaluation_representation
