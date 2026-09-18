@@ -2,6 +2,36 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+## 最新执行回执（UTC 2026-09-18 05 时）
+
+- **V2 dense 已完成固定20 epoch/1620 steps**，每步梯度非零，两个参数张量变化，
+  snippet/video logits磁盘重载误差均0。最终checkpoint SHA为
+  `cc039fcf673c07b855f19d2c43aff19f5d40e96073f2898b484efaebfa69a717`。
+  全部fit/select/canary与最终controller result完成；这不是官方测试集质量结果。
+- head I/O优化已冻结为`f3f9c9a`并上传新clean checkout。四encoder各自原生CPU环境用真实
+  2视频×32clips、两epoch进行cached/uncached验收，loss/state/logits逐位一致；各模式
+  梯度、更新与重载QA通过，读取128→64，CUDA不可见且未初始化。权威汇总SHA为
+  `2ed1b3189e1623547a8d5393d3daea3699f609bead1509977b76ec23fc3e6c25`。
+- 64项队列在node2/node3实际启用。最初两个V2 repeat/a01因控制参数中的manifest根目录
+  少了`/manifests`而在训练前失败，保留原失败；修正路径后显式登记a02，实际strict loader
+  与双host参数/依赖复验通过。最新coord为node2 PID11612、node3 PID19950。V2 seed1/a02
+  已完成20 epoch/1620非零梯度steps及QA，参数在CPU；seed2/a02顺序接力，尚无完成主张。
+  24组配对质量导出另有等待控制器（node2 PID139208、node3 PID1091），共用每host CPU锁。
+- GPU3正式clip计时已实际运行。V2、Time完成并独立审核了全部1440次正式sample、4608个
+  汇总数值，真实后半6–11层token分别为1568→784、1569→785。纯模型实测加速范围
+  V2 1.265–1.298×、Time 1.297–1.318×；adapter和含解码的clip路径收益较小。
+  V2 B1的三种缩减方法clip端到端均略慢；两模型全部36个非dense配置peak allocated均略增。
+  负结果完整保留。这里不包含MIL head和完整视频聚合，不代替完整detector计时或质量结论。
+- XD测试下载旧PID109671在同一分块两次Timeout后退出，431个已验证分块仍保留；新PID129785
+  复核并续用，未发布完整ZIP。两慢训练卷经独立11项测试及服务器验收后，逐个核owner/argv/FD
+  切换为四路请求，新PID130957/132714；原part分别保留11.616GB/7.116GB，未覆盖或删除。
+  新程序还绑定原CD精确字节SHA，逐成员CRC后才create-only发布。数据仍非ready。
+- XD训练materialization和评测/重复头/质量导出已具备本地实现，真实训练视图仍为
+  830/1598 available，完整167 confirm的最短时长canary规则已预先冻结，当前不选canary。
+  独立审核发现ready manifest与上游receipt缺少内容绑定，以及raw坐标consumer未追查部分
+  探针证据/晚期原文件变化；均已在合成负例复现，正在修正。未生成正式XD head合同、未开始
+  XD训练或模型评分，也不把尚未审核通过的实现当成已完成的第二数据集验证。
+
 ## 最新执行回执（UTC 2026-09-18 05 时前）
 
 - 四条中断运行的真实 native GPU 复用验收全部通过：每项两个完整视频、64条特征，复制
