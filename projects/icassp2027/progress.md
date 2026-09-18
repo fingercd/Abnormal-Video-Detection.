@@ -12,9 +12,9 @@
 
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
-- node3实际快照epoch1789765120：完整fit视频分片为VideoMAEv2 399/1288、
-  TimeSformer 398/1288、VideoMAE 497/1288、V-JEPA 2 299/1288；四条native的owner/argv/startticks
-  均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a02/`。
+- node3实际快照epoch1789765461：完整fit视频分片为VideoMAEv2 408/1288、
+  TimeSformer 401/1288、VideoMAE 497/1288、V-JEPA 2 300/1288；四条native的owner/argv/startticks
+  均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a03/`。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
 - VideoMAEv2、TimeSformer 的 development-select 均已完成 161/161 视频（80正常/81含异常）。
   独立审计逐一验证 65,862 / 131,814 个 blob、数组 SHA/shape/dtype/finite、原生窗口和视频完整覆盖，
@@ -61,6 +61,18 @@
 
 ## 四模型性质观察完成：保留异质性（2026-09-19）
 
+最新推进：已在读取剩余33个confirm的像素、controls与目标统计之前冻结
+[P04四模型独立确认合同](decisions/p04-four-encoder-confirmation-v1.md)及同名JSON，
+JSON SHA `936c5af50864fff0a7b9975d8985fdb626731a87eb2fa8a546cc1cb4699f0210`。
+唯一primary为相对深度.25 block input local cosine，不把coverage_k4增列为第二候选。
+权威元数据证明33=16/17、原confirm角色及与FIT128/两旧64确认池ID互斥；最短485帧，
+264个VJ64/stride2窗口均有效，16个边界clamp、无复用。不把未知来源分组称为近重复已排除。
+四份FIT正常64校准的SHA/normal IDs/采样身份已绑定，root实际重算四native采样digest一致。
+新覆盖门槛为每标签至少12、min-count质量至少10、至少2个完整分层、非singleton分层质量比例至少.8。
+先执行controls-only；任一模型覆盖不足即报告coverage_insufficient，不启动新P04 GPU确认。
+目前仅冻结元数据与规则，尚未执行真实controls或目标观察；预检工具初版发现校准SHA、资源和
+输出绑定不足，保留为未就绪版本，修订与验收通过后才执行。原3个保护文件与旧冻结回执保持原样。
+
 - 当前完整VJ原生run为`code-0192fad/outputs/icassp2027/runs/probe-20260918T163038291972Z-a4fc7f17`，
   805,888条available/12,288条unavailable；分析输出`vjepa2-fit128-video-bootstrap-20260919-a02`。
   原生24 blocks，.25实际b5；全1024条架构记录的真实32×16×16几何、65,536源帧索引和
@@ -84,8 +96,8 @@
   VJ全41个local−nonlocal站点的82行诊断亦保留；root对400/82行点与覆盖的独立重建均通过。
 - [F04完整更新](decisions/findings/F04-early-layer-structure-exploratory.md)保留历史2/3模型原表、
   原F01/F03身份及剩余33个confirm边界；四模型图显示VJ跨0区间，已实际查看并通过独立审查。
-  下一步只评审一个主性质local cosine的独立确认，coverage_k4作相关辅助；当前尚未注册/运行新确认，
-  未读剩余33视频的目标性质或controls，未选择selector/预算或启动LoRA。
+  该FIT阶段结束时尚未注册新确认；随后已完成上述单一local cosine预登记，仍未执行真实confirm
+  controls/目标观察，未选择selector/预算或启动LoRA。
 
 ## VideoMAE完整观察与三模型探索证据（2026-09-19）
 

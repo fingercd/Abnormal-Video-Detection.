@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "decision": "p04_four_encoder_confirmation_v1",
+  "status": "frozen_before_confirm33_controls",
+  "frozen_at_utc": "2026-09-18T21:18:00.452233+00:00",
+  "allow_real_video_controls": true,
+  "scope": {
+    "dataset": "ucf_crime",
+    "official_split": "train",
+    "partition": "confirm",
+    "role": "confirm",
+    "annotation_policy": "W",
+    "official_test_access": false,
+    "method_frozen": false
+  },
+  "candidates": [
+    {
+      "candidate_id": "early_native_local_cosine",
+      "expected_direction": "positive",
+      "property_signature": {
+        "probe_id": "P04",
+        "statistic_name": "same_frame_local_cosine_mean"
+      },
+      "encoder_bindings": [
+        {
+          "encoder_id": "videomaev2",
+          "layer_index": 2,
+          "site": "block.2.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P04",
+          "statistic_name": "same_frame_local_cosine_mean"
+        },
+        {
+          "encoder_id": "timesformer",
+          "layer_index": 2,
+          "site": "block.2.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P04",
+          "statistic_name": "same_frame_local_cosine_mean"
+        },
+        {
+          "encoder_id": "videomae",
+          "layer_index": 2,
+          "site": "block.2.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P04",
+          "statistic_name": "same_frame_local_cosine_mean"
+        },
+        {
+          "encoder_id": "vjepa2",
+          "layer_index": 5,
+          "site": "block.5.input",
+          "sublayer_kind": "input",
+          "head_id": null,
+          "probe_id": "P04",
+          "statistic_name": "same_frame_local_cosine_mean"
+        }
+      ]
+    }
+  ],
+  "relative_depth": 0.25,
+  "block_index_rule": "ceil(relative_depth * block_count) - 1",
+  "block_counts": {
+    "videomaev2": 12,
+    "timesformer": 12,
+    "vjepa2": 24,
+    "videomae": 12
+  },
+  "manifest": {
+    "path": "outputs/icassp2027/assets/p04-four-encoder-confirmation-v1/manifest.jsonl",
+    "sha256": "e5e427eb6864731e869cc3a7899d47a3ccd3913becf241db8bc7711d9e95fb41"
+  },
+  "cohort": {
+    "path": "outputs/icassp2027/assets/p04-four-encoder-confirmation-v1/controls-cohort.jsonl",
+    "sha256": "94b67f9b1ca50dd847d19829997c3409965bc7e717f8c73aea945ff6560f014c"
+  },
+  "probe_cohort": {
+    "path": "outputs/icassp2027/assets/p04-four-encoder-confirmation-v1/probe-cohort.jsonl",
+    "sha256": "1171c108734ffb4033974d4f4e0a0c139b54324ede82d07546e32a65983f30d5"
+  },
+  "dataset_root": "/users/fotile/datasets/UCF-Crime-official-verified",
+  "fit_bindings": {
+    "path": "outputs/icassp2027/assets/p04-four-encoder-confirmation-v1/fit-bindings.json",
+    "sha256": "2e7d2c657848759db8e05810f3505776403cb5ef3ddb39384217290b4a9e0f1e"
+  },
+  "provenance_contract": {
+    "path": "outputs/icassp2027/control/p04-four-confirm-preflight-20260919/remaining33-metadata/authoritative-metadata.json",
+    "sha256": "29d8b361d442b480dc9c8d54e0fbe3947c2d3401355d3b11b1c3b20505a92fae"
+  },
+  "metadata_preflight": {
+    "path": "outputs/icassp2027/control/p04-four-confirm-preflight-20260919/remaining33-metadata/receipt.json",
+    "sha256": "b64e3906c5513224b965f8faceb37e9aa7825e642fa5feec87dfb6b23fad089c"
+  },
+  "fit_preflight": {
+    "path": "outputs/icassp2027/control/p04-four-confirm-preflight-20260919/fit-bindings.json",
+    "sha256": "7be730ba6e139b5d6b51eeeb435c9b8e99198f0267f425d183fbe809cb4c13e5"
+  },
+  "role_lock": {
+    "path": "outputs/icassp2027/assets/frozen192-verified-20260917T200000Z/frozen-partition-lock.json",
+    "sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59"
+  },
+  "original_confirm_manifest": {
+    "path": "outputs/icassp2027/research/official-dense-budget-20260918/inputs/confirm.jsonl",
+    "sha256": "515c044cf94b06970aac91bd1bfb56e159a86cebc4df56a6e4bfa49049628948"
+  },
+  "original_official_training_view": {
+    "contract_path": "/users/fotile/VAD-icassp2027/outputs/icassp2027/control/official-fulltrain-20260918-r01/ucf-view/contract.json",
+    "contract_sha256": "47467e6c88497fbb8f81bc7e2be59cc9e7ed0b6076cdf1548f0e1fe1be5c6998",
+    "training_view": "official-fulltrain-final",
+    "dataset_root": "/users/fotile/datasets/UCF-Crime-official-verified",
+    "manifest_path": "/users/fotile/VAD-icassp2027/outputs/icassp2027/control/official-fulltrain-20260918-r01/ucf-view/official-fulltrain.jsonl",
+    "manifest_sha256": "30878c1a07e07c2be0493f017f40289c4329ec16912fcd640660b5e1988274b5",
+    "manifest_rows": 1610,
+    "inputs": {
+      "role_lock": {
+        "path": "/users/fotile/VAD-icassp2027/outputs/icassp2027/control/official-fulltrain-20260918-r01/ucf-view/sources/role_lock.json",
+        "sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59"
+      },
+      "confirm": {
+        "path": "/users/fotile/VAD-icassp2027/outputs/icassp2027/control/official-fulltrain-20260918-r01/ucf-view/sources/confirm.jsonl",
+        "sha256": "515c044cf94b06970aac91bd1bfb56e159a86cebc4df56a6e4bfa49049628948"
+      }
+    }
+  },
+  "confirmation_videos": {
+    "count": 33,
+    "normal": 16,
+    "positive": 17,
+    "canonical_id_set_sha256": "e71da9d06c5f977f688a37709d5950eeadb0377071fd9342dc733ef255d16b54",
+    "ids": [
+      "Arson040_x264",
+      "Assault013_x264",
+      "Assault028_x264",
+      "Explosion003_x264",
+      "Fighting035_x264",
+      "Normal_Videos020_x264",
+      "Normal_Videos084_x264",
+      "Normal_Videos088_x264",
+      "Normal_Videos125_x264",
+      "Normal_Videos131_x264",
+      "Normal_Videos161_x264",
+      "Normal_Videos179_x264",
+      "Normal_Videos207_x264",
+      "Normal_Videos485_x264",
+      "Normal_Videos505_x264",
+      "Normal_Videos529_x264",
+      "Normal_Videos547_x264",
+      "Normal_Videos584_x264",
+      "Normal_Videos753_x264",
+      "Normal_Videos805_x264",
+      "Normal_Videos917_x264",
+      "RoadAccidents093_x264",
+      "RoadAccidents116_x264",
+      "Robbery030_x264",
+      "Robbery111_x264",
+      "Robbery124_x264",
+      "Shooting003_x264",
+      "Shooting014_x264",
+      "Stealing010_x264",
+      "Stealing032_x264",
+      "Stealing063_x264",
+      "Stealing091_x264",
+      "Stealing109_x264"
+    ],
+    "selection": "all original confirm IDs remaining after F01/F02 and F03 reservations; no result-based sampling"
+  },
+  "sampling": {
+    "kind": "uniform_segment_centers_full_clip",
+    "windows_per_video": 8,
+    "frame_stride": 2,
+    "position": "center"
+  },
+  "native_clip_frames": {
+    "videomaev2": 16,
+    "timesformer": 8,
+    "vjepa2": 64,
+    "videomae": 16
+  },
+  "sampling_short_policy": "strict; all 33 metadata num_frames >=485, native max span127; no padding/stride fallback",
+  "observation": {
+    "depths": [
+      0.25
+    ],
+    "max_tokens": 256,
+    "max_queries": 32,
+    "max_records": 128,
+    "probes": [
+      "P04"
+    ],
+    "primary_site_only_for_decision": true,
+    "identity_method": "identity",
+    "local_pair_definition": "same native t, spatial Manhattan distance1, unique unordered pairs among nonzero sampled patch tokens"
+  },
+  "controls": {
+    "fields": [
+      "motion_bin",
+      "brightness_bin"
+    ],
+    "calibration_source": "frozen per-encoder FIT128 normal64",
+    "refit_on_confirm": false,
+    "third_field_sensitivity": false
+  },
+  "coverage_gate": {
+    "minimum_retained_per_label": 12,
+    "minimum_weight_mass": 10,
+    "minimum_complete_strata": 2,
+    "minimum_nonsingleton_weight_fraction": 0.8
+  },
+  "coverage_failure_action": "report coverage_insufficient; retain all four coverage results; do not launch new P04 GPU confirmation; never change bins, candidate, depth, cohort, gate or estimator based on confirm",
+  "measurement_gate": {
+    "videos_per_encoder": 33,
+    "logical_windows_per_video": 8,
+    "finite_primary_measurements_per_encoder": 264,
+    "observer_and_identity_parity_required": true,
+    "native_geometry_and_source_indices_required": true,
+    "missing_or_failed_action": "measurement_incomplete; never confirm subset"
+  },
+  "analysis": {
+    "phase": "confirm",
+    "analysis_role": "confirm",
+    "data_status": "real_observation",
+    "independent_unit": "video",
+    "clip_aggregation": "equal mean of exactly8 logical windows",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 20260919,
+    "invocation": "one separate analyze_probes.py invocation per encoder, same seed, complete frozen candidate JSON, motion_bin then brightness_bin matching fields",
+    "primary_estimand": "min_count_weighted_mean_delta_positive_minus_normal",
+    "matched_bootstrap_method": "fixed_min_count_video_stratified_v1",
+    "ci": "two_sided_percentile_95",
+    "raw_hedges_g": "companion only; no pass or fallback rule",
+    "category_results": "descriptive only; retain complete analyzer output; no category selection"
+  },
+  "pass_rule": "all four coverage and measurement gates pass, and each primary matched effect>0 and ci_low>0; confirmed_at_frozen_scope only",
+  "negative_rule": "otherwise not_confirmed, measurement_incomplete, or coverage_insufficient as appropriate; zero-crossing CI does not establish equality",
+  "secondary_candidate": null,
+  "source_code": [
+    {
+      "path": "src/vadbench/research/collectors.py",
+      "sha256": "60a2275316d1a0c570b883d6b6f24d59fa1a861e6d84d84b90773d0e5d29326f"
+    },
+    {
+      "path": "src/vadbench/research/controls.py",
+      "sha256": "432342229b0076826971868ac0478ecf51da7c0202a69c577fe7822ecd23af93"
+    },
+    {
+      "path": "src/vadbench/research/contrasts.py",
+      "sha256": "128d17f8d4418cec4c3484c98241b8e69ef34e4bd9c55e775ba91e18833a54b3"
+    },
+    {
+      "path": "src/vadbench/research/cohorts.py",
+      "sha256": "2f648c288fc8afa61f1f4da4f4743274838e28c72971e9d20935e74ff24e1c8b"
+    },
+    {
+      "path": "src/vadbench/paper/stages.py",
+      "sha256": "4e24658df6ac75704e5f74c5246322db78de9b6eeb35aa706844b940e1a3a704"
+    },
+    {
+      "path": "src/vadbench/paper/resolve.py",
+      "sha256": "1bcd71e2f27dd1fdc46c56c3c0ef15498f62a1ce60b1245ceb9f582c237c0c7b"
+    },
+    {
+      "path": "src/vadbench/data/video.py",
+      "sha256": "0ec5ff846f9e36d2aa34d96aae66dcd79352fa7a0edb9420d949410f663a94c0"
+    },
+    {
+      "path": "src/vadbench/data/dense_sampling.py",
+      "sha256": "e9ead5431d60039eb000631bef50bb68c59f1475917a9d1802eaea2a85f727c4"
+    },
+    {
+      "path": "src/vadbench/data/sampling.py",
+      "sha256": "74797b728f4b8e74fddc433a763b354dd251fb6a3992de0965cf879367f9ef91"
+    },
+    {
+      "path": "scripts/icassp2027/analyze_probes.py",
+      "sha256": "f267a5ecede832fce465ade1cafc976961a172d6e07a61a7c58403f5669cd14b"
+    }
+  ],
+  "output_root": "outputs/icassp2027/control/p04-four-encoder-confirmation-v1",
+  "read_boundary_at_freeze": {
+    "remaining33_pixels_read": false,
+    "remaining33_controls_read": false,
+    "remaining33_target_statistics_read": false
+  },
+  "limits": [
+    "same videos across four correlated encoders; not four independent replications or joint95% interval",
+    "source/scene/near-duplicate metadata unknown",
+    "small33 cohort and fixed strata bootstrap; no power guarantee",
+    "video-level weak label not event/patch truth",
+    "confirmation does not establish compressibility, causal mechanism, reducer, or LoRA"
+  ]
+}
