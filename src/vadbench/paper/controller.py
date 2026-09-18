@@ -52,6 +52,7 @@ class DetectionExperimentRequest:
     dense_window_stride: int | None = None
     output_dim: int = 768
     precision: str = "float32"
+    processor_tensor_type: Literal["pt", "np"] | None = None
     seed: int = 0
     epochs: int = 1
     batch_size: int = 2
@@ -79,6 +80,10 @@ class DetectionExperimentRequest:
             raise ValueError("learning_rate must be positive")
         if self.short_policy not in {"strict", "stride1_if_needed"}:
             raise ValueError("short_policy must be 'strict' or 'stride1_if_needed'")
+        if self.processor_tensor_type not in {None, "pt", "np"}:
+            raise ValueError("processor_tensor_type must be pt, np, or null")
+        if self.processor_tensor_type is not None and self.encoder not in {"timesformer", "videomae"}:
+            raise ValueError("processor_tensor_type is only supported by the active Transformers adapters")
 
 
 @dataclass(frozen=True)
@@ -209,6 +214,8 @@ def run_detection_experiment(
             definition = dict(selected["definition"])
             constructor = dict(definition["constructor"])
             constructor["device"] = request.device
+            if request.processor_tensor_type is not None:
+                constructor["processor_tensor_type"] = request.processor_tensor_type
             definition["constructor"] = constructor
             definition["identity"] = encoder_identity(definition, project_root=project.root)
             adapter = ENCODER_REGISTRY.create(request.encoder, **constructor)

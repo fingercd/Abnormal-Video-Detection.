@@ -514,6 +514,7 @@ class TransformersVideoAdapter(VideoEncoderAdapter):
         local_files_only: bool = True,
         trust_remote_code: bool = False,
         processor_kwargs: Mapping[str, Any] | None = None,
+        processor_tensor_type: str = "pt",
         transformers_module: Any | None = None,
         model_loader: Any | None = None,
         processor_loader: Any | None = None,
@@ -538,6 +539,8 @@ class TransformersVideoAdapter(VideoEncoderAdapter):
             raise ValueError("pooling 必须是 mean、auto 或 pooler")
         if not isinstance(preprocess_profile, str) or not preprocess_profile.strip():
             raise ValueError("preprocess_profile 必须是非空字符串")
+        if processor_tensor_type not in ("pt", "np"):
+            raise ValueError("processor_tensor_type 必须是 pt 或 np")
 
         # Fully injected test/worker objects do not need an asset path; in
         # that case ignore a merely informational (possibly remote-looking)
@@ -556,6 +559,7 @@ class TransformersVideoAdapter(VideoEncoderAdapter):
         self.preprocess_profile = preprocess_profile.strip()
         self.processor_kwargs = dict(processor_kwargs or {})
         self.processor_kwargs.pop("return_tensors", None)
+        self.processor_tensor_type = processor_tensor_type
         self.transformers_module = transformers_module
 
         # If a model/processor is injected, no optional package import or file
@@ -623,7 +627,7 @@ class TransformersVideoAdapter(VideoEncoderAdapter):
     def _prepare_inputs(self, batch: ClipBatch) -> tuple[Mapping[str, Any], np.ndarray]:
         videos, lengths = _frame_lists(batch)
         kwargs = dict(self.processor_kwargs)
-        kwargs["return_tensors"] = "pt"
+        kwargs["return_tensors"] = self.processor_tensor_type
         if self.image_size is not None and "size" not in kwargs:
             # Processors differ in whether ``size`` accepts an integer or a
             # dict.  Let an explicit processor config win; only use a square
@@ -636,6 +640,15 @@ class TransformersVideoAdapter(VideoEncoderAdapter):
             inputs = {"pixel_values": processed.pixel_values}
         else:
             inputs = {"pixel_values": processed}
+        if self.processor_tensor_type == "np":
+            # Classic video processors otherwise construct torch tensors from
+            # lists of frame arrays. NumPy batches the same processed pixels
+            # first; from_numpy preserves their dtype/layout without a copy.
+            torch = importlib.import_module("torch")
+            inputs = {
+                key: torch.from_numpy(value) if isinstance(value, np.ndarray) else value
+                for key, value in inputs.items()
+            }
         return _move_to_device(inputs, self.device), lengths
 
     def _forward(self, inputs: Mapping[str, Any], *, train: bool) -> Any:

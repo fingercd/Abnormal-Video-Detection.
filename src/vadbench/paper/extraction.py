@@ -243,6 +243,7 @@ def adapter_runtime_summary(adapter: Any) -> dict[str, Any]:
         "implementation_source",
         "preprocess_profile",
         "pooling",
+        "processor_tensor_type",
         "feature_stage",
         "variant",
         "revision",

@@ -2,8 +2,22 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
-## 最新执行回执（UTC 2026-09-17 23 时）
+## 最新执行回执（UTC 2026-09-18 00 时）
 
+- 四模型pair gate真实RTX4060工程训练已在冻结 `8c35f62` 顺序完成，均exit0。每模型只训练
+  w[D]两步，主干eval/requires_gradFalse且grad全None；identity与zero-gate/mean最大差0，
+  真实磁盘checkpoint回读输出最大差0。V-JEPA2 native mean工程readout与该clip的adapter
+  pooled最大差0，其他三模型直接用actual adapter pooled。它们不是完整校准或检测质量结论。
+  回执：`D:/PythonProject/icassp2027-runs/code-8c35f62/outputs/icassp2027/control/pair-active-local-20260918T000425Z/`。
+- 新pairmean fit26操作在同一A100配置下已运行。首两模型的mean−pairedrandom pooled
+  relativeL2视频均值差：V2 +0.205829 [0.170041,0.243300]，Time +0.024723 [0.006196,0.042251]。
+  因此不把均值冻结为免训练方法，保留其为消融和训练gate的初始状态。候选免训练路线继续
+  采用局部随机单边保留；静态seed版本须按自身身份验证，不能与原逐clip seed pilot混称。
+- 服务器独立micro定位到Time/VMA旧processor将NumPy列表转Torch tensor的CPU成本。
+  同一输入改为processor返回NumPy后from_numpy，像素tensor和pooled逐位相同，batch8构造
+  时间约2.0→0.46秒、3.6→1.2秒。新增显式processor_tensor_type，默认pt保持不变，paper
+  请求可显式np并进入verified constructor；未改resize/normalize、权重或系统环境。
+  相关adapter、controller、extractor和deployment集成52 passed/44.37秒，Ruff通过。
 - node2 重新核验后存在独立空闲 V100，已在不同 UUID 租约启动 V2/TimeSformer/VideoMAE
   完整fit1288/select161的dense基线，冻结 `cd39a5d`，各自独立FeatureStore。64clip实测确认
   batch8/FP32可运行，约0.201/0.653/0.812秒每clip（含读取与adapter，不是纯模型正式计时）。

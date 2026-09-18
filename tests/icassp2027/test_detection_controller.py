@@ -174,7 +174,7 @@ def test_disjoint_rejects_same_source_under_different_video_ids():
         _disjoint([fit], [], [holdout])
 
 
-@pytest.mark.parametrize("encoder", ["videomaev2", "clip"])
+@pytest.mark.parametrize("encoder", ["videomaev2", "timesformer", "videomae", "clip"])
 def test_real_profile_uses_external_assets_and_rejects_inactive(
     tmp_path: Path, monkeypatch, encoder
 ):
@@ -197,8 +197,11 @@ def test_real_profile_uses_external_assets_and_rejects_inactive(
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(repository / name, destination)
     external_weights = tmp_path / "existing-assets" / "verified-v2"
+    configured_encoder = "videomaev2" if encoder == "clip" else encoder
+    frames = 8 if encoder == "timesformer" else 16
+    conversion = "np" if encoder in {"timesformer", "videomae"} else None
     (tmp_path / "projects/icassp2027/assets.local.yaml").write_text(
-        "checkpoint_paths:\n  videomaev2: " + external_weights.as_posix() + "\n",
+        f"checkpoint_paths:\n  {configured_encoder}: " + external_weights.as_posix() + "\n",
         encoding="utf-8",
     )
     train = [_record("a", "train", False), _record("b", "train", True)]
@@ -212,11 +215,14 @@ def test_real_profile_uses_external_assets_and_rejects_inactive(
     def verified_identity(definition, *, project_root):
         assert Path(project_root) == tmp_path
         assert Path(definition["checkpoint"]["local_path"]) == external_weights
+        if conversion is not None:
+            assert definition["constructor"]["processor_tensor_type"] == conversion
         return {
-            "adapter": "videomaev2",
+            "adapter": encoder,
             "constructor": {
                 "model_name": {"checkpoint_sha256": {"toy.bin": "fixture"}},
-                "num_frames": 16,
+                "num_frames": frames,
+                **({"processor_tensor_type": conversion} if conversion is not None else {}),
             },
             "checkpoint": {"id": "toy", "sha256": {"toy.bin": "fixture"}},
             "code": {"source_sha256": "fixture"},
@@ -224,11 +230,14 @@ def test_real_profile_uses_external_assets_and_rejects_inactive(
 
     def create(name, **constructor):
         received.append((name, constructor))
-        assert Path(constructor["model_name"]) == external_weights
+        asset_key = "model_name" if encoder == "videomaev2" else "model_path"
+        assert Path(constructor[asset_key]) == external_weights
         assert constructor["device"] == "cpu"
+        if conversion is not None:
+            assert constructor["processor_tensor_type"] == conversion
         adapter = _Adapter()
         adapter.capabilities = replace(
-            adapter.capabilities, fixed_num_frames=16, min_frames=16, max_frames=16
+            adapter.capabilities, fixed_num_frames=frames, min_frames=frames, max_frames=frames
         )
         return adapter
 
@@ -244,6 +253,7 @@ def test_real_profile_uses_external_assets_and_rejects_inactive(
         evaluation_manifest=str(eval_path),
         output_root=str(tmp_path / "runs"),
         output_dim=4,
+        processor_tensor_type=conversion,
     )
     if encoder == "clip":
         with pytest.raises(ConfigError, match="not active"):

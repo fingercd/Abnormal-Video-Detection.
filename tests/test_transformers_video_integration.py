@@ -76,6 +76,7 @@ def test_adapter_normalizes_bthwc_and_last_hidden_state() -> None:
     output = adapter.encode(_batch(8))
 
     assert adapter.capabilities == DEFAULT_CAPABILITIES
+    assert adapter.processor_tensor_type == "pt"
     assert output.features.shape == (1, 5, 6)
     assert output.pooled.shape == (1, 6)
     np.testing.assert_allclose(output.pooled, output.features.mean(axis=1))
@@ -89,6 +90,7 @@ def test_adapter_normalizes_bthwc_and_last_hidden_state() -> None:
     assert processor.calls[0][1]["return_tensors"] == "pt"
     assert processor.calls[0][1]["size"] == {"height": 224, "width": 224}
     assert model.calls[0]["return_dict"] is True
+    assert isinstance(model.calls[0]["pixel_values"], np.ndarray)
 
 
 def test_videomae_variant_accepts_padded_batched_clip_and_pooling_stage() -> None:
@@ -180,6 +182,107 @@ def test_frame_contract_is_checked_before_processor_call() -> None:
     with pytest.raises(ValueError, match="要求 clip_frames=8"):
         adapter.encode(_batch(4))
     assert processor.calls == []
+
+
+@pytest.mark.parametrize("tensor_type", ["numpy", "torch", "PT", "", None, 1])
+def test_invalid_processor_tensor_type_is_rejected(tensor_type) -> None:
+    with pytest.raises(ValueError, match="processor_tensor_type"):
+        TransformersVideoAdapter(
+            model=object(), processor=object(), processor_tensor_type=tensor_type,
+        )
+
+
+def test_explicit_numpy_processor_output_is_shared_and_moved_to_device(monkeypatch) -> None:
+    torch = pytest.importorskip("torch")
+    pixels = np.arange(24, dtype=np.float32).reshape(1, 2, 3, 2, 2)
+    seen = {}
+
+    def processor(_videos, **kwargs):
+        seen.update(kwargs)
+        return {"pixel_values": pixels}
+
+    adapter = TransformersVideoAdapter(
+        model=_Model(frames=2), processor=processor, device="cpu",
+        processor_tensor_type="np", processor_kwargs={"return_tensors": "pt"},
+    )
+    original_from_numpy = torch.from_numpy
+    converted = []
+
+    def from_numpy(array):
+        tensor = original_from_numpy(array)
+        converted.append((array, tensor))
+        return tensor
+
+    monkeypatch.setattr(torch, "from_numpy", from_numpy)
+    inputs, lengths = adapter._prepare_inputs(_batch(2))
+    assert adapter.processor_tensor_type == seen["return_tensors"] == "np"
+    assert len(converted) == 1 and converted[0][0] is pixels
+    assert inputs["pixel_values"].data_ptr() == converted[0][1].data_ptr()
+    assert inputs["pixel_values"].device.type == "cpu"
+    assert inputs["pixel_values"].dtype == torch.float32
+    np.testing.assert_array_equal(lengths, [2])
+
+
+@pytest.mark.parametrize("variant", ["videomae", "timesformer"])
+@pytest.mark.parametrize("processor_name", ["VideoMAEImageProcessor", "VideoMAEImageProcessorPil"])
+def test_real_processor_numpy_path_is_bitwise_equal_and_constructor_identity_distinct(
+    variant, processor_name,
+) -> None:
+    """Both native model families use VideoMAE's video image processor family."""
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    processor_class = getattr(transformers, processor_name, None)
+    if processor_class is None:
+        pytest.skip(f"{processor_name} is not exported by this Transformers version")
+    from vadbench.paper.extraction import representation_from_verified_encoder
+
+    processor = processor_class(
+        size={"shortest_edge": 16}, crop_size={"height": 16, "width": 16},
+        image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225],
+    )
+    model_config = dict(
+        image_size=16, patch_size=8, num_frames=4, hidden_size=8,
+        num_hidden_layers=1, num_attention_heads=2, intermediate_size=16,
+    )
+    if variant == "videomae":
+        model = transformers.VideoMAEModel(transformers.VideoMAEConfig(**model_config, tubelet_size=2))
+    else:
+        model = transformers.TimesformerModel(transformers.TimesformerConfig(**model_config))
+    adapters = {
+        tensor_type: TransformersVideoAdapter(
+            variant=variant, model=model, processor=processor, clip_frames=4,
+            device="cpu", processor_tensor_type=tensor_type,
+        )
+        for tensor_type in ("pt", "np")
+    }
+    batch = _batch(4, batch_size=2)
+    inputs_pt, lengths_pt = adapters["pt"]._prepare_inputs(batch)
+    inputs_np, lengths_np = adapters["np"]._prepare_inputs(batch)
+    for inputs in (inputs_pt, inputs_np):
+        assert isinstance(inputs["pixel_values"], torch.Tensor)
+        assert inputs["pixel_values"].dtype == torch.float32
+        assert inputs["pixel_values"].shape == (2, 4, 3, 16, 16)
+    assert torch.equal(inputs_np["pixel_values"], inputs_pt["pixel_values"])
+    np.testing.assert_array_equal(lengths_np, lengths_pt)
+    output_pt, output_np = (adapters[k].encode(batch) for k in ("pt", "np"))
+    assert torch.equal(output_np.features, output_pt.features)
+    assert torch.equal(output_np.pooled, output_pt.pooled)
+    np.testing.assert_array_equal(output_np.timeline.source_frame_start, output_pt.timeline.source_frame_start)
+    identities = []
+    for tensor_type, adapter in adapters.items():
+        identities.append(representation_from_verified_encoder(
+            runtime_id=variant, adapter=adapter,
+            verified_encoder_identity={
+                "adapter": variant, "checkpoint": {"sha256": "a" * 64},
+                "constructor": {"variant": variant, "processor_tensor_type": tensor_type},
+            },
+            preprocessing={"profile": adapter.preprocess_profile}, readout={"pooling": "mean"},
+            reducer={"name": "identity"}, output_dim=8, precision="float32",
+            position_strategy={"name": "native"},
+        ))
+    assert identities[0].backbone.weights_digest == identities[1].backbone.weights_digest
+    assert identities[0].backbone.code_digest != identities[1].backbone.code_digest
+    assert identities[0].fingerprint != identities[1].fingerprint
 
 
 def test_real_videomae_processor_accepts_square_override_and_timesformer_224_8_shape():
