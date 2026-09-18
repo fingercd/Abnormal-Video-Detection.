@@ -4,8 +4,8 @@
 
 ## 当前运行快照（本轮接手后的最新状态）
 
-- 八路A100共享dense提取仍运行。最近完整视频分片数为：V2 fit70/select53、Time fit71/select52、
-  VMA fit83/select73、VJ fit60/select26；分母分别1288与161。视频长短不等，这不是计算完成率。
+- 八路A100共享dense提取仍运行。最近完整视频分片数为：V2 fit74/select67、Time fit79/select67、
+  VMA fit83/select74、VJ fit66/select26；分母分别1288与161。视频长短不等，这不是计算完成率。
   完整dense总量2,923,485 clips；本轮UR-DMU开发头尚未开始3000步训练，不能报检测质量。
 - P04已经完整确认且未通过，停止该干预分支。真实结果、10,000次视频级bootstrap与独立点值
   复核见F03；没有据此实现插件或启动LoRA。Time/VJ补齐原128个fit视频的观察已实际入队，
@@ -14,7 +14,7 @@
 - A100 dense-only clip计时的新冻结源`f25d79e`已经安全上传，native CPU验收19项通过。
   唯一独占guard14261等待无其他计算PID且取得lease的卡；未停止现有提取，尚无A100正式数字。
 - XD三尾卷均已CRC解压完成，测试raw800齐备，训练仍有4个原始坏成员。全800坐标审计的
-  最近快照为checked581/passed578/failed3。三项失败的stderr均为精确的QuickTime章节轨缺失
+  最近快照为checked639/passed633/failed6。六项失败的stderr均为精确的QuickTime章节轨缺失
   诊断，视频PTS数量与container帧数一致；不能直接称为视频解码损坏。
 - 已补producer和下游sealed-coordinate consumer的精确metadata诊断分类，只允许已观测的
   那一行且ffprobe exit0，保留stderr/SHA并继续要求完整PTS/24fps/OpenCV解码。其它诊断、
@@ -23,12 +23,14 @@
   CRC、完整FFprobe PTS及OpenCV解码复验（865/962/649帧，24fps，漂移0），未修改视频。
   回执为该工作区`outputs/icassp2027/control/qt-metadata-native-validation-20260918-a02/receipt.json`。
   最初诊断脚本误按archive顺序取index，独立a01失败保留；a02改用正式auditor相同canonical join。
+  新增0598/0599/0600仅已核查旧stderr和PTS/container计数2569/3481/1201一致，尚未完成新规则
+  的OpenCV全解码，不能套用前三项完整复验的通过结论。
   当前9b4e1f2全量审计继续原冻结规则，没有替换其在运行源码或修改旧缓存，完整800尚未封存。
 - 唯一XD复审等待队列PID23888已核实在运行，等待旧审计自然结束；只有终态及全部失败均满足
   已复验的精确QT诊断条件，才会在node2用1b6bd26新目录重审完整800，并检查CPU lease与磁盘。
   不复用或重写旧实现的cache身份；若出现其他错误、身份变化或空间不足则停在needs_review。
 - 旧TopKMIL coordinator已实时确认research_protocol_hold=true、无子进程；未读取任何官方
-  模型测试分数。当前可用磁盘约78.7GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
+  模型测试分数。当前可用磁盘约78.2GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
   可操作性质、同源TF/LoRA和完整detector效率仍未完成，Goal保持active。
 
 ## 本轮继续：观察入队与实测写入开销（2026-09-18）
@@ -51,9 +53,23 @@
   批内重复、后项无效、blob/index失败及跨块失败均不能发布部分video/root；不可达blob保留。
   首轮回归发现恢复路径尚用旧私有接口，已修正；最终提取/恢复/常规store联合81 passed，
   新边界负例加UR-DMU训练/评分43 passed，Ruff、compileall及diff check通过。
-  正在准备新冻结代码的native真实数组重放；现有八路运行仍保持2d9d1a0，未原地换代码。
+  新冻结`030c86f28b37646ded5b81e9ce0a3507a58ec3af`已上传，bundle SHA为
+  `579295746ceca1b2ef4b0ee6efdc16bc1d99a5718443ac0ee5d6df1e3e9d9772`。
+  native同范围114 passed/2 skipped；两个skip是默认位置没有作者源码，显式使用现有固定
+  `URDMU_UPSTREAM_DIR`后单独2 passed，包括真实更新和精确重载，未安装环境或复制外部源码。
+  原生真实64数组按single/batch8/batch8/single交错重放，四次数组及除created_at外全部记录语义一致；
+  源tree SHA前后不变，诊断只写2,397,041 bytes。batch8的旧记录解析从2016降至224、index发布64降至8；
+  wall为single3.220/3.249秒与batch0.830/1.859秒，保留共享CPU波动，不能报为正式端到端加速。
+  回执在`code-030c86f/outputs/icassp2027/control/feature-batch-native-20260918-a01/real-replay/receipt.json`，
+  本地镜像SHA`083a40314dfac824302fef743b9bbf7bffc819c7d24cc481800b125f7ed5605e`。
+  现有八路运行仍保持2d9d1a0，未原地换代码或重启健康提取。
 - 只读审查确认现有resume仅接受同一完整身份的一个来源，不能把健康fit任务直接拆到额外GPU。
   本轮不新建跨store assembler，不把工程子集拼成完整训练，后续释放卡先用于已登记的观察与计时。
+- 四个XD坏源的补充只读检查已有明确结论：官方项目页的AliyunDrive训练分享
+  `https://www.aliyundrive.com/s/6UquaxKpKTm`在真实浏览器显示“文件违规，该文件已禁止访问”，
+  无目录或成员可核验。CUA连接层不可用后，复用本机已安装Kimi WebBridge并只打开本任务标签，
+  未登录、下载、转存或读取凭据；官方OneDrive匿名登录限制及HF镜像缺失结论继续保留。
+  训练四缺口没有被这次可见性检查修复，仍需可访问且可匹配冻结size/CRC的原始副本。
 
 ## 新执行任务接手（2026-09-18）
 
