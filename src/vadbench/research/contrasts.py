@@ -457,6 +457,7 @@ def _weak_video_contrast(
         num_positive_videos=int(len(positive)),
         num_normal_videos=int(len(normal)),
         effect_name="hedges_g_positive_minus_normal",
+        ci_estimand="hedges_g_positive_minus_normal",
         effect=None,
         mean_difference=None,
         positive_raw_mean=None,
@@ -539,23 +540,44 @@ def _matched_control_contrast(
                 unknown_counts[field] += 1
             continue
         groups[values][record["weak_label"]].append(record["video_statistic_value"])
-    complete = [(key, values) for key, values in groups.items() if values.get(0) and values.get(1)]
+    complete = [
+        (key, groups[key])
+        for key in sorted(groups)
+        if groups[key].get(0) and groups[key].get(1)
+    ]
+    one_sided = [
+        values
+        for values in groups.values()
+        if bool(values.get(0)) != bool(values.get(1))
+    ]
+    retained = {label: sum(len(values[label]) for _, values in complete) for label in (0, 1)}
+    mass = {key: min(len(values[0]), len(values[1])) for key, values in complete}
+    total_mass = sum(mass.values())
     row = _base_row(
         signature,
         contrast_id="matched_control",
         group_definition=(
             f"exact {' × '.join(config.matching_fields)} matched control; "
-            "equal weight per complete group"
+            "fixed min(label-count) weight per complete group"
         ),
         stratum="×".join(config.matching_fields),
-        resampling_unit="matched_group",
+        resampling_unit="video_within_matched_group_and_label",
         matching_fields=list(config.matching_fields),
-        num_independent_videos=sum(len(values[0]) + len(values[1]) for _, values in complete),
-        num_positive_videos=sum(len(values[1]) for _, values in complete),
-        num_normal_videos=sum(len(values[0]) for _, values in complete),
+        num_independent_videos=retained[0] + retained[1],
+        num_positive_videos=retained[1],
+        num_normal_videos=retained[0],
         num_matched_groups=len(complete),
         excluded_unknown_nuisance_videos=excluded_unknown,
-        effect_name="matched_group_mean_difference_positive_minus_normal",
+        excluded_one_sided_stratum_videos=sum(
+            len(values[0]) + len(values[1]) for values in one_sided
+        ),
+        matched_bootstrap_method="fixed_min_count_video_stratified_v1",
+        matched_weight_policy="fixed_min_label_count_per_complete_stratum_v1",
+        matched_weight_mass=total_mass,
+        retained_normal_videos=retained[0],
+        retained_positive_videos=retained[1],
+        effect_name="min_count_weighted_mean_delta_positive_minus_normal",
+        ci_estimand="min_count_weighted_mean_delta_positive_minus_normal",
         effect=None,
         mean_difference=None,
         ci_low=None,
@@ -577,22 +599,51 @@ def _matched_control_contrast(
     )
     for field, count in unknown_counts.items():
         row[f"unknown_{field}_videos"] = count
-    if len(complete) < 2:
-        row["reason"] = "至少需要两个完整且非 unknown 的场景×运动匹配组"
+    row["bin_composition"] = [
+        {
+            **dict(zip(config.matching_fields, key, strict=True)),
+            "normal": len(values[0]),
+            "positive": len(values[1]),
+            "included": key in mass,
+            "fixed_weight": mass.get(key, 0) / total_mass if total_mass else 0,
+            "normal_singleton": len(values[0]) == 1,
+            "positive_singleton": len(values[1]) == 1,
+        }
+        for key, values in sorted(groups.items())
+    ]
+    if retained[0] < 2 or retained[1] < 2:
+        row["reason"] = "每个标签至少需要两个保留独立视频，且至少一个完整非 unknown stratum"
         return row
-    differences = np.asarray(
-        [float(np.mean(values[1]) - np.mean(values[0])) for _, values in complete], dtype=float
+    point = sum(
+        mass[key] / total_mass * (float(np.mean(values[1])) - float(np.mean(values[0])))
+        for key, values in complete
     )
-    boot = rng.choice(
-        differences, size=(config.bootstrap_replicates, len(differences)), replace=True
-    ).mean(axis=1)
+    boot = np.zeros(config.bootstrap_replicates, dtype=float)
+    for key, values in complete:
+        normal, positive = np.asarray(sorted(values[0])), np.asarray(sorted(values[1]))
+        weight = mass[key] / total_mass
+        positive_draws = positive[
+            rng.integers(0, len(positive), size=(config.bootstrap_replicates, len(positive)))
+        ].mean(axis=1)
+        normal_draws = normal[
+            rng.integers(0, len(normal), size=(config.bootstrap_replicates, len(normal)))
+        ].mean(axis=1)
+        boot += weight * (positive_draws - normal_draws)
+    if not np.isfinite(boot).all() or np.ptp(boot) == 0:
+        row.update(
+            effect=float(point), mean_difference=float(point),
+            bootstrap_valid_replicates=int(np.isfinite(boot).sum()),
+            bootstrap_attempts=len(boot), status="unavailable",
+            reason="bootstrap_degenerate",
+        )
+        return row
     low, high = _ci(boot.tolist())
     row.update(
-        effect=float(np.mean(differences)),
-        mean_difference=float(np.mean(differences)),
+        effect=float(point),
+        mean_difference=float(point),
         ci_low=low,
         ci_high=high,
-        ci_contains_point_estimate=bool(low <= float(np.mean(differences)) <= high),
+        ci_contains_point_estimate=bool(low <= float(point) <= high),
         bootstrap_valid_replicates=len(boot),
         bootstrap_attempts=len(boot),
         status="available",
@@ -613,6 +664,7 @@ def _empty_unavailable(
         num_positive_videos=0,
         num_normal_videos=0,
         effect_name="hedges_g_positive_minus_normal",
+        ci_estimand="hedges_g_positive_minus_normal",
         effect=None,
         mean_difference=None,
         positive_raw_mean=None,
@@ -817,7 +869,16 @@ def analyze_contrasts(
         "seed": config.seed,
         "resampling": {
             "weak_video": "independent videos resampled separately by weak label",
-            "matched_control": "complete non-unknown matching-field groups resampled",
+            "matched_control": "fixed_min_count_video_stratified_v1; videos resampled within sorted complete strata and label, with fixed min(label-count) weights",
+        },
+        "matched_bootstrap_method": "fixed_min_count_video_stratified_v1",
+        "matched_bootstrap_conditioning": (
+            "fixed complete strata, control-bin boundaries, label-specific video counts and "
+            "min-count weights; clips and strata are not resampled"
+        ),
+        "ci_estimands": {
+            "weak_video": "hedges_g_positive_minus_normal",
+            "matched_control": "min_count_weighted_mean_delta_positive_minus_normal",
         },
         "matching_fields": list(config.matching_fields),
         "matching_unknown_coverage": unknown_coverage,

@@ -2,19 +2,30 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+当前位于`RESEARCH_PLAN_V2.md`的**第2/7步：开发期dense基线、性质证据与方法冻结**。
+第1步四组native工程验收通过；第3步正式完整train三seed、最终TF/LoRA比较及论文结果尚未完成。
+
 ## 当前运行快照（本轮接手后的最新状态）
 
-- 八路A100共享dense提取仍运行。最近完整视频分片数为：V2 fit74/select67、Time fit79/select67、
-  VMA fit83/select74、VJ fit66/select26；分母分别1288与161。视频长短不等，这不是计算完成率。
+- 七路A100共享dense提取继续，GPU6改为Time fit128观察。最近完整视频分片数为：
+  V2 fit83/select70、Time fit83/select72、VMA fit138/select79、VJ fit69/select26；分母分别1288与161。
+  VMA select已在完整视频边界暂停并保留79个完整shard，等待两组主模型观察后恢复原身份的完整select。
+  视频长短不等，这不是计算完成率。旧job receipt仍为运行中，但原guard已cancelled、native PID已退出，
+  不再据该陈旧receipt把VMA select算为存活进程。
   完整dense总量2,923,485 clips；本轮UR-DMU开发头尚未开始3000步训练，不能报检测质量。
 - P04已经完整确认且未通过，停止该干预分支。真实结果、10,000次视频级bootstrap与独立点值
   复核见F03；没有据此实现插件或启动LoRA。Time/VJ补齐原128个fit视频的观察已实际入队，
-  guard13203/13204均为fotile且完整argv匹配，当前等待GPU lease；尚未开始新的GPU观察。
+  Time guard13203已获得GPU6，真实run`probe-20260918T132416783598Z-94424de8`最近92/1024 clips，
+  11/128完整视频；VJ guard13204继续等待lease。只观察进度，没有解释未完成子集。
   最短210帧、两个原生窗口均支持；128个raw SHA均已复算，未消耗新的confirm样本。
-- A100 dense-only clip计时的新冻结源`f25d79e`已经安全上传，native CPU验收19项通过。
-  唯一独占guard14261等待无其他计算PID且取得lease的卡；未停止现有提取，尚无A100正式数字。
+- A100 dense-only clip计时a01独占GPU6启动，UR-DMU的4例GPU operator equivalence先通过，
+  包含D768/D1024及明确synthetic repetition的N1025/Q128，max abs差最高8.94e-08、权重未变。
+  receipt SHA`da27234f2c147253f6d04cda4a676cfd49f18dba963af5bfa7602126e04b889c`；不是质量或速度。
+  随后VideoMAEv2首个Conv3d触发`CUDNN_STATUS_SUBLIBRARY_LOADING_FAILED`，正式样本前失败。
+  新a02 guard28110已排队独占，明确与现有dense提取同样关闭cuDNN/TF32并保持FP32；不重跑已通过
+  的UR operator检查，保留a01失败及独立后端策略回执。仍无完整A100正式效率数字。
 - XD三尾卷均已CRC解压完成，测试raw800齐备，训练仍有4个原始坏成员。全800坐标审计的
-  最近快照为checked639/passed633/failed6。六项失败的stderr均为精确的QuickTime章节轨缺失
+  最近快照为checked704/passed698/failed6。六项失败的stderr均为精确的QuickTime章节轨缺失
   诊断，视频PTS数量与container帧数一致；不能直接称为视频解码损坏。
 - 已补producer和下游sealed-coordinate consumer的精确metadata诊断分类，只允许已观测的
   那一行且ffprobe exit0，保留stderr/SHA并继续要求完整PTS/24fps/OpenCV解码。其它诊断、
@@ -30,8 +41,35 @@
   已复验的精确QT诊断条件，才会在node2用1b6bd26新目录重审完整800，并检查CPU lease与磁盘。
   不复用或重写旧实现的cache身份；若出现其他错误、身份变化或空间不足则停在needs_review。
 - 旧TopKMIL coordinator已实时确认research_protocol_hold=true、无子进程；未读取任何官方
-  模型测试分数。当前可用磁盘约78.2GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
+  模型测试分数。当前可用磁盘约76.8GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
   可操作性质、同源TF/LoRA和完整detector效率仍未完成，Goal保持active。
+
+## 第2步继续：优先性质观察、纠正探索统计（2026-09-18）
+
+- 用户询问阶段、数据、四encoder进度及fit/select、开发头含义，已明确解释当前仍在找可操作性质，
+  并行建立开发期原encoder＋UR-DMU基线；没有最终方法或官方frame质量。fit1288训练/参考拟合，
+  select161开发比较，confirm161独立性质确认；冻结后再联合官方train1610训练正式头。各encoder
+  的UR-DMU独立训练，且同维不代表同特征空间；主direct_insert的各方法共用同encoder/seed的dense头。
+- 为避免两主模型观察再等待全部select提取完成，已在VMA select的`Normal_Videos548_x264`
+  5264个native clips完整发布后，通过原guard cancel让出GPU6，未影响其他7路。暂停前核验guard/native
+  owner、argv、startticks和resolved SHA，保存79个完整视频index的SHA/条数；完整分片不被删除或改写。
+  唯一交接monitor9980位于`code-2d9d1a0/outputs/icassp2027/control/`
+  `research-priority-handoff-20260918-a01`。两组已登记probe guard终态后，将以原2d源码/classic环境、
+  同full-select authority、相同np预处理/微批/采样，通过`resume_source`在新目录恢复全部161视频，
+  未完整的最后视频重新提取，不把旧partial输出当完成。额外复制预算及剩余dense/raw/probe/15GiB
+  余量已实时预检。该调整改变排队优先级，不改变实验身份或方法预算。
+- 对V2既有fit128的全847个一级签名完成只读盘点，v1摘要的CI对象解释不够明确，因此保留v1并写v2：
+  原weak CI是Hedges g，raw delta只是另一个点估计；legacy matched按complete groups等权重抽样，
+  原分析是1000次而非本轮要求的10000次。全量阴性和N/A保留，没有从计数直接推广候选。
+- 新公共matched入口改为`fixed_min_count_video_stratified_v1`：固定完整strata与min(nN,nP)权重，
+  在每个bin×label内按独立video重抽原样本量，point与CI同一估计器；报告unknown/one-sided排除、
+  retained、min-count mass、bin/singleton构成及CI对应量。全退化bootstrap仅保留point和覆盖，CI=null。
+  已有F01/F02/F03确认使用原v3冻结统计，不被本次修改重算或改写；新结果仍是未校正的fit探索。
+  本地contrasts＋controls共25项通过，包含16种联合draw的独立精确枚举CI、相同bin差但bin内有方差、
+  顺序不变性、one-sided/unknown和单bin/退化边界；Ruff、compileall及diff check通过。
+- 用户再次明确要求专责修复XD四坏源，已交给独立agent执行：寻找准确原始副本、最多2GiB新临时
+  下载预算、逐成员size/CRC/SHA及解码验证后输出独立receipt，再由root接正式inventory。
+  不覆盖旧raw/归档，不改变期望CRC，不以重编码或近似剪辑冒充修复，不启动重复writer。
 
 ## 本轮继续：观察入队与实测写入开销（2026-09-18）
 

@@ -3,8 +3,10 @@ from __future__ import annotations
 import csv
 import json
 import runpy
+from itertools import product
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from vadbench.research.contrasts import (
@@ -104,7 +106,8 @@ def test_category_unknown_is_reported_and_matching_excludes_unknown_nuisance():
     matched = next(
         item for item in analysis.contrast_rows if item["contrast_id"] == "matched_control"
     )
-    assert matched["status"] == "available"
+    assert matched["status"] == "unavailable"
+    assert matched["reason"] == "bootstrap_degenerate"
     assert matched["num_matched_groups"] == 2
     assert matched["excluded_unknown_nuisance_videos"] == 2
     assert matched["effect"] == pytest.approx(3.0)
@@ -238,7 +241,8 @@ def test_explicit_motion_brightness_matching_is_not_described_as_scene_control()
     matched = next(
         item for item in analysis.contrast_rows if item["contrast_id"] == "matched_control"
     )
-    assert matched["status"] == "available"
+    assert matched["status"] == "unavailable"
+    assert matched["reason"] == "bootstrap_degenerate"
     assert matched["matching_fields"] == ["motion_bin", "brightness_bin"]
     assert "scene_group" not in matched["group_definition"]
     assert analysis.receipt["matching_fields"] == ["motion_bin", "brightness_bin"]
@@ -246,6 +250,124 @@ def test_explicit_motion_brightness_matching_is_not_described_as_scene_control()
         "unknown_videos": 0,
         "total_videos": 4,
     }
+
+
+def test_matched_uses_fixed_min_count_weights_and_video_resampling():
+    rows = [
+        row("n0", "n0:0", 0, 0, motion="low", brightness="low"),
+        row("p0", "p0:0", 2, 1, motion="low", brightness="low"),
+        row("n1", "n1:0", 0, 0, motion="high", brightness="high"),
+        row("n2", "n2:0", 0, 0, motion="high", brightness="high"),
+        row("n3", "n3:0", 0, 0, motion="high", brightness="high"),
+        row("p1", "p1:0", 10, 1, motion="high", brightness="high"),
+        row("p2", "p2:0", 10, 1, motion="high", brightness="high"),
+    ]
+    analysis = analyze_contrasts(rows, config=ContrastConfig(200, 5, "explore", ("motion_bin", "brightness_bin")))
+    matched = next(item for item in analysis.contrast_rows if item["contrast_id"] == "matched_control")
+    assert matched["mean_difference"] == pytest.approx((2 + 2 * 10) / 3)
+    assert matched["matched_weight_mass"] == 3
+    assert matched["resampling_unit"] == "video_within_matched_group_and_label"
+    assert matched["bootstrap_valid_replicates"] == 200
+
+
+def test_matched_single_bin_with_variance_has_non_degenerate_ci():
+    rows = [
+        row("n0", "n0:0", 0, 0, motion="low", brightness="low"),
+        row("n1", "n1:0", 2, 0, motion="low", brightness="low"),
+        row("p0", "p0:0", 1, 1, motion="low", brightness="low"),
+        row("p1", "p1:0", 5, 1, motion="low", brightness="low"),
+    ]
+    matched = next(item for item in analyze_contrasts(rows, config=ContrastConfig(1000, 4, "explore", ("motion_bin", "brightness_bin"))).contrast_rows if item["contrast_id"] == "matched_control")
+    assert matched["status"] == "available"
+    assert matched["ci_high"] > matched["ci_low"]
+    assert matched["ci_estimand"] == "min_count_weighted_mean_delta_positive_minus_normal"
+
+
+def test_matched_all_singletons_are_explicitly_degenerate():
+    rows = [row("n0", "n0:0", 0, 0, motion="low", brightness="low"), row("p0", "p0:0", 1, 1, motion="low", brightness="low"), row("n1", "n1:0", 2, 0, motion="high", brightness="high"), row("p1", "p1:0", 3, 1, motion="high", brightness="high")]
+    matched = next(item for item in analyze_contrasts(rows, config=ContrastConfig(100, 4, "explore", ("motion_bin", "brightness_bin"))).contrast_rows if item["contrast_id"] == "matched_control")
+    assert matched["status"] == "unavailable"
+    assert matched["reason"] == "bootstrap_degenerate"
+    assert matched["mean_difference"] == pytest.approx(1)
+    assert matched["ci_low"] is None and matched["ci_high"] is None
+    assert matched["ci_estimand"] == "min_count_weighted_mean_delta_positive_minus_normal"
+
+
+def test_matched_single_bin_ci_matches_exact_label_stratified_enumeration():
+    from vadbench.research.contrasts import SIGNATURE_FIELDS, _matched_control_contrast
+
+    rows = [
+        row("n0", "n0:0", 0, 0, motion="low", brightness="low"),
+        row("n1", "n1:0", 2, 0, motion="low", brightness="low"),
+        row("p0", "p0:0", 1, 1, motion="low", brightness="low"),
+        row("p1", "p1:0", 5, 1, motion="low", brightness="low"),
+    ]
+    choices = list(product(range(2), repeat=2))
+    joint = list(product(choices, choices))
+
+    class EnumeratedLabels:
+        calls = 0
+
+        def integers(self, low, high, size):
+            assert (low, high, size) == (0, 2, (16, 2))
+            column = self.calls
+            self.calls += 1
+            return np.asarray([pair[column] for pair in joint])
+
+    rng = EnumeratedLabels()
+    matched = _matched_control_contrast(
+        tuple(rows[0][field] for field in SIGNATURE_FIELDS),
+        [{**item, "video_statistic_value": item["statistic_value"]} for item in rows],
+        config=ContrastConfig(16, 0, "explore", ("motion_bin", "brightness_bin")),
+        rng=rng,
+        selection_source="independent enumeration fixture",
+        confirmation_source=None,
+    )
+    # All 16 equally probable joint draws have delta counts
+    # {-1:1, 0:2, 1:3, 2:4, 3:3, 4:2, 5:1}; linear percentile endpoints follow.
+    assert rng.calls == 2
+    assert matched["status"] == "available"
+    assert matched["effect"] == pytest.approx(2)
+    assert matched["ci_low"] == pytest.approx(-0.625)
+    assert matched["ci_high"] == pytest.approx(4.625)
+
+
+def test_matched_resamples_videos_when_stratum_mean_differences_are_identical():
+    rows = []
+    for group, offset in (("low", 0), ("high", 100)):
+        for index, value in enumerate((0, 10)):
+            rows.append(row(f"n-{group}-{index}", f"n-{group}-{index}:0", offset + value, 0, motion=group, brightness=group))
+            rows.append(row(f"p-{group}-{index}", f"p-{group}-{index}:0", offset + value + 1, 1, motion=group, brightness=group))
+    config = ContrastConfig(1000, 4, "explore", ("motion_bin", "brightness_bin"))
+    result = analyze_contrasts(rows, config=config)
+    matched = next(item for item in result.contrast_rows if item["contrast_id"] == "matched_control")
+    reversed_result = analyze_contrasts(reversed(rows), config=config)
+    reordered = next(item for item in reversed_result.contrast_rows if item["contrast_id"] == "matched_control")
+    assert matched["status"] == "available" and matched["effect"] == pytest.approx(1)
+    assert matched["ci_high"] - matched["ci_low"] > 1
+    assert (matched["ci_low"], matched["ci_high"]) == (reordered["ci_low"], reordered["ci_high"])
+    assert result.receipt["matched_bootstrap_method"] == "fixed_min_count_video_stratified_v1"
+
+
+def test_matched_separates_one_sided_and_unknown_exclusions():
+    rows = [
+        row("n0", "n0:0", 0, 0, motion="low", brightness="low"),
+        row("n1", "n1:0", 2, 0, motion="low", brightness="low"),
+        row("p0", "p0:0", 1, 1, motion="low", brightness="low"),
+        row("p1", "p1:0", 5, 1, motion="low", brightness="low"),
+        row("n2", "n2:0", 100, 0, motion="high", brightness="high"),
+        row("p2", "p2:0", -100, 1, motion=None, brightness="high"),
+    ]
+    result = analyze_contrasts(rows, config=ContrastConfig(100, 4, "explore", ("motion_bin", "brightness_bin")))
+    matched = next(item for item in result.contrast_rows if item["contrast_id"] == "matched_control")
+    assert matched["effect"] == pytest.approx(2)
+    assert matched["num_independent_videos"] == 4
+    assert matched["retained_normal_videos"] == matched["retained_positive_videos"] == 2
+    assert matched["excluded_unknown_nuisance_videos"] == 1
+    assert matched["excluded_one_sided_stratum_videos"] == 1
+    assert matched["matched_weight_mass"] == 2
+    excluded = next(item for item in matched["bin_composition"] if not item["included"])
+    assert excluded["motion_bin"] == "high" and excluded["fixed_weight"] == 0
 
 
 def test_nearly_constant_norm_output_keeps_raw_distribution_and_caution_flag():
