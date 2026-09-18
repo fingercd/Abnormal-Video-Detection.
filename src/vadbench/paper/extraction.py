@@ -718,6 +718,7 @@ def _write_pooled_record(
     encoder_fingerprint: str,
     paper_identity: Mapping[str, str],
     runtime: Mapping[str, Any],
+    runtime_reference: Mapping[str, str],
     source_video: Mapping[str, Any],
     pooled: np.ndarray,
     token_count: int,
@@ -762,7 +763,11 @@ def _write_pooled_record(
             "sampling": sample_metadata | {
                 "kind": "uniform_full" if hasattr(sample, "requested_input_start") else "dense"
             },
-            "runtime": dict(runtime),
+            "runtime": {
+                name: runtime[name]
+                for name in ("runtime_id", "adapter_type", "loaded_library_versions")
+            },
+            "runtime_reference": dict(runtime_reference),
         },
     )
 
@@ -900,6 +905,13 @@ def extract_pooled_features(
             "paper_identity": paper_identity,
         },
     )
+    from vadbench.checkpoints import sha256_file
+
+    runtime_reference = {
+        "base": "extraction_run",
+        "path": "resolved.json",
+        "sha256": sha256_file(run_dir / "resolved.json"),
+    }
     failures: list[dict[str, str]] = []
     shard_dirs: list[Path] = []
     written = 0
@@ -952,6 +964,7 @@ def extract_pooled_features(
                         encoder_fingerprint=encoder_fingerprint,
                         paper_identity=paper_identity,
                         runtime=runtime,
+                        runtime_reference=runtime_reference,
                         source_video={
                             "manifest_path": record.path,
                             "actual_num_frames": info.num_frames,
@@ -984,6 +997,10 @@ def extract_pooled_features(
             failures.append(
                 {"video_id": record.video_id, "type": type(exc).__name__, "message": str(exc)}
             )
+            # This run requires every video. Keep the completed shards for
+            # diagnosis, but do not spend another full dataset on a repeated
+            # model, sampler, or serialization failure.
+            break
     completed = not failures
     feature_root: str | None = None
     if completed:

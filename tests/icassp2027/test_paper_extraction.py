@@ -783,3 +783,62 @@ def test_encode_context_requires_bound_identity_and_actual_suffix(tmp_path: Path
         assert not (Path(result.run_dir) / "index.jsonl").exists()
         assert "suffix token count" in result.failures[0]["message"]
         assert factory.exits == 1 and not hasattr(adapter, "context_tokens")
+
+
+class _LargeRuntimeModel:
+    def __init__(self):
+        self.config = {
+            "id2label": {str(index): f"action-{index}" for index in range(1500)},
+            "label2id": {f"action-{index}": index for index in range(1500)},
+        }
+
+
+def test_large_runtime_config_uses_verified_reference_not_repeated_inline_metadata(tmp_path):
+    from vadbench.checkpoints import sha256_file
+    from vadbench.features import ensure_json_metadata
+
+    records = [_record("video", split="train", anomaly=False)]
+    _touch(tmp_path, records)
+    adapter = _Adapter()
+    adapter.model = _LargeRuntimeModel()
+    representation = _representation(adapter, reducer="identity")
+    sampling = _sampling(records, root=tmp_path, regime="train_32", clips=32)
+    result = extract_pooled_features(
+        _spec(representation, sampling, kind="uniform_full"), adapter=adapter,
+        manifest=records, dataset_root=tmp_path, output_root=tmp_path / "runs",
+        run_id="large-config", backend=_CV2(64),
+    )
+    assert result.completed and result.records_written == 32
+    resolved_path = Path(result.run_dir) / "resolved.json"
+    resolved = json.loads(resolved_path.read_text())
+    assert len(resolved["runtime"]["runtime_configurations"]["model_config"]["id2label"]) == 1500
+    for row in FeatureStore(result.feature_root).records():
+        ensure_json_metadata(row.metadata)
+        assert set(row.metadata["runtime"]) == {"runtime_id", "adapter_type", "loaded_library_versions"}
+        assert row.metadata["runtime_reference"] == {
+            "base": "extraction_run", "path": "resolved.json", "sha256": sha256_file(resolved_path)
+        }
+
+
+def test_extraction_stops_after_first_failure_without_processing_later_videos(tmp_path, monkeypatch):
+    from vadbench.paper import extraction
+
+    records = [_record("first", split="train", anomaly=False), _record("later", split="train", anomaly=True)]
+    _touch(tmp_path, records)
+    adapter = _Adapter()
+    representation = _representation(adapter, reducer="identity")
+    sampling = _sampling(records, root=tmp_path, regime="train_32", clips=32)
+
+    def fail_write(*_args, **_kwargs):
+        raise ValueError("synthetic systemic serializer failure")
+
+    monkeypatch.setattr(extraction, "_write_pooled_record", fail_write)
+    result = extract_pooled_features(
+        _spec(representation, sampling, kind="uniform_full"), adapter=adapter,
+        manifest=records, dataset_root=tmp_path, output_root=tmp_path / "runs",
+        run_id="stop-on-failure", backend=_CV2(64),
+    )
+    assert not result.completed and result.records_written == 0
+    assert len(adapter.seen_batches) == 1
+    assert len(result.failures) == 1 and result.failures[0]["video_id"] == "first"
+    assert not (Path(result.run_dir) / "index.jsonl").exists()

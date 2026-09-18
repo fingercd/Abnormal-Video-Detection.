@@ -10,6 +10,7 @@ passed by these paper entry points.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -20,11 +21,18 @@ from vadbench.checkpoints import sha256_file
 from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.manifest import DatasetSplit, VideoManifestRecord, validate_manifest
 from vadbench.engine.evaluate import UCFEvaluationResult, evaluate_manifest_predictions
+from vadbench.engine.predict import _records as _prediction_records
 from vadbench.engine.predict import predict_feature_head
 from vadbench.engine.runner import HeadOnlyTrainingConfig, TrainingRunResult, train_feature_head
 from vadbench.features import FeatureStore
 
-from .compatibility import CompatibilityDeclaration, feature_cache_key, validate_compatibility
+from .compatibility import (
+    CompatibilityDeclaration,
+    RepresentationIdentity,
+    SamplingIdentity,
+    feature_cache_key,
+    validate_compatibility,
+)
 
 DetectorHead = Literal["topk", "attention"]
 OverlapReduction = Literal["mean", "max"]
@@ -327,7 +335,7 @@ def _verify_feature_identity(
     representation: Any,
     sampling: Any,
 ) -> None:
-    """Require the cache rows to name the reviewed representation and sampler."""
+    """Check row identities and any run-scoped runtime evidence before use."""
 
     store = (
         feature_store if isinstance(feature_store, FeatureStore) else FeatureStore(feature_store)
@@ -345,6 +353,8 @@ def _verify_feature_identity(
         "sampling_fingerprint": sampling.fingerprint,
         "feature_cache_fingerprint": feature_cache_key(representation, sampling),
     }
+    runtime_id = representation.backbone.runtime_id
+    resolved_digest = None
     for item in matching:
         identity = item.metadata.get("paper_identity")
         if not isinstance(identity, Mapping) or dict(identity) != expected:
@@ -352,6 +362,65 @@ def _verify_feature_identity(
                 f"{item.video_id}/{item.clip_id}: FeatureStore paper identity does not match "
                 "the declared representation and sampling"
             )
+        if "runtime_reference" not in item.metadata:
+            continue  # Older inline records retain their existing identity contract.
+        reference = item.metadata["runtime_reference"]
+        if (
+            not isinstance(reference, Mapping)
+            or set(reference) != {"base", "path", "sha256"}
+            or reference["base"] != "extraction_run"
+            or reference["path"] != "resolved.json"
+        ):
+            raise ValueError("runtime_reference must name extraction_run/resolved.json exactly")
+        declared_digest = reference["sha256"]
+        if (
+            not isinstance(declared_digest, str)
+            or len(declared_digest) != 64
+            or any(char not in "0123456789abcdef" for char in declared_digest)
+        ):
+            raise ValueError("runtime_reference.sha256 must be a lowercase SHA-256")
+        if resolved_digest is None:
+            # Only this fixed, run-local file is eligible. Read/hash one byte
+            # snapshot once for all clips, including mixed reference digests.
+            resolved_path = (store.root / "resolved.json").resolve()
+            if resolved_path.parent != store.root:
+                raise ValueError("runtime_reference resolved.json escapes the extraction run")
+            content = resolved_path.read_bytes()
+            resolved_digest = hashlib.sha256(content).hexdigest()
+            if resolved_digest != declared_digest:
+                raise ValueError("runtime_reference SHA-256 differs from resolved.json bytes")
+            resolved = json.loads(content.decode("utf-8"))
+            if not isinstance(resolved, Mapping):
+                raise ValueError("runtime_reference resolved.json must contain an object")
+            spec = resolved.get("spec")
+            runtime = resolved.get("runtime")
+            if not isinstance(spec, Mapping) or not isinstance(runtime, Mapping):
+                raise ValueError("runtime_reference resolved.json lacks extraction spec/runtime")
+            if resolved.get("encoder_fingerprint") != encoder_fingerprint:
+                raise ValueError("runtime_reference resolved encoder fingerprint does not match the rows")
+            if resolved.get("paper_identity") != expected:
+                raise ValueError("runtime_reference resolved paper identity does not match the detector")
+            if spec.get("runtime_id") != runtime_id or runtime.get("runtime_id") != runtime_id:
+                raise ValueError("runtime_reference resolved runtime_id differs from the representation")
+            if (
+                runtime.get("representation_fingerprint") != representation.fingerprint
+                or runtime.get("sampling_fingerprint") != sampling.fingerprint
+            ):
+                raise ValueError("runtime_reference resolved runtime fingerprints do not match the detector")
+            if not isinstance(spec.get("representation"), Mapping) or not isinstance(spec.get("sampling"), Mapping):
+                raise ValueError("runtime_reference resolved spec lacks representation/sampling identities")
+            resolved_representation = RepresentationIdentity.from_mapping(spec["representation"])
+            resolved_sampling = SamplingIdentity.from_mapping(spec["sampling"])
+            if (
+                resolved_representation.fingerprint != representation.fingerprint
+                or resolved_sampling.fingerprint != sampling.fingerprint
+            ):
+                raise ValueError("runtime_reference resolved representation/sampling content does not match the detector")
+        if declared_digest != resolved_digest:
+            raise ValueError("runtime_reference SHA-256 differs from resolved.json bytes")
+        row_runtime = item.metadata.get("runtime")
+        if not isinstance(row_runtime, Mapping) or row_runtime.get("runtime_id") != runtime_id:
+            raise ValueError("runtime_reference row runtime_id differs from the representation")
 
 
 def train_detector(
@@ -451,6 +520,16 @@ def predict_detector(
 ) -> list[Any]:
     """Predict dense features through a bound permit and frame aggregation."""
 
+    if not isinstance(config, DetectionConfig):
+        raise TypeError("config must be a DetectionConfig")
+    evaluation_records = _prediction_records(evaluation_manifest)
+    _verify_feature_identity(
+        feature_store,
+        evaluation_records,
+        encoder_fingerprint=config.evaluation_encoder_fingerprint,
+        representation=config.declaration.evaluation_representation,
+        sampling=config.declaration.evaluation_sampling,
+    )
     permit = issue_prediction_permit(config, training)
     checkpoint_path = (
         training.checkpoint_path if isinstance(training, TrainingRunResult) else training
@@ -458,7 +537,7 @@ def predict_detector(
     return predict_feature_head(
         config.training_config(),
         feature_store,
-        evaluation_manifest,
+        evaluation_records,
         checkpoint_path,
         output_path,
         device=device,

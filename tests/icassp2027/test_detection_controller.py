@@ -334,3 +334,38 @@ def test_reduced_controller_binds_context_across_all_roles(tmp_path, monkeypatch
         assert all(row.metadata["reduction_execution"]["gathered_tokens"] == 1 for row in store.records())
         resolved = json.loads((store.root / "resolved.json").read_text())
         assert resolved["spec"]["representation"]["reducer"]["name"] == reducer
+
+
+@pytest.mark.parametrize("failed_role", ["train", "validation"])
+def test_controller_does_not_advance_after_failed_extraction(tmp_path, monkeypatch, failed_role):
+    from types import SimpleNamespace
+
+    from vadbench.paper import controller
+
+    groups = {"train": [_record("fit-a", "train", False), _record("fit-b", "train", True)],
+              "validation": [_record("select", "val", False)],
+              "evaluation": [_record("canary", "val", True)]}
+    paths = {}
+    for role, records in groups.items():
+        for record in records:
+            (tmp_path / record.path).touch()
+        paths[role] = str(write_manifest_jsonl(records, tmp_path / f"{role}.jsonl"))
+    calls = []
+
+    def extract(_spec, **kwargs):
+        role = kwargs["run_id"]
+        calls.append(role)
+        return SimpleNamespace(completed=role != failed_role, status_path=f"{role}-failed-status")
+
+    monkeypatch.setattr(controller, "extract_pooled_features", extract)
+    identity = {"adapter": "toy", "constructor": {"clip_frames": 4},
+                "checkpoint": {"id": "toy", "sha256": {"toy.bin": "fixture"}}}
+    request = DetectionExperimentRequest(
+        encoder="toy", device="cpu", dataset_root=str(tmp_path),
+        train_manifest=paths["train"], validation_manifest=paths["validation"],
+        evaluation_manifest=paths["evaluation"], output_root=str(tmp_path / "runs"), output_dim=4,
+    )
+    with pytest.raises(RuntimeError, match="feature extraction is incomplete"):
+        run_detection_experiment(request, adapter_factory=lambda _summary: (
+            _Adapter(), {"constructor": {"clip_frames": 4}, "identity": identity}), video_backend=_CV())
+    assert calls == (["train"] if failed_role == "train" else ["train", "validation"])

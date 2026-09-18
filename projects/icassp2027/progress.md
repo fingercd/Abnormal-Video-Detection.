@@ -2,7 +2,27 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
-## 最新执行回执（UTC 2026-09-18 00 时）
+## 最新执行回执（UTC 2026-09-18 01 时）
+
+- TimeSformer `96e4631` np 基线的 train1288、validation161 均因 FeatureStore 单条元数据
+  超过 2048 项上限而写入失败，0 records，未训练成功。完整 runtime 重复嵌入每条记录是
+  原因。已核对 owner/PID/命令树，只停止该 child50907；保留原失败运行及外部停止回执。
+  下方 00 时的“运行中”是此前快照，不代表该基线成功。其余三条基线仍继续。
+- 修复将完整 runtime 保存在每个提取 run 的 `resolved.json`，记录内只保留短摘要及文件 SHA
+  引用。读取时核验引用路径、SHA、实际 representation/sampling 内容和身份，不提高元数据
+  上限，不改变 encoder 数值、采样、语义指纹或冻结预算。每个提取 run 在首个视频失败后停止，
+  controller 在每个角色完成前不会进入下个角色，避免系统性失败继续消耗完整数据集。
+  2026-09-18 本地 `.venv/Scripts/python.exe` 定向综合测试 **61 passed / 85.30 秒**，
+  `compileall src tests`、Ruff、`git diff --check` 通过；真实 GPU 写入/读取验收及新运行待执行。
+- TARGET 原生服务器校准的 V2、Time、VMA 均完成 768 steps，各自三种 reducer 的 B1/B2/
+  重复 B2、真实后续层长度、context 清理及 dense 恢复检查通过；V-JEPA2 仍进行中。
+  本机校准仅作复现，不能替代 TARGET 权重或根据质量择优挑运行。
+- XD 在方法和预算冻结后完成 dataset-only 标签投影审计：预登记的 10 个不同变换中，唯一
+  全部 800 个 feature-grid slice 匹配的是 0-based 半开区间、起点0、裁到 `[0,16T_i)`。
+  独立实现复核一致。原视频 N/FPS/PTS 与预登记 suffix 族仍待完整 test 原视频，raw mapping
+  保持未通过；未读取模型预测或性能分数。
+
+## 此前执行回执（UTC 2026-09-18 00 时）
 
 - 4条完整dense基线实际运行：V2在node2 GPU3、TimeSformer新版np在node2 GPU1、VideoMAE
   新版np在node2 GPU7、V-JEPA2在node3 GPU3。新np开关在真实GPU完成8批B8的像素/pooled

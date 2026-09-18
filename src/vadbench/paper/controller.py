@@ -346,6 +346,8 @@ def run_detection_experiment(
             backend=video_backend,
             encode_context_factory=reduction_factory,
         )
+        if not train_features.completed:
+            raise RuntimeError(f"training feature extraction is incomplete: {train_features.status_path}")
         validation_features = (
             None
             if not validation
@@ -370,6 +372,8 @@ def run_detection_experiment(
                 encode_context_factory=reduction_factory,
             )
         )
+        if validation_features is not None and not validation_features.completed:
+            raise RuntimeError(f"validation feature extraction is incomplete: {validation_features.status_path}")
         evaluation_features = extract_pooled_features(
             PooledExtractionSpec(
                 runtime_id=request.encoder,
@@ -390,11 +394,7 @@ def run_detection_experiment(
             backend=video_backend,
             encode_context_factory=reduction_factory,
         )
-        if (
-            not train_features.completed
-            or not evaluation_features.completed
-            or (validation_features is not None and not validation_features.completed)
-        ):
+        if not evaluation_features.completed:
             raise RuntimeError(
                 "feature extraction is incomplete; final FeatureStore index was not published"
             )
