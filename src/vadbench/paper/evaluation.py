@@ -508,6 +508,28 @@ def load_frozen_detector_source(
     head_data_contract_path: str | Path | None = None,
     source_manifest_root: str | Path | None = None,
 ) -> FrozenDetectorSource:
+    """Load a UCF source with the original independently sealed UCF role contract."""
+    return _load_frozen_detector_source(
+        path,
+        freeze=freeze,
+        expected_encoder=expected_encoder,
+        role_lock_path=role_lock_path,
+        head_data_contract_path=head_data_contract_path,
+        source_manifest_root=source_manifest_root,
+        verify_training_roles=_verify_frozen_training_roles,
+    )
+
+
+def _load_frozen_detector_source(
+    path: str | Path,
+    *,
+    freeze: Mapping[str, Any],
+    expected_encoder: str,
+    role_lock_path: str | Path | None,
+    head_data_contract_path: str | Path | None,
+    source_manifest_root: str | Path | None,
+    verify_training_roles: Callable[..., Any],
+) -> FrozenDetectorSource:
     root = Path(path).expanduser().resolve()
     stage, stage_path = _stage_config(root)
     if stage.get("encoder") != expected_encoder:
@@ -542,7 +564,7 @@ def load_frozen_detector_source(
         head_contract,
         head_contract_sha,
         source_manifest_hashes,
-    ) = _verify_frozen_training_roles(
+    ) = verify_training_roles(
         train_manifest=train_manifest,
         validation_manifest=validation_manifest if validation_manifest.exists() else None,
         role_lock_path=role_lock_path,
@@ -956,18 +978,54 @@ def run_frozen_ucf_evaluation(
     manifest = load_manifest_jsonl(test_manifest)
     if not manifest or any(item.split != DatasetSplit.TEST for item in manifest):
         raise ValueError("official UCF evaluation manifest must contain only test records")
+    return _run_frozen_evaluation(
+        request,
+        freeze=freeze,
+        freeze_sha=freeze_sha,
+        test_manifest=test_manifest,
+        audit_report=audit_report,
+        manifest=manifest,
+        source_loader=load_frozen_detector_source,
+        score=lambda records: evaluate_detector(
+            records, test_manifest, protocol="official", audit_report=audit_report
+        ).to_dict(),
+        protocol="ucf-official-frozen-v1",
+        stage_name="frozen_ucf_evaluation",
+        adapter_factory=adapter_factory,
+        video_backend=video_backend,
+    )
+
+
+def _run_frozen_evaluation(
+    request: FrozenEvaluationRequest,
+    *,
+    freeze: Mapping[str, Any],
+    freeze_sha: str,
+    test_manifest: Path,
+    audit_report: Path,
+    manifest: tuple[VideoManifestRecord, ...],
+    source_loader: Callable[..., FrozenDetectorSource],
+    score: Callable[[Any], Mapping[str, Any]],
+    protocol: str,
+    stage_name: str,
+    adapter_factory: Callable[..., Any] | None,
+    video_backend: Any | None,
+    extra_inputs: Mapping[str, Any] | None = None,
+    validate_extraction: Callable[[Mapping[str, Any]], None] | None = None,
+) -> FrozenEvaluationResult:
+    """Shared extraction/permit path; dataset gates run before entering here."""
     source_kwargs = {
         "role_lock_path": request.role_lock_path,
         "head_data_contract_path": request.head_data_contract_path,
         "source_manifest_root": request.source_manifest_root,
     }
-    method = load_frozen_detector_source(
+    method = source_loader(
         request.method_source_run, freeze=freeze, expected_encoder=request.encoder, **source_kwargs
     )
     dense = (
         None
         if request.dense_source_run is None
-        else load_frozen_detector_source(
+        else source_loader(
             request.dense_source_run,
             freeze=freeze,
             expected_encoder=request.encoder,
@@ -994,7 +1052,7 @@ def run_frozen_ucf_evaluation(
         raise ValueError("calibration_run is only permitted for the pair_linear frozen reducer")
     root = Path(request.dataset_root).expanduser().resolve()
     run_dir = Path(request.output_root).expanduser().resolve() / (
-        request.run_id or new_run_id("frozen-ucf-evaluation")
+        request.run_id or new_run_id(stage_name.replace("_", "-"))
     )
     if run_dir.exists():
         raise FileExistsError(f"official evaluation run already exists: {run_dir}")
@@ -1007,6 +1065,7 @@ def run_frozen_ucf_evaluation(
         "head_data_contract": method.head_data_contract_path,
         "method_checkpoint": method.checkpoint,
         "dense_checkpoint": None if dense is None else dense.checkpoint,
+        **(extra_inputs or {}),
     }
     if resume_source is not None and resume_resolved is not None:
         inputs["resume_source_evaluation_run"] = (
@@ -1015,7 +1074,7 @@ def run_frozen_ucf_evaluation(
         inputs["resume_source_test_resolved"] = resume_resolved
     with record_stage(
         run_dir,
-        "frozen_ucf_evaluation",
+        stage_name,
         config=request.__dict__,
         inputs=inputs,
         project_root=Path.cwd(),
@@ -1131,6 +1190,13 @@ def run_frozen_ucf_evaluation(
             raise RuntimeError(
                 "official test FeatureStore was not completely extracted and published"
             )
+        if validate_extraction is not None:
+            validate_extraction(
+                _json(
+                    Path(extraction.feature_root) / "resolved.json",
+                    name="completed test extraction resolution",
+                )
+            )
         coverage = _coverage(
             manifest, Path(extraction.feature_root), extraction.encoder_fingerprint
         )
@@ -1154,11 +1220,9 @@ def run_frozen_ucf_evaluation(
             output_path=primary_path,
             device=request.device,
         )
-        primary_metrics = evaluate_detector(
-            primary_records, test_manifest, protocol="official", audit_report=audit_report
-        )
+        primary_metrics = score(primary_records)
         primary_metrics_path = run_dir / "metrics-primary-refit-head.json"
-        atomic_write_json(primary_metrics_path, primary_metrics.to_dict())
+        atomic_write_json(primary_metrics_path, primary_metrics)
         secondary_path = secondary_metrics_path = None
         if dense is not None:
             dense.verify_unchanged()
@@ -1177,11 +1241,9 @@ def run_frozen_ucf_evaluation(
                 output_path=secondary_path,
                 device=request.device,
             )
-            secondary_metrics = evaluate_detector(
-                secondary_records, test_manifest, protocol="official", audit_report=audit_report
-            )
+            secondary_metrics = score(secondary_records)
             secondary_metrics_path = run_dir / "metrics-secondary-dense-head-direct-insert.json"
-            atomic_write_json(secondary_metrics_path, secondary_metrics.to_dict())
+            atomic_write_json(secondary_metrics_path, secondary_metrics)
         artifacts = {
             "test_feature_store": {
                 "root": str(extraction.feature_root),
@@ -1255,7 +1317,7 @@ def run_frozen_ucf_evaluation(
             {
                 "schema_version": 1,
                 "status": "completed",
-                "protocol": "ucf-official-frozen-v1",
+                "protocol": protocol,
                 "resolved": {
                     "path": str(resolved_path),
                     "sha256": _digest(resolved_path, name="official evaluation resolved receipt"),

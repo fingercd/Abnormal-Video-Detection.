@@ -141,8 +141,8 @@ def _feature_store_root(root, resolved, sources, visited=None):
     return feature_root
 
 
-def _feature_contract(root, entry, resolved, manifest, sources):
-    feature_root = _feature_store_root(root, resolved, sources)
+def _feature_contract(root, entry, resolved, manifest, sources, *, expected_video_count=290, feature_root_loader=None):
+    feature_root = (feature_root_loader or _feature_store_root)(root, resolved, sources)
     document = _bound_json(entry["resolved"], feature_root / "resolved.json", sources)
     status = _bound_json(entry["status"], feature_root / "status.json", sources)
     fingerprint = resolved["evaluation_encoder_fingerprint"]
@@ -164,7 +164,7 @@ def _feature_contract(root, entry, resolved, manifest, sources):
     _require(evidence["source_digest"] == compute_encoder_fingerprint({"canonical_manifest": evidence["canonical_manifest_sha256"], "video_contents": evidence["videos"]}), "test data-content digest is not self-consistent")
     by_video = {r.video_id: r for r in manifest}
     contents = {r["video_id"]: r for r in evidence["videos"]}
-    _require(set(contents) == set(by_video) and len(evidence["videos"]) == 290, "test video content evidence does not cover the sealed cohort")
+    _require(set(contents) == set(by_video) and len(evidence["videos"]) == expected_video_count, "test video content evidence does not cover the sealed cohort")
     index_path = _bound_path(entry["index"], feature_root / "index.jsonl")
     index_digest, windows_digest = hashlib.sha256(), hashlib.sha256()
     keys = set()
@@ -207,8 +207,8 @@ def _feature_contract(root, entry, resolved, manifest, sources):
             windows_digest.update(b"\n")
     _require(index_digest.hexdigest() == entry["index"]["sha256"], "test FeatureStore index SHA mismatch")
     sources[str(index_path)] = index_digest.hexdigest()
-    _require(len(keys) == status["records_written_to_shards"] == expected_window_count and len(videos) == 290, "test FeatureStore does not contain every frozen sampler window")
-    _require(resolved["coverage"].get("input_union_complete") is True and resolved["coverage"].get("videos") == 290, "original dense input windows did not cover every video")
+    _require(len(keys) == status["records_written_to_shards"] == expected_window_count and len(videos) == expected_video_count, "test FeatureStore does not contain every frozen sampler window")
+    _require(resolved["coverage"].get("input_union_complete") is True and resolved["coverage"].get("videos") == expected_video_count, "original dense input windows did not cover every video")
     runtime.pop("representation_fingerprint")  # reducer differences are compared explicitly
     return representation, sampling, runtime, windows_digest.hexdigest(), document["data_content_evidence"], videos
 
