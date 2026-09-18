@@ -72,6 +72,35 @@ def test_ffprobe44_packet_pts_is_an_explicit_presentation_timestamp_field():
         audit.validate_timing(document, _opencv(4))
 
 
+def test_exact_qt_chapter_diagnostic_is_metadata_only():
+    stderr = (
+        b"[mov,mp4,m4a,3gp,3g2,mj2 @ 0x7fd60e013700] "
+        b"Referenced QT chapter track not found\n"
+    )
+    assert audit._accepted_ffprobe_stderr(0, stderr) == "metadata_only_qt_chapter_track_missing"
+    assert audit.validate_timing(_timing(4), _opencv(4))["num_frames"] == 4
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        b"[mov,mp4,m4a,3gp,3g2,mj2 @ 0x7fd60e013700] Referenced QT chapter track not found\n"
+        b"decode error\n",
+        b"unknown container diagnostic\n",
+    ],
+)
+def test_ffprobe_stderr_diagnostics_other_than_exact_chapter_message_are_rejected(stderr):
+    assert audit._accepted_ffprobe_stderr(0, stderr) is None
+
+
+def test_qt_chapter_diagnostic_with_nonzero_ffprobe_exit_is_rejected():
+    stderr = (
+        b"[mov,mp4,m4a,3gp,3g2,mj2 @ 0x7fd60e013700] "
+        b"Referenced QT chapter track not found\n"
+    )
+    assert audit._accepted_ffprobe_stderr(1, stderr) is None
+
+
 def test_quantized_cfr_uses_only_preregistered_one_tick_tolerance():
     pts = [round(i * 12800 / 24) for i in range(12)]
     timing = audit.validate_timing(_timing(12, pts=pts, time_base="1/12800"), _opencv(12))

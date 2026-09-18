@@ -245,9 +245,18 @@ def verify_raw_coordinates(request: FrozenXDEvaluationRequest) -> SealedXDCoordi
         for name, digest in artifacts.items():
             path = _bound(probe_path.parent / name, digest, "XD timing observation")
             hashes[path] = digest
-        if (probe_path.parent / "ffprobe.stderr.txt").read_bytes().strip():
+        stderr = (probe_path.parent / "ffprobe.stderr.txt").read_bytes()
+        from vadbench.research.xd_raw_alignment import _accepted_ffprobe_stderr, validate_timing
+
+        stderr_classification = _accepted_ffprobe_stderr(0, stderr)
+        if stderr_classification is None:
             raise ValueError("XD timing probe contains FFprobe decode errors")
-        from vadbench.research.xd_raw_alignment import validate_timing
+        declared_classification = probe.get("ffprobe_stderr_classification")
+        if stderr_classification == "none":
+            if declared_classification not in (None, "none"):
+                raise ValueError("XD timing probe stderr classification differs from its artifact")
+        elif declared_classification != stderr_classification:
+            raise ValueError("XD timing probe stderr classification differs from its artifact")
 
         computed = validate_timing(
             shared._json(probe_path.parent / "ffprobe.json", name="XD full frame PTS"),

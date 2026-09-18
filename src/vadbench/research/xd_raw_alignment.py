@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -186,6 +187,8 @@ def _preregister(request: RawAlignmentRequest) -> tuple[Path, dict[str, Any]]:
         "raw_timing_rule": {
             "fps": 24,
             "ffprobe_counts_equal_container_and_opencv": True,
+            "ffprobe_exit_code": 0,
+            "ffprobe_stderr_policy": "empty or exact metadata-only QT chapter-track diagnostic; every other diagnostic rejected and original stderr retained",
             "full_frame_pts_required": True,
             "pts_field_rule": "frame.pts or historical frame.pkt_pts, one complete field for all frames; never DTS; match best_effort_timestamp",
             "pts_strictly_increasing": True,
@@ -431,6 +434,23 @@ def _runtime(ffprobe: str) -> dict[str, Any]:
     }
 
 
+_QT_CHAPTER_TRACK_DIAGNOSTIC = re.compile(
+    rb"\[mov,mp4,m4a,3gp,3g2,mj2 @ 0x[0-9A-Fa-f]+\] "
+    rb"Referenced QT chapter track not found\r?\n?"
+)
+
+
+def _accepted_ffprobe_stderr(returncode: int, stderr: bytes) -> str | None:
+    """Classify the sole observed metadata-only ffprobe diagnostic exactly."""
+    if returncode != 0:
+        return None
+    if not stderr:
+        return "none"
+    if _QT_CHAPTER_TRACK_DIAGNOSTIC.fullmatch(stderr) is not None:
+        return "metadata_only_qt_chapter_track_missing"
+    return None
+
+
 def probe_raw_video(path: Path, directory: Path, runtime: Mapping[str, Any]) -> dict[str, Any]:
     """Decode every frame twice, once for ffprobe PTS and once with evaluator OpenCV."""
     import cv2
@@ -455,7 +475,10 @@ def probe_raw_video(path: Path, directory: Path, runtime: Mapping[str, Any]) -> 
     process = subprocess.run(command, capture_output=True, timeout=3600)
     (directory / "ffprobe.json").write_bytes(process.stdout)
     (directory / "ffprobe.stderr.txt").write_bytes(process.stderr)
-    _require(process.returncode == 0 and not process.stderr.strip(), "FFPROBE_DECODE_ERROR")
+    _require(
+        _accepted_ffprobe_stderr(process.returncode, process.stderr) is not None,
+        "FFPROBE_DECODE_ERROR",
+    )
     try:
         document = json.loads(process.stdout)
     except json.JSONDecodeError:
@@ -727,10 +750,9 @@ def run_raw_alignment_audit(
                     timing = validate_timing(
                         _json(directory / "ffprobe.json"), _json(directory / "opencv.json")
                     )
-                _require(
-                    not (directory / "ffprobe.stderr.txt").read_bytes().strip(),
-                    "FFPROBE_DECODE_ERROR",
-                )
+                stderr = (directory / "ffprobe.stderr.txt").read_bytes()
+                stderr_classification = _accepted_ffprobe_stderr(0, stderr)
+                _require(stderr_classification is not None, "FFPROBE_DECODE_ERROR")
                 after = path.stat()
                 _require(
                     (before.st_size, before.st_mtime_ns) == (after.st_size, after.st_mtime_ns),
@@ -755,6 +777,7 @@ def run_raw_alignment_audit(
                     "cache_identity": cache_identity,
                     "probe_origin": origin,
                     "artifact_sha256": artifact_hashes,
+                    "ffprobe_stderr_classification": stderr_classification,
                     "status": "passed",
                 }
                 _write_once(directory / "receipt.json", record)

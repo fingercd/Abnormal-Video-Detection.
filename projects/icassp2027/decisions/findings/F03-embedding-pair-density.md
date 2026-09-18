@@ -1,10 +1,10 @@
-# F03｜embedding 全采样 token 对高余弦密度未通过独立确认
+# F03｜Embedding 层采样 token 对的高相似比例未通过确认
 
 状态：`rejected_or_inconclusive`。这表示预登记的 VideoMAEv2 模型内正向确认门槛未通过，
 **不是**证明效应为零或两个视频组等价；P04 token 操作停止，不把它作为 LoRA、局部合并或其他插件的依据。
 
 研究问题是：在 VideoMAEv2 的 `embedding.output`，含异常训练视频是否具有更高的高相似
-token 对密度。精确定义为：collector 固定时空采样的非零 token 中，全部非对角 token 对的
+token 对比例。精确定义为：collector 固定时空采样的至多256个非零 token 中，全部非对角 token 对的
 余弦相似度不低于 0.90 的比例。它不是冗余 token 的比例、局部邻接相似度，也不表示局部
 token 可以安全合并。
 
@@ -20,7 +20,8 @@ token 可以安全合并。
 | 原始 Hedges g | 32 / 32 | +0.0630 | [−0.437, +0.537] | 效应方向不稳定 |
 | motion×brightness matched | 32 正常 / 29 正视频 | −0.0036728 | [−0.037680, +0.033041] | 条件比较反向且区间跨 0 |
 
-matched 使用 fit-normal 冻结的 tercile 阈值；8 个完整 bin 的固定权重质量为 23。一个
+matched 使用 fit-normal 冻结的三分位阈值；8 个完整 bin 按两组中较小的样本数确定固定权重，
+这些较小样本数合计为23。一个
 `low×mid` bin 没有正常视频，因此 3 个正视频未进入 matched 比较；覆盖仍达到预登记的每标签
 至少 16 个视频门槛。它不授权重新拟合阈值、替换层、阈值、统计量或样本。
 

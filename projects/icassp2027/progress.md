@@ -2,6 +2,27 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+## 当前运行快照（本轮接手后的最新状态）
+
+- 八路A100共享dense提取仍运行。最近完整视频分片数为：V2 fit38/select26、Time fit40/select26、
+  VMA fit55/select26、VJ fit30/select12；分母分别1288与161。视频长短不等，这不是计算完成率。
+  完整dense总量2,923,485 clips；本轮UR-DMU开发头尚未开始3000步训练，不能报检测质量。
+- P04已经完整确认且未通过，停止该干预分支。真实结果、10,000次视频级bootstrap与独立点值
+  复核见F03；没有据此实现插件或启动LoRA。Time/VJ补齐原128个fit视频的观察输入已准备，
+  最短210帧、两个原生窗口均支持；未消耗新的confirm样本。
+- A100 dense-only clip计时的新冻结源`f25d79e`已经安全上传，native CPU验收19项通过。
+  唯一独占guard14261等待无其他计算PID且取得lease的卡；未停止现有提取，尚无A100正式数字。
+- XD三尾卷均已CRC解压完成，测试raw800齐备，训练仍有4个原始坏成员。全800坐标审计的
+  最近快照为checked273/passed270/failed3。三项失败的stderr均为精确的QuickTime章节轨缺失
+  诊断，视频PTS数量与container帧数一致；不能直接称为视频解码损坏。
+- 已补producer和下游sealed-coordinate consumer的精确metadata诊断分类，只允许已观测的
+  那一行且ffprobe exit0，保留stderr/SHA并继续要求完整PTS/24fps/OpenCV解码。其它诊断、
+  混入decode error或分类篡改均拒绝。本地联合65 passed/1 skipped（无ffprobe），Ruff与
+  compileall通过。当前9b4e1f2审计继续原冻结规则，新分类尚未替换其在运行源码或旧缓存。
+- 旧TopKMIL coordinator已实时确认research_protocol_hold=true、无子进程；未读取任何官方
+  模型测试分数。当前可用磁盘约83.9GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
+  可操作性质、同源TF/LoRA和完整detector效率仍未完成，Goal保持active。
+
 ## 新执行任务接手（2026-09-18）
 
 - 用户选择的现有目录方案已生效：在 `D:/PythonProject/VAD` 接续

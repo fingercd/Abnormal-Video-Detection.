@@ -73,6 +73,75 @@ def _reseal(request, receipt):
     return replace(request, raw_coordinate_receipt_sha256=_sha(request.audit_report))
 
 
+def _metadata_only_sealed(case, monkeypatch):
+    """Produce a real dataset-only seal carrying the exact accepted diagnostic."""
+    from vadbench.research import xd_raw_alignment as producer
+
+    preparation, _, _ = case
+    diagnostic = (
+        b"[mov,mp4,m4a,3gp,3g2,mj2 @ 0x7fd60e013700] "
+        b"Referenced QT chapter track not found\n"
+    )
+
+    def probe(path, directory, runtime):
+        directory.mkdir(parents=True)
+        _write(directory / "ffprobe.json", _timing(35))
+        _write(directory / "opencv.json", _opencv(35))
+        (directory / "ffprobe.stderr.txt").write_bytes(diagnostic)
+
+    result = producer.run_raw_alignment_audit(
+        preparation, probe=probe, runtime_factory=lambda _: {}
+    )
+    assert result["status"] == "sealed"
+    root = Path(result["run_dir"])
+    for name, value in (
+        ("CANONICAL_METADATA_SHA256", producer.CANONICAL_SHA),
+        ("GT_FILE_SHA256", producer.GT_SHA),
+        ("OFFICIAL_VIDEO_COUNT", 2),
+        ("OFFICIAL_GT_LENGTH", 64),
+    ):
+        monkeypatch.setattr(xd, name, value)
+    request = xd.FrozenXDEvaluationRequest(
+        encoder="videomaev2",
+        device="cpu",
+        dataset_root=preparation.raw_root,
+        test_manifest=str(root / "private/test.jsonl"),
+        audit_report=result["seal"]["path"],
+        method_source_run=str(root / "unused-source"),
+        output_root=str(root / "evaluation"),
+        canonical_metadata=preparation.canonical_metadata,
+        ground_truth=str(Path(preparation.prior_alignment_root) / "sealed-inputs/gt.npy"),
+        raw_coordinate_receipt_sha256=result["seal"]["sha256"],
+        head_data_contract_sha256="a" * 64,
+        original_role_lock_path=str(root / "unused-lock"),
+    )
+    return request, json.loads(Path(request.audit_report).read_text(encoding="utf8")), root
+
+
+def test_sealed_metadata_only_ffprobe_diagnostic_round_trips_to_coordinate_consumer(
+    pipeline, monkeypatch  # noqa: F811 - imported pytest fixture is injected by name
+):
+    request, _, root = _metadata_only_sealed(pipeline, monkeypatch)
+    probe = json.loads((root / "private/probes/0000/receipt.json").read_text(encoding="utf8"))
+    assert probe["ffprobe_stderr_classification"] == "metadata_only_qt_chapter_track_missing"
+    assert len(xd.verify_raw_coordinates(request).manifest) == 2
+
+
+def test_sealed_metadata_diagnostic_rejects_tampered_receipt_classification(pipeline, monkeypatch):  # noqa: F811
+    request, receipt, root = _metadata_only_sealed(pipeline, monkeypatch)
+    probe_path = root / "private/probes/0000/receipt.json"
+    probe = json.loads(probe_path.read_text(encoding="utf8"))
+    probe["ffprobe_stderr_classification"] = "none"
+    _write(probe_path, probe)
+    timing_path = root / "audits/raw_timing.json"
+    timing = json.loads(timing_path.read_text(encoding="utf8"))
+    timing["probe_receipt_sha256"]["private/probes/0000/receipt.json"] = _sha(probe_path)
+    _write(timing_path, timing)
+    receipt["audits"]["raw_timing"]["sha256"] = _sha(timing_path)
+    with pytest.raises(ValueError, match="stderr classification"):
+        xd.verify_raw_coordinates(_reseal(request, receipt))
+
+
 def _predictions():
     return [
         SimpleNamespace(
