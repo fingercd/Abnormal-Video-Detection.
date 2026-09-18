@@ -50,6 +50,24 @@
   官方OneDrive浏览器下载仍待已提出的D盘目录设置/直接原始文件链接，尚未启动约15GB到C盘的下载。
   UCF研究继续推进。官方模型测试分数未读取，最终TF/LoRA方法与完整三seed质量矩阵尚未完成。
 
+## 提取迁移准备与当前资源门禁（2026-09-19）
+
+- 一次性 TimeSformer fit 迁移控制器已补齐取消前preflight、写cancel前身份/阶段复核、
+  termination_pending/终态处理、同目录重入和真实native接管监督。原始helpers保留，
+  r01新文件由root再次py_compile通过；独立审查的6项隔离状态分支通过，未作为实机迁移证据。
+  位置：`outputs/icassp2027/control/dense-batch-migration-20260919-timesformer/revisions/`。
+- 仍未生成真实迁移plan、取消任何fit或启动新fit。控制器保留旧保守容量公式；上线前必须
+  根据当前实测预算修订并重新绑定SHA。取消只保证已有完整视频可复用，不保证精确停在视频之间。
+- 独立容量v2使用原8个dense store（VJ select为专用a03）、停止的VMA副本和当前a03副本、
+  两项probe实际run目录；全部同容量池且无祖先重叠。57GiB dense、4GiB VJ probe、1GiB VMA
+  probe各扣除已分配空间；保留1GiB XD修复、15GiB安全余量及2×Time source+512MiB迁移预留。
+  实测free=72,867,971,072 B，required=77,843,406,848 B，缺4,975,435,776 B，未通过门禁。
+  错误v1曾把jobs控制目录当probe数据目录、比较动态df字段，已保留并纠正；只采用
+  `outputs/icassp2027/control/time-fit-current-capacity-20260919/snapshot-v2.json`（SHA eab4f75a…8ade6）。
+  本轮没有清理权重；原fit继续运行，备份完成及完整SHA验证前不删除服务器原文件。
+- node3 epoch1789755416的VJ/VideoMAE观察为554/732个窗口（各1024）；VJ guard/native身份匹配，
+  VideoMAE随后也再次核验三层实际进程存活。所有结果仍等待完整封存与CPU分析。
+
 ## TimeSformer补充attention完整描述（2026-09-19）
 
 - 全量保留 spatial/temporal × 4深度 × 12 heads × 5指标 × weak/matched 共960行对比；
