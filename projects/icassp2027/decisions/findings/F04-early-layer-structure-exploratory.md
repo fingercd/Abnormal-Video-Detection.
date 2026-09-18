@@ -2,6 +2,10 @@
 
 日期：2026-09-19。状态：`exploratory_not_confirmed`。
 
+最新确认状态为 `coverage_insufficient`：预登记的剩余33视频 controls-only 检查已完成，
+四模型均未满足预定匹配覆盖门槛，因此没有启动P04目标确认。下面的FIT发现保持探索身份；
+这次停止不是“局部相似性差异不存在”的检验结果。详见本卡末尾的确认记录。
+
 四个encoder的完整fit结果现已齐备。在固定相对深度0.25的输入站点，含异常视频组的
 local cosine和`uniform_representative_coverage_k4`更高；原始、motion×brightness匹配及
 加入输入亮度标准差的敏感性区间均保持同方向。它们是相关的相似度描述，不是独立性质。
@@ -243,3 +247,32 @@ VideoMAEv2、TimeSformer、VideoMAE为12 blocks，V-JEPA 2为24 blocks。原探�
   results SHA `d978b0e232477cd7b5b1615002b47b419a249df182556d94dee25402e2fd1584`。
 - `outputs/icassp2027/control/cross-encoder-early-structure-20260919/four-encoder-a03/`：12点/区间
   绑定的PNG/SVG及实际视觉检查；PNG SHA `61554cb715c26df6205ecafac48af7c271b984d3c557115375c61dc4aca1cd2e`。
+
+## 新独立确认的覆盖停止记录
+
+[冻结合同](../p04-four-encoder-confirmation-v1.md)在读取原confirm池最后33个视频的像素、
+controls或目标统计前固定单一local cosine性质、四模型.25输入站点及覆盖条件。
+本次真实执行仅计算原生8窗口的运动/亮度controls，应用各自FIT正常64校准。
+
+| encoder | 匹配保留正常/含异常 | 完整分层 | min-count质量 | 非singleton质量/总质量 | 覆盖通过 |
+|---|---:|---:|---:|---:|---|
+| VideoMAEv2 | 14/15 | 7 | 14 | 11/14 = 0.785714 | 否 |
+| TimeSformer | 14/15 | 7 | 13 | 9/13 = 0.692308 | 否 |
+| V-JEPA 2 | 16/15 | 8 | 13 | 8/13 = 0.615385 | 否 |
+| VideoMAE | 14/15 | 7 | 14 | 11/14 = 0.785714 | 否 |
+
+各模型均通过至少12/label、质量至少10、至少2完整分层的前三项门槛；均未达到最后一项
+预定0.80比例。“非singleton”在此指分层内两标签各至少2个视频。没有把0.785714四舍五入
+成0.80，没有事后删分层、调门槛、改分箱或换样本。
+
+完整四组264窗口已产出，输入33视频SHA及13个产物SHA封存；root独立重建132个视频的
+controls均值与分箱、四组覆盖和27,456个源帧索引，均值最大差2.7756e-17。
+完成回执SHA `b8320d17155e4b10b3c7eca9bf97f3ca0a784944cf6f232005a96fdf6aad8a06`。
+仅用node3既有CPU原生环境、nice15、两线程、CUDA=-1，worker exit0，max RSS217,648 KiB；
+它不是模型计时。原始镜像与独立复核见
+`outputs/icassp2027/control/p04-four-encoder-confirmation-v1/`。
+
+[机器可读结局](../p04-four-encoder-confirmation-v1-outcome.json)明确effect/CI保持null、
+target未执行/读取、没有新GPU确认或LoRA启动。33视频的input-controls已被使用，之后不能
+再称其完全未见；原角色锁未改变。新增独立验证样本需要先解决现有角色约束，不能偷偷复用
+旧确认池、把FIT探索改称确认或把当前原型作为ours。全研究仍在进行，四组dense基线继续。

@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "decision": "p04_four_encoder_confirmation_v1_outcome",
+  "recorded_at_utc": "2026-09-18T21:35:25.802922+00:00",
+  "status": "coverage_insufficient",
+  "frozen_definition": {
+    "path": "projects/icassp2027/decisions/p04-four-encoder-confirmation-v1.json",
+    "sha256": "936c5af50864fff0a7b9975d8985fdb626731a87eb2fa8a546cc1cb4699f0210"
+  },
+  "code_commit": "ab338f5dabab4549152018b44a73bc1e69c46282",
+  "completed_controls_run": {
+    "path": "outputs/icassp2027/control/p04-four-encoder-confirmation-v1/controls-preflight-1789766410898056327/receipt.json",
+    "sha256": "b8320d17155e4b10b3c7eca9bf97f3ca0a784944cf6f232005a96fdf6aad8a06"
+  },
+  "independent_root_verification": {
+    "path": "outputs/icassp2027/control/p04-four-encoder-confirmation-v1/root-verification.json",
+    "sha256": "182918bbe9fa5924a6c38419a806f33e685c09f8e20e51bc715f18ad1f604e38"
+  },
+  "scope": {
+    "official_split": "train",
+    "partition": "confirm",
+    "videos": 33,
+    "normal": 16,
+    "positive": 17,
+    "logical_windows_per_encoder": 264,
+    "encoders": [
+      "videomaev2",
+      "timesformer",
+      "vjepa2",
+      "videomae"
+    ],
+    "official_test_access": false
+  },
+  "coverage": {
+    "videomaev2": {
+      "normal_retained": 14,
+      "positive_retained": 15,
+      "complete_strata": 7,
+      "mass": 14,
+      "nonsingleton_mass": 11,
+      "nonsingleton_fraction": 0.7857142857142857,
+      "passed": false,
+      "all_strata": [
+        {
+          "motion": "high",
+          "brightness": "high",
+          "normal": 3,
+          "positive": 3
+        },
+        {
+          "motion": "high",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "high",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "high",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "low",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "mid",
+          "normal": 0,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "high",
+          "normal": 2,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "low",
+          "normal": 4,
+          "positive": 4
+        },
+        {
+          "motion": "mid",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 0
+        }
+      ]
+    },
+    "timesformer": {
+      "normal_retained": 14,
+      "positive_retained": 15,
+      "complete_strata": 7,
+      "mass": 13,
+      "nonsingleton_mass": 9,
+      "nonsingleton_fraction": 0.6923076923076923,
+      "passed": false,
+      "all_strata": [
+        {
+          "motion": "high",
+          "brightness": "high",
+          "normal": 4,
+          "positive": 3
+        },
+        {
+          "motion": "high",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "high",
+          "brightness": "mid",
+          "normal": 1,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "high",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "low",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "mid",
+          "normal": 0,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "high",
+          "normal": 2,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "low",
+          "normal": 4,
+          "positive": 4
+        },
+        {
+          "motion": "mid",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 0
+        }
+      ]
+    },
+    "vjepa2": {
+      "normal_retained": 16,
+      "positive_retained": 15,
+      "complete_strata": 8,
+      "mass": 13,
+      "nonsingleton_mass": 8,
+      "nonsingleton_fraction": 0.6153846153846154,
+      "passed": false,
+      "all_strata": [
+        {
+          "motion": "high",
+          "brightness": "high",
+          "normal": 4,
+          "positive": 3
+        },
+        {
+          "motion": "high",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "high",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 1
+        },
+        {
+          "motion": "low",
+          "brightness": "high",
+          "normal": 1,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "mid",
+          "normal": 0,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "high",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "mid",
+          "brightness": "low",
+          "normal": 4,
+          "positive": 3
+        },
+        {
+          "motion": "mid",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 2
+        }
+      ]
+    },
+    "videomae": {
+      "normal_retained": 14,
+      "positive_retained": 15,
+      "complete_strata": 7,
+      "mass": 14,
+      "nonsingleton_mass": 11,
+      "nonsingleton_fraction": 0.7857142857142857,
+      "passed": false,
+      "all_strata": [
+        {
+          "motion": "high",
+          "brightness": "high",
+          "normal": 3,
+          "positive": 3
+        },
+        {
+          "motion": "high",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "high",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "high",
+          "normal": 1,
+          "positive": 1
+        },
+        {
+          "motion": "low",
+          "brightness": "low",
+          "normal": 1,
+          "positive": 2
+        },
+        {
+          "motion": "low",
+          "brightness": "mid",
+          "normal": 0,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "high",
+          "normal": 2,
+          "positive": 2
+        },
+        {
+          "motion": "mid",
+          "brightness": "low",
+          "normal": 4,
+          "positive": 4
+        },
+        {
+          "motion": "mid",
+          "brightness": "mid",
+          "normal": 2,
+          "positive": 0
+        }
+      ]
+    }
+  },
+  "verification": {
+    "control_mean_max_abs_error": 2.7755575615628914e-17,
+    "reconstructed_source_frame_indices": 27456,
+    "input_video_sha_records": 33,
+    "artifact_sha_bindings_verified": 13
+  },
+  "runtime": {
+    "python": "/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python",
+    "vadbench_file": "/users/fotile/icassp2027-runs/code-ab338f5/src/vadbench/__init__.py",
+    "code_sha256": {
+      "tool": "87b95cf62ce17ad40f5014e11a9e5df8d790d8a20d842afb9312f62d14ae60c5",
+      "stages": "4e24658df6ac75704e5f74c5246322db78de9b6eeb35aa706844b940e1a3a704",
+      "controls": "432342229b0076826971868ac0478ecf51da7c0202a69c577fe7822ecd23af93",
+      "video": "0ec5ff846f9e36d2aa34d96aae66dcd79352fa7a0edb9420d949410f663a94c0",
+      "dense_sampling": "e9ead5431d60039eb000631bef50bb68c59f1475917a9d1802eaea2a85f727c4"
+    },
+    "thread_environment": {
+      "CUDA_VISIBLE_DEVICES": "-1",
+      "OMP_NUM_THREADS": "2",
+      "MKL_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2"
+    },
+    "nice": 15,
+    "max_rss_kib": 217648
+  },
+  "target_measurement": {
+    "executed": false,
+    "primary_effect": null,
+    "ci95": null,
+    "candidate_confirmed": false,
+    "not_a_negative_effect_test": true
+  },
+  "action_taken": "do not launch new P04 GPU measurement; preserve all four failed coverage results; no gate/bin/layer/candidate/cohort changes",
+  "consumption": {
+    "original_role_lock_changed": false,
+    "confirm33_input_controls_consumed": true,
+    "confirm33_target_statistics_consumed": false,
+    "cannot_call_confirm33_fully_unseen_again": true
+  },
+  "research_conclusion": "The remaining original confirm33 cohort cannot evaluate this frozen four-model matched design at its declared coverage threshold. The FIT property remains exploratory; this does not refute its direction or establish compressibility."
+}

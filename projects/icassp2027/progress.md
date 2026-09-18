@@ -12,9 +12,9 @@
 
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
-- node3实际快照epoch1789765461：完整fit视频分片为VideoMAEv2 408/1288、
-  TimeSformer 401/1288、VideoMAE 497/1288、V-JEPA 2 300/1288；四条native的owner/argv/startticks
-  均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a03/`。
+- node3实际快照epoch1789766894：完整fit视频分片为VideoMAEv2 439/1288、
+  TimeSformer 421/1288、VideoMAE 497/1288、V-JEPA 2 314/1288；四条native的owner/argv/startticks
+  均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a04/`。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
 - VideoMAEv2、TimeSformer 的 development-select 均已完成 161/161 视频（80正常/81含异常）。
   独立审计逐一验证 65,862 / 131,814 个 blob、数组 SHA/shape/dtype/finite、原生窗口和视频完整覆盖，
@@ -70,8 +70,24 @@ JSON SHA `936c5af50864fff0a7b9975d8985fdb626731a87eb2fa8a546cc1cb4699f0210`。
 四份FIT正常64校准的SHA/normal IDs/采样身份已绑定，root实际重算四native采样digest一致。
 新覆盖门槛为每标签至少12、min-count质量至少10、至少2个完整分层、非singleton分层质量比例至少.8。
 先执行controls-only；任一模型覆盖不足即报告coverage_insufficient，不启动新P04 GPU确认。
-目前仅冻结元数据与规则，尚未执行真实controls或目标观察；预检工具初版发现校准SHA、资源和
-输出绑定不足，保留为未就绪版本，修订与验收通过后才执行。原3个保护文件与旧冻结回执保持原样。
+真实controls-only现已完成，四模型均在最后一项覆盖门槛失败：V2与VMA为11/14=.785714，
+Time为9/13=.692308，VJ为8/13=.615385；其余三项覆盖条件均通过。
+已按合同停止新P04 GPU目标确认，没有放宽0.80、删singleton或改变bins。性质本身仍未确认，
+本次不是效应为零的证据。[结局JSON](decisions/p04-four-encoder-confirmation-v1-outcome.json)
+与[F04](decisions/findings/F04-early-layer-structure-exploratory.md)保留完整表和null效应/区间。
+root核验13个产物SHA，独立重建所有controls均值/分箱、四组覆盖与27,456源帧索引，最大差2.7756e-17。
+回执SHA `b8320d17155e4b10b3c7eca9bf97f3ca0a784944cf6f232005a96fdf6aad8a06`；四组各33×8窗口，
+33输入视频SHA、帧坐标、校准与代码绑定齐全。native worker27500/controller27483已正常exit0，
+nice15、两线程、CUDA=-1、max RSS217,648 KiB，36次监测没有资源停止。
+执行来自独立冻结`code-ab338f5`，既有baseline工作树未改。初版工具缺项及a02标量metadata错误
+均在真实读取前由root修正，a03通过本地/原生环境合成边界和合同校验；未执行两份旧草案。
+首次部署仓库无前置commit、首次启动误用不存在的/usr/bin/python3均在读取数据前失败，
+旧记录保留；新a02部署/启动各只执行一次，没有重复controls进程。
+原33视频仅controls已消耗、target仍未读；新增独立验证视图的角色规则修订已向用户询问，
+当前只做可用样本元数据审计，未创建或运行新cohort。旧角色锁及原3个保护文件不变。
+该有界审计在1288个原fit中排除了明确已用FIT128及其已知探索/校准子集，留下1160个角色上
+候选（576正常/584含异常）。没有完整跨本地/远端使用账本，因此不能称全局未使用或已证明独立；
+不据此自动重新划角色或启动确认。回执在`additional-property-validation-feasibility-20260919/`。
 
 - 当前完整VJ原生run为`code-0192fad/outputs/icassp2027/runs/probe-20260918T163038291972Z-a4fc7f17`，
   805,888条available/12,288条unavailable；分析输出`vjepa2-fit128-video-bootstrap-20260919-a02`。
@@ -96,8 +112,8 @@ JSON SHA `936c5af50864fff0a7b9975d8985fdb626731a87eb2fa8a546cc1cb4699f0210`。
   VJ全41个local−nonlocal站点的82行诊断亦保留；root对400/82行点与覆盖的独立重建均通过。
 - [F04完整更新](decisions/findings/F04-early-layer-structure-exploratory.md)保留历史2/3模型原表、
   原F01/F03身份及剩余33个confirm边界；四模型图显示VJ跨0区间，已实际查看并通过独立审查。
-  该FIT阶段结束时尚未注册新确认；随后已完成上述单一local cosine预登记，仍未执行真实confirm
-  controls/目标观察，未选择selector/预算或启动LoRA。
+  该FIT阶段结束时尚未注册新确认；随后完成单一local cosine预登记，并得到上述coverage停止结果。
+  未执行P04目标确认，未选择selector/预算或启动LoRA。
 
 ## VideoMAE完整观察与三模型探索证据（2026-09-19）
 
