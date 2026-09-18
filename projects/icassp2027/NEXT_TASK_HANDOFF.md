@@ -5,6 +5,10 @@
 `decisions/property-first-method-contract-v3.md`：旧paired_random/pair_linear降为工程/对照，
 最终免训练/可训练方法必须从确认性质推导并同根同源，不以当前两原型直接冒充论文方法。
 
+用户最新进一步选择A，优先LoRA：固定同一性质压缩规则，冻结ViT base和检测后端，
+训练ViT内部低秩适配参数。要有dense同预算LoRA控制及梯度/更新/重载/合并身份验证。
+不新增selector网络，也不预先锁rank或损失。旧A/B并列说明以此新选择更新。
+
 ## 工作目录与入口
 
 - 原工作区：`D:/PythonProject/VAD`，分支`qzt/icassp2027-evidence`。
