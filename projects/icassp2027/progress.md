@@ -48,6 +48,61 @@
   清理后实际free=79,340,277,760 bytes。原TopKMIL coordinator仍保持研究协议hold，
   未读取官方模型测试分数。可操作性质、同源TF/LoRA、正式完整train三seed和最终质量矩阵尚未完成，Goal active。
 
+## 最新完成回执（2026-09-19）
+
+- Time局部attention补充已完整完成，guard24836 exit0：128视频、1024clips、491,520条available
+  P10/P11记录（480签名×1024），run为`code-0192fad/outputs/icassp2027/runs/`
+  `probe-20260918T155022550042Z-94a7dc2c`。完成后VJ guard24800已获得GPU6，native14237
+  正在新身份下检查输入；实际owner/argv/startticks已核对。尚未解释未完成VJ数据。
+- XD新规则全800审计已sealed，800新探测、0复用、0raw timing失败，仅`b0-half_open-origin0`
+  满足精确坐标门禁。seal SHA
+  `ac2ba2fd66899ebe0bdc1ab15c048f146d901b4cbd8425682551577986c8d21b`。
+  独立复核重新计算800当前raw的SHA/CRC/bytes、receipt及其三份artifact的SHA，并对保存的全帧
+  PTS/OpenCV结果重算时序条件；六个QT分类索引恰为0140/0141/0142/0598/0599/0600，全部通过。
+- `verify_raw_coordinates`叶子consumer也通过800 manifest/raw rows；这只验证数据坐标，不是新方法
+  的完整评测授权。首次报告脚本访问不存在的`.hashes`属性，旧尝试保留；新v2回执成功。
+  全过程未读模型评分或GT值。原9b的794/6结果不改写，XD四个训练坏源仍缺失。
+  产物在`code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02`及同级
+  `...-independent-proof`、`...-coordinate-consumer-check-v2`；本地摘要在
+  `outputs/icassp2027/control/xd-four-bad-repair-20260918/b02_full800_seal_audit_20260919.md`。
+
+## 两模型早期层的探索证据（2026-09-19）
+
+- 新增[F04探索卡](decisions/findings/F04-early-layer-structure-exploratory.md)，状态明确为
+  `exploratory_not_confirmed`。384个共享签名完整筛查后22条满足两模型raw/matched四CI同方向，
+  都位于早期block2附近；P02 normalized只是同一rank缩放，4条P16 activation norm与P01每视频
+  完全重复，不能计为额外性质。原F01/F02/F03确认身份不变，没有新确认或插件决策。
+- 加入每视频8clip平均亮度标准差的fit-normal三分位控制后，block.2.input的有效秩差为
+  Time −1.0005 [−1.8112,−0.1940]、V2 −2.3096 [−3.4113,−1.2107]；local cosine差为
+  +0.03146 [+0.01464,+0.04818]、+0.05569 [+0.03963,+0.07169]，均为matched原始差值。
+  新匹配保留Time59/56与V2 59/52视频，估计人群已变化；这是事后fit敏感性，不是因果控制。
+- 进一步对全部20个共同且无head的站点逐video计算local−nonlocal cosine，不从两个CI相减。
+  block.2.input的三字段matched增量为Time +0.01425 [+0.00319,+0.02503]、V2 +0.01988
+  [+0.00824,+0.03138]；只有4个早期站点的raw g区间在两模型均为正，其余保留模型/站点差异。
+  这不决定哪个token可丢弃。local指同原生时间索引、真实空间坐标曼哈顿距离1的采样token对。
+- 两个诊断均保留10,000视频bootstrap、输入/脚本/输出SHA与覆盖；root独立重建88个匹配点值及
+  40个派生组间点值/g，最大差4.44e-16/2.50e-15。三联PNG/SVG已实际查看；图明确标fit探索、
+  不同原生窗口与匹配人数，不作正式论文方法图。证据和图均由F04列出ignored路径及SHA。
+  初版输入反差诊断在修复前曾同路径覆盖，已明确无法恢复，未作为证据；只使用a02_verified快照。
+- 只读cohort元数据审计确认原confirm161（80N/81P）中，两轮64 cohort互不相交，尚余33视频
+  （16N/17P，ID集合SHA e71da9d0…16b54）。没有读取其统计或重新分配角色；source/scene分组未知。
+  未来假设、校准及覆盖门槛必须在读取这些目标统计前冻结，不能用小样本结果调整门槛。
+- 新CPU分析监视器最终a03 PID13537，绑定Time/VJ两个原观察guard并按各自真实成功流水分析。
+  control为`code-0192fad/outputs/icassp2027/control/observation-analysis-0192fad-20260919-a03`；
+  输出仍分别名为`timesformer-local-attention-fit128-20260919-a02`与
+  `vjepa2-fit128-video-bootstrap-20260919-a02`。旧a01/a02在waiting且无分析子树时已核验退役，
+  原文件和回执保留。新CLI在worker同进程执行，取得CPU lease后要求20GiB可用RAM，5秒采样
+  worker+monitor RSS；16GiB/4GiB阈值仅停止自有分析。该守护不代表分析已完成，尚待真实产物。
+- node3最新完整快照epoch1789748471：Time attention800/1024、VJ待lease；七路dense仍活：
+  V2 fit214/select149、Time fit226/select149、VMA fit306、VJ fit131/select78；VMA原select79保留。
+  被取消的VMA duplicate-copy receipt仍写running是陈旧状态，其guard cancelled/native退出才是实际状态。
+- 后续启动预算再次实测缺715,378,688 bytes，依原条件授权只清理inactive HERMES的
+  `weights/hermes-llava-ov-0.5b/model.safetensors`（1,787,445,680 bytes，SHA
+  `07b3362c3412de79baf2379e44e5b0b2a8f4b965ebebd11d7b5b3eb4450fe96e`），
+  active配置/可读计算进程未引用，非symlink且单硬链接。配置、tokenizer、源码、登记、缓存保留，
+  该inactive模型未来需恢复权重。回执`control/inactive-hermes-weight-cleanup-20260919-a01/receipt.json`，
+  free由75,936,354,304增至77,721,411,584 bytes；没有把磁盘清理称为释放显存。
+
 ## 新观察恢复与科学审查（2026-09-19）
 
 - 新冻结`0192fadcfcb6f4c0a677aeca65730681e0a89b51`，bundle SHA
