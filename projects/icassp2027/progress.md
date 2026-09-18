@@ -11,8 +11,9 @@
 
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
-- node3 实际快照 epoch1789754837：完整 fit 视频分片为 VideoMAEv2 299/1288、
-  TimeSformer 313/1288、VideoMAE 369/1288、V-JEPA 2 197/1288；均仍处于 dense 提取。
+- node3实际快照epoch1789758095：完整fit视频分片为VideoMAEv2 333/1288、
+  TimeSformer 344/1288、VideoMAE 409/1288、V-JEPA 2 225/1288；四条native的owner/argv/startticks
+  均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a02/`。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
 - VideoMAEv2、TimeSformer 的 development-select 均已完成 161/161 视频（80正常/81含异常）。
   独立审计逐一验证 65,862 / 131,814 个 blob、数组 SHA/shape/dtype/finite、原生窗口和视频完整覆盖，
@@ -32,7 +33,7 @@
   旧等待监视器24916已核验退役，旧源与已取消的重复复制产物保留。
 - V-JEPA 2 select 的独立a03任务也已核验存活：native20861，start ticks1342814834，
   owner/argv与`--encoder vjepa2 --role select`精确匹配；其自身receipt/provenance均为extract_dense。
-  node3 18:15:01 UTC快照为105/161完整视频、13,008 clips；该控制目录中的P04已先完成，
+  node3 epoch1789758095快照为149/161完整视频，真实native仍在推进；该控制目录中的P04已先完成，
   不能因早先另一个slot7曾失败就排除当前select。只读盘点v1曾误作排除，已保留错误版本并以v2更正。
   回执在`outputs/icassp2027/control/dense-state-20260919-current/snapshot-v2.json`；四fit句柄也已逐一核对。
   v2的fit元数据快照为V2 299/80,868、Time313/171,306、VMA369/111,749、VJ198/13,617
@@ -84,6 +85,28 @@ V-JEPA 2对应5/11/17/23（均零起始）。
 不直接按block编号混为同深度，不根据结果换层。这里只读结构元数据，没有读取未完成VJ的性质统计。
 `outputs/icassp2027/control/cross-encoder-depth-alignment-20260919/alignment.json`绑定15个VJ
 和其余三模型的完整后层执行回执；VJ当前probe完成后还需核验自身block_count一致。
+
+## 完整结果比较与第四组select审计准备（2026-09-19）
+
+- 已完成相对深度对照表的真实三模型回归，最终仅采用ignored
+  `relative-depth-comparison-20260919/a04_verified`。join key去除实际block编号，仅以既定
+  相对深度和完整site后缀等字段对齐；实际层号、site和来源仍逐模型保留。Time的non-block
+  embedding及temporal/spatial域独立保留，缺失值为not_in_export/空数值，不填0。
+- 同128个video→label映射、64/64和每项8窗口已核对。7800行union含全部head-free一级对比，
+  300行共有长表对应原三模型50个签名×3模型×2估计量；原status/point/CI/estimand/reason
+  均逐项不变。12-block b2与24-block b5对齐、相同b5不同相对深度不合并等元数据用例通过
+  生产函数验证。所有输入前后SHA及输出SHA绑定，未新增bootstrap或读取VJ未完成统计。
+  Time补充的per-head attention仍在独立export中，不混入这张head-free表，也不改写旧run的NA。
+- a01–a03保留为开发尝试：早期实际编号残留在key、遗漏non-block及报告字段不足均已纠正。
+  当前a04回执SHA `f439d7382da8476e50e291a5f86fac6724a6cb1a433d4a9c6ddf9154dfb8a5a8`。
+  待VJ全run与统计审计完成后，才另建绑定其真实产物的新manifest运行，不假装已有第四模型结果。
+- VJ select的全量CPU审计已排入唯一新a02队列（monitor15535），等待source job、guard成功完成
+  和非空根index三条件。验证固定64帧/stride2/window64、D1024及指定manifest/role-lock/authority
+  SHA；原native20861/guard24884未改动。旧waiting器21761在精确核验且无审计子树后退役，
+  原文件和错误monitor JSON保留。当前还没有VJ select审计通过结论。
+- Time复制空间静态审查确认每clip目标只新增一份NPZ（内部features/pooled两个成员），
+  三层索引不另复制blob；仍有原source保留、lineage及重复metadata增量。源码不足以证明更紧
+  allocated-byte上界，因此未下调现预算、未启动迁移，报告在`time-fit-copy-space-review-20260919/`。
 
 ## 提取迁移准备与当前资源门禁（2026-09-19）
 
