@@ -8,7 +8,7 @@
 ## 当前运行快照（本轮接手后的最新状态）
 
 - 七路A100共享dense提取继续，GPU6改为Time fit128观察。最近完整视频分片数为：
-  V2 fit83/select70、Time fit83/select72、VMA fit138/select79、VJ fit69/select26；分母分别1288与161。
+  V2 fit94/select78、Time fit102/select78、VMA fit179/select79、VJ fit81/select46；分母分别1288与161。
   VMA select已在完整视频边界暂停并保留79个完整shard，等待两组主模型观察后恢复原身份的完整select。
   视频长短不等，这不是计算完成率。旧job receipt仍为运行中，但原guard已cancelled、native PID已退出，
   不再据该陈旧receipt把VMA select算为存活进程。
@@ -25,7 +25,7 @@
   新a02 guard28110已排队独占，明确与现有dense提取同样关闭cuDNN/TF32并保持FP32；不重跑已通过
   的UR operator检查，保留a01失败及独立后端策略回执。仍无完整A100正式效率数字。
 - XD三尾卷均已CRC解压完成，测试raw800齐备，训练仍有4个原始坏成员。全800坐标审计的
-  最近快照为checked704/passed698/failed6。六项失败的stderr均为精确的QuickTime章节轨缺失
+  最近快照为checked758/passed752/failed6。六项失败的stderr均为精确的QuickTime章节轨缺失
   诊断，视频PTS数量与container帧数一致；不能直接称为视频解码损坏。
 - 已补producer和下游sealed-coordinate consumer的精确metadata诊断分类，只允许已观测的
   那一行且ffprobe exit0，保留stderr/SHA并继续要求完整PTS/24fps/OpenCV解码。其它诊断、
@@ -41,7 +41,7 @@
   已复验的精确QT诊断条件，才会在node2用1b6bd26新目录重审完整800，并检查CPU lease与磁盘。
   不复用或重写旧实现的cache身份；若出现其他错误、身份变化或空间不足则停在needs_review。
 - 旧TopKMIL coordinator已实时确认research_protocol_hold=true、无子进程；未读取任何官方
-  模型测试分数。当前可用磁盘约76.8GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
+  模型测试分数。当前可用磁盘约74.9GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
   可操作性质、同源TF/LoRA和完整detector效率仍未完成，Goal保持active。
 
 ## 第2步继续：优先性质观察、纠正探索统计（2026-09-18）
@@ -67,9 +67,30 @@
   已有F01/F02/F03确认使用原v3冻结统计，不被本次修改重算或改写；新结果仍是未校正的fit探索。
   本地contrasts＋controls共25项通过，包含16种联合draw的独立精确枚举CI、相同bin差但bin内有方差、
   顺序不变性、one-sided/unknown和单bin/退化边界；Ruff、compileall及diff check通过。
+  新代码`deda86ed0a23354d11ca3a402e059df227ad69a0`已以bundle
+  `b2f02a4804b54dfdaed141c32053fef66b3ca0eca4ca13fb15a1e1e43542aa71`安全上传到独立工作区；native也25 passed。
+- 已实际按新统计重算旧V2 fit128，产物`outputs/icassp2027/analysis/`
+  `v2-fit128-video-bootstrap-20260918-a02`：867,328原始probe行、128视频64/64、每video8 clips，
+  完整847一级签名中799有可用video值、48 N/A保留；10,000 bootstrap，无候选选择或新确认结论。
+  原probe实际是Windows Torch2.8 CUDA观察，本次仅本机CPU重算，不称A100新观察。
+  四个输入文件前后SHA匹配旧封存gate；独立verification receipt SHA为
+  `ba1d800b5aaaa9a6f33b66812805495b2ba5dd087cb40226d8f2d448cab7a43a`。
+  a01后台生命周期退出且未产出，保留stopped_without_receipt；a02最终CLI成功marker与全部产物门禁
+  通过，但PowerShell supervisor未保存Python exit code（null），不改写为0。初始a02只监测launcher，
+  随后追加独立descendant守护；实际分析树约4.4GB、可用RAM约6GB，未触发3GB/6GB门禁。
 - 用户再次明确要求专责修复XD四坏源，已交给独立agent执行：寻找准确原始副本、最多2GiB新临时
   下载预算、逐成员size/CRC/SHA及解码验证后输出独立receipt，再由root接正式inventory。
   不覆盖旧raw/归档，不改变期望CRC，不以重编码或近似剪辑冒充修复，不启动重复writer。
+- XD成员级复查已排除当前客户端下载截断：原zip总长及外层SHA与冻结身份一致，四个压缩段均完整；
+  一个deflate报错，另三个解压长度正确且可播放，但CRC不符。429,389,964B分类payload仅在新control，
+  不接入raw/inventory。服务器没有找到第二份归档或历史可恢复分块。
+- 浏览器真实检查纠正了“没有可访问来源”的判断：作者OneDrive `1005-2004.zip` 页面可见下载按钮，
+  只是node2的同share请求跳登录。已给专责agent扩大本地D盘临时预算至20GiB（实测空余223.15GiB），
+  服务器仍保持2GiB预算；计划浏览器本地取得原zip，再只传核验通过的4成员。
+  当前WebBridge拒绝下载路径控制和浏览器设置页，下载BUTTON也没有可直接读取的DOM href，故未点
+  约15GB下载到空间较少的C盘。已向用户请求将该任务浏览器下载目录临时设为
+  `D:\PythonProject\VAD\outputs\icassp2027\control\xd-four-bad-repair-20260918\browser-source-a01`
+  或提供直接原始文件链接；等待回复期间UCF任务继续。未读取或导出cookie/token，未改永久设置。
 
 ## 本轮继续：观察入队与实测写入开销（2026-09-18）
 
