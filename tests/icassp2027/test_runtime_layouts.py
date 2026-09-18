@@ -388,12 +388,12 @@ def test_real_hf_small_configs_execute_all_four_native_geometry_paths():
     bridge = create_observation_bridge("vjepa2", eager)
     geometry = bridge.geometry([[0, 1, 2, 3]], [[True] * 4])
     with geometry:
-        eager(pixel_values_videos=pixels, skip_predictor=True)
+        eager(pixel_values_videos=pixels, skip_predictor=True, output_attentions=True)
     sites = bridge.observation_sites([0])
     probability_site = {key: value for key, value in sites.items() if key.endswith(".probs.output")}
     collector = ProbeCollector(probability_site, bridge.probe_token_metadata(geometry, sites))
     with collector:
-        eager(pixel_values_videos=pixels, skip_predictor=True)
+        eager(pixel_values_videos=pixels, skip_predictor=True, output_attentions=True)
     rows = collector.observations[0].rows
     assert any(row["probe_id"] == "P10" and row["status"] == "available" for row in rows)
     assert any(row["probe_id"] == "P11" and row["status"] == "available" for row in rows)

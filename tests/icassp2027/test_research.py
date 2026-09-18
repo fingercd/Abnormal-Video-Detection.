@@ -171,3 +171,51 @@ def test_registered_but_nontriggering_or_tensorless_sites_emit_explicit_receipts
     assert {row["probe_id"] for row in missing.rows} == {"P10", "P11", "P13"}
     assert {row["status"] for row in missing.rows} == {"unavailable"}
     assert {row["statistic_name"] for row in missing.rows} == {"hook_not_triggered"}
+
+
+class _NativeAttentionTuple(nn.Module):
+    def __init__(self, second: torch.Tensor | None | object) -> None:
+        super().__init__()
+        self.second = second
+
+    def forward(self, value: torch.Tensor):
+        context = value * 2
+        if self.second is _CONTEXT_ONLY:
+            return (context,)
+        return context, self.second
+
+
+_CONTEXT_ONLY = object()
+
+
+@pytest.mark.parametrize("second", [_CONTEXT_ONLY, None], ids=["context_only", "context_none"])
+def test_probability_site_rejects_context_only_native_attention_tuples(second):
+    layer = _NativeAttentionTuple(second)
+    values = torch.ones(1, 4, 2, requires_grad=True)
+    collector = ProbeCollector({"block.0.attn.probs.output": layer}, metadata())
+
+    output = collector.run(layer, values)
+    torch.testing.assert_close(output[0], values * 2)
+    output[0].sum().backward()
+    assert values.grad is not None
+    observation = collector.observations[0]
+    assert {row["probe_id"] for row in observation.rows} == {"P10", "P11", "P13"}
+    assert {row["status"] for row in observation.rows} == {"unavailable"}
+    assert {row["statistic_name"] for row in observation.rows} == {
+        "hook_output_has_no_usable_tensor"
+    }
+    assert collector.missing_sites == ("block.0.attn.probs.output",)
+
+
+def test_probability_site_accepts_only_native_second_probability_tensor():
+    attention = torch.full((1, 2, 4, 4), 0.25)
+    layer = _NativeAttentionTuple(attention)
+    collector = ProbeCollector({"block.0.attn.probs.output": layer}, metadata())
+
+    output = collector.run(layer, torch.ones(1, 4, 2))
+
+    assert tuple(output[1].shape) == (1, 2, 4, 4)
+    rows = collector.observations[0].rows
+    assert any(row["probe_id"] == "P10" and row["status"] == "available" for row in rows)
+    assert any(row["probe_id"] == "P11" and row["status"] == "available" for row in rows)
+    assert all(row["probe_id"] != "P01" for row in rows)

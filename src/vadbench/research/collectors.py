@@ -391,16 +391,18 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
     def _make_forward_hook(self, site: str) -> Callable[[Any, tuple[Any, ...], Any], None]:
         def hook(_module: Any, _inputs: tuple[Any, ...], output: Any) -> None:
             self._triggered_sites.add(site)
-            # V-JEPA2 self-attention returns ``(context, probabilities)``.
-            # Selecting the second native value is explicit in the site name;
-            # do not mistake the context tensor for attention probabilities.
-            value = (
-                _first_tensor(output[1])
-                if site.endswith(".probs.output")
-                and isinstance(output, (tuple, list))
-                and len(output) > 1
-                else _first_tensor(output)
-            )
+            if site.endswith(".probs.output"):
+                # V-JEPA2 exposes probabilities only as the second native
+                # tuple value when its caller requested attention outputs.
+                # A context-only ``(context,)`` or ``(context, None)`` is not
+                # fallback token evidence for a probability-named site.
+                if not isinstance(output, (tuple, list)) or len(output) < 2:
+                    return None
+                value = _first_tensor(output[1])
+                if value is None or len(value.shape) != 4:
+                    return None
+            else:
+                value = _first_tensor(output)
             if value is not None:
                 self._capture(site, value)
             return None

@@ -7,42 +7,60 @@
 
 ## 当前运行快照（本轮接手后的最新状态）
 
-- 七路A100共享dense提取继续，GPU6改为Time fit128观察。最近完整视频分片数为：
-  V2 fit94/select78、Time fit102/select78、VMA fit179/select79、VJ fit81/select46；分母分别1288与161。
-  VMA select已在完整视频边界暂停并保留79个完整shard，等待两组主模型观察后恢复原身份的完整select。
-  视频长短不等，这不是计算完成率。旧job receipt仍为运行中，但原guard已cancelled、native PID已退出，
-  不再据该陈旧receipt把VMA select算为存活进程。
-  完整dense总量2,923,485 clips；本轮UR-DMU开发头尚未开始3000步训练，不能报检测质量。
-- P04已经完整确认且未通过，停止该干预分支。真实结果、10,000次视频级bootstrap与独立点值
-  复核见F03；没有据此实现插件或启动LoRA。Time/VJ补齐原128个fit视频的观察已实际入队，
-  Time guard13203已获得GPU6，真实run`probe-20260918T132416783598Z-94424de8`最近92/1024 clips，
-  11/128完整视频；VJ guard13204继续等待lease。只观察进度，没有解释未完成子集。
-  最短210帧、两个原生窗口均支持；128个raw SHA均已复算，未消耗新的confirm样本。
-- A100 dense-only clip计时a01独占GPU6启动，UR-DMU的4例GPU operator equivalence先通过，
-  包含D768/D1024及明确synthetic repetition的N1025/Q128，max abs差最高8.94e-08、权重未变。
-  receipt SHA`da27234f2c147253f6d04cda4a676cfd49f18dba963af5bfa7602126e04b889c`；不是质量或速度。
-  随后VideoMAEv2首个Conv3d触发`CUDNN_STATUS_SUBLIBRARY_LOADING_FAILED`，正式样本前失败。
-  新a02 guard28110已排队独占，明确与现有dense提取同样关闭cuDNN/TF32并保持FP32；不重跑已通过
-  的UR operator检查，保留a01失败及独立后端策略回执。仍无完整A100正式效率数字。
-- XD三尾卷均已CRC解压完成，测试raw800齐备，训练仍有4个原始坏成员。全800坐标审计的
-  最近快照为checked758/passed752/failed6。六项失败的stderr均为精确的QuickTime章节轨缺失
-  诊断，视频PTS数量与container帧数一致；不能直接称为视频解码损坏。
-- 已补producer和下游sealed-coordinate consumer的精确metadata诊断分类，只允许已观测的
-  那一行且ffprobe exit0，保留stderr/SHA并继续要求完整PTS/24fps/OpenCV解码。其它诊断、
-  混入decode error或分类篡改均拒绝。本地联合65 passed/1 skipped（无ffprobe），Ruff与
-  compileall通过。新冻结`1b6bd26`已上传并通过native测试，三条真实文件随后全部通过新规则的
-  CRC、完整FFprobe PTS及OpenCV解码复验（865/962/649帧，24fps，漂移0），未修改视频。
-  回执为该工作区`outputs/icassp2027/control/qt-metadata-native-validation-20260918-a02/receipt.json`。
-  最初诊断脚本误按archive顺序取index，独立a01失败保留；a02改用正式auditor相同canonical join。
-  新增0598/0599/0600仅已核查旧stderr和PTS/container计数2569/3481/1201一致，尚未完成新规则
-  的OpenCV全解码，不能套用前三项完整复验的通过结论。
-  当前9b4e1f2全量审计继续原冻结规则，没有替换其在运行源码或修改旧缓存，完整800尚未封存。
-- 唯一XD复审等待队列PID23888已核实在运行，等待旧审计自然结束；只有终态及全部失败均满足
-  已复验的精确QT诊断条件，才会在node2用1b6bd26新目录重审完整800，并检查CPU lease与磁盘。
-  不复用或重写旧实现的cache身份；若出现其他错误、身份变化或空间不足则停在needs_review。
-- 旧TopKMIL coordinator已实时确认research_protocol_hold=true、无子进程；未读取任何官方
-  模型测试分数。当前可用磁盘约74.9GiB，没有删除旧权重或历史输出。完整质量矩阵、三个seed、
-  可操作性质、同源TF/LoRA和完整detector效率仍未完成，Goal保持active。
+- node3最近实际快照epoch1789745433：完整视频分片V2 fit179/select97、Time fit184/select104、
+  VMA fit263/原select79、VJ fit89/select70，原fit/select分母为1288/161；视频长短不等，不能作为计算完成率。
+  原VMA select在完整79视频边界暂停；唯一handoff监视器已按Time完成/VJ失败终态派发resume guard17046。
+  新resume正在复制/恢复原完整分片，当前目录16个完整shard不能算作16个新增视频；保留原完整身份和旧79分片。
+  其余七路native进程仍存活。完整dense总量2,923,485 clips；UR-DMU开发头尚未开始3000步训练。
+- Time原128个fit视频、64正常/64含异常、8窗口共1024 clips的完整观察已完成：
+  `code-f25d79e/outputs/icassp2027/runs/probe-20260918T132416783598Z-94424de8`，guard13203 exit0。
+  已重新核对完整cohort、raw SHA、几何/parity和controls后，code-deda86e正在执行10,000次视频级
+  fixed-min-count matched bootstrap，输出`timesformer-fit128-video-bootstrap-20260918-a01`。
+  完成前不解释部分统计；Time旧P10/P11缺少局部attention实现，不等于科学阴性。
+- VJ原观察guard13204随后取得GPU6，但在CUDA初始化前因剩余磁盘预算不足退出；没有probe数据。
+  正在审计原56GiB完整dense预算及未计入schedule根的VMA resume额外副本，不降低15GiB安全余量。
+  VJ新观察将采用修正后的probability hook：native Transformers4.57.3默认仅返回context，
+  旧fallback会误报token族；现已修正为明确P10/P11/P13 unavailable，不强制切换生产attention后端。
+  tiny fixture明确请求output_attentions以核验真实第二项；本地两组受影响测试共39通过，Ruff/compileall通过。
+- A100 dense-only clip计时a02四模型均已完成，guard28110 exit0；独占GPU6、FP32、cuDNN/TF32关闭。
+  独立审计已核验B1/B8、warmup5/repeats30、纯模型/adapter/单clip解码口径；没有计入UR-DMU后端，
+  不能将其称为完整视频detector质量或完整长序列端到端效率。完整审核数字另行归档。
+  a01首个Conv3d的cuDNN loading失败原样保留；其之前UR-DMU四例GPU operator equivalence已通过，
+  含D768/D1024及明确synthetic repetition的N1025/Q128，max abs差最高8.94e-08、权重未变。
+- Time局部attention只读实现已完成本地36项验证；native a01/a03含VJ的组合测试因classic环境无该类失败，
+  a02 foundation组合35通过/1失败，后者已由旧f25同环境复现为VJ tiny fixture缺少output_attentions=True。
+  a03实际Time相关28项通过；独立a04已用真实Time预训练权重和两个fit视频完成B1/B2 source clip归约、
+  hooks/identity parity及参数不变验收；模型前后SHA均3ad0137b…eef9d，CUDA未初始化。上述失败保留。
+- XD三尾卷已CRC解压，测试raw800齐备，训练仍缺4个原始坏成员。旧9b4e1f2全800审计最终794通过/6失败，
+  六个失败均为原冻结规则拒绝的精确QT chapter metadata诊断，不改写旧结果。新1b6bd26完整800复审
+  b01因launcher缺PYTHONPATH退出；b02已在node2真实运行，PID132797，最近355/800通过、0失败、0复用。
+  仍需完成全部PTS/24fps/OpenCV解码及sealed门禁，不能提前宣布新增0598/0599/0600完整通过。
+- XD四坏源的官方OneDrive页面可访问下载按钮，但工具无法把浏览器下载定向到D盘；等待用户完成已提出的
+  临时下载目录设置或提供直接原始文件链接，没有启动约15GB到C盘的下载。UCF研究不等待该人工步骤。
+- 磁盘门禁实测缺口2,460,884,992 bytes（仍预留完整56GiB dense、2GiB XD、4GiB probe、1GiB resume
+  副本及15GiB安全余量）。按用户既有条件清理授权，只移除了未被active配置或可读计算进程引用的
+  `weights/videochat-flash/model.safetensors`：4,143,085,560 bytes，SHA8d7599e4…70b475，单硬链接、非symlink。
+  其配置、源码、tokenizer、training_args、锁/缓存及历史产物保留；该inactive模型以后重跑须先恢复权重。
+  初次审计因sshd的proc权限有限而停止，复核仅为低内存SSH传输进程后a02执行；未绕过系统权限。
+  回执`/users/fotile/icassp2027-runs/control/inactive-flash-weight-cleanup-20260918-a02/receipt.json`，
+  清理后实际free=79,340,277,760 bytes。原TopKMIL coordinator仍保持研究协议hold，
+  未读取官方模型测试分数。可操作性质、同源TF/LoRA、正式完整train三seed和最终质量矩阵尚未完成，Goal active。
+
+## 已审核的A100固定clip dense基线（2026-09-18）
+
+同一fit视频Abuse005_x264；GPU6独占guard、FP32、cuDNN/TF32关闭；每scope warmup5、timed30。
+下表为B8同步wall中位数，单位秒，不能比较为同样时长的视频吞吐（各encoder原生窗口不同）。
+
+| encoder | 纯模型＋pooled | adapter | clip解码＋adapter | 峰值allocated/reserved GiB（解码scope） |
+|---|---:|---:|---:|---:|
+| VideoMAEv2 | 0.31076 | 0.77835 | 4.29336 | 2.375 / 2.518 |
+| TimeSformer | 0.22175 | 0.59163 | 1.58709 | 1.144 / 1.484 |
+| V-JEPA 2 | 5.62937 | 9.59445 | 18.39982 | 4.599 / 5.926 |
+| VideoMAE | 0.29916 | 1.04538 | 2.34982 | 2.448 / 2.522 |
+
+B1/B8全scope、CUDA event诊断、P10–P90及输入/模型/代码指纹在ignored
+`outputs/icassp2027/control/a100-dense-baseline-review-20260918/`。UR-DMU不在本计时边界，
+完整detector和整视频dense序列效率仍待实际匹配head完成；本表没有检测质量或压缩加速结论。
 
 ## 第2步继续：优先性质观察、纠正探索统计（2026-09-18）
 
