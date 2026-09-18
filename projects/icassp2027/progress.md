@@ -46,6 +46,18 @@
 
 ## 第2步继续：优先性质观察、纠正探索统计（2026-09-18）
 
+- 新增只读诊断：对原V2 fit128的5个固定站点做每clip尺度比值，再平均8clip到video；
+  10,000次新matched统计，全部10项与类别描述保留。embedding的IQR/median及variance/median²
+  仍为负，Block9 input的IQR/median为正；其它多个站点区间跨0。不能以一个全局尺度或一个
+  “异常高范数/高方差”规则概括，更不支持直接norm-topk。它是posthoc fit敏感性诊断，非确认。
+  数据和图在ignored `outputs/icassp2027/control/v2-scale-sensitivity-20260918/`；图已实际查看。
+- Time的P10/P11旧N/A经源码审查是未实现局部group归约，而不是模型没有attention性质。
+  现已补齐只读temporal/spatial原生key域统计，按真实B×P/B×T分组还原每source clip、每head，
+  不伪造global矩阵，不重复视频样本；P13全局CLS仍明确unavailable。定义见
+  [TimeSformer局部attention口径](decisions/timesformer-local-attention-probe-v1.md)。
+  attention-only观察现在只挂probability hooks，继续三次前向parity而不额外计算无关SVD。
+  本地相关36项测试、Ruff、compileall通过；真实native验收待执行，当前f25运行未改动。
+
 - 用户询问阶段、数据、四encoder进度及fit/select、开发头含义，已明确解释当前仍在找可操作性质，
   并行建立开发期原encoder＋UR-DMU基线；没有最终方法或官方frame质量。fit1288训练/参考拟合，
   select161开发比较，confirm161独立性质确认；冻结后再联合官方train1610训练正式头。各encoder

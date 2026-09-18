@@ -185,6 +185,17 @@ class ProbeObservation:
                 "backend": backend,
                 "dtype": self.dtype,
             }
+            for name in (
+                "native_domain",
+                "groups_per_clip",
+                "local_key_count",
+                "queries_per_group",
+                "native_query_rows",
+                "temporary_cls_policy",
+                "group_aggregation",
+            ):
+                if name in row:
+                    result[name] = row[name]
             output.append(result)
         return tuple(output)
 
@@ -411,7 +422,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             site_meta = self.token_metadata.site_metadata.get(site)
             if site_meta is not None:
                 self._observations.append(
-                    self._separated_attention_unavailable(site, layer_index, array, site_meta)
+                    self._summarize_separated_attention(site, layer_index, array, ids, site_meta)
                 )
             else:
                 self._observations.append(self._summarize_attention(site, layer_index, array, ids))
@@ -431,8 +442,8 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
         elif array.ndim == 4 and sublayer_kind == "attention":
             site_meta = self.token_metadata.site_metadata.get(site)
             if site_meta is not None:
-                observation = self._separated_attention_unavailable(
-                    site, layer_index, array, site_meta
+                observation = self._summarize_separated_attention(
+                    site, layer_index, array, np.arange(array.shape[2]), site_meta
                 )
             else:
                 observation = self._summarize_attention(
@@ -547,34 +558,217 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             has_cls=False,
         )
 
-    def _separated_attention_unavailable(
+    def _summarize_separated_attention(
         self,
         site: str,
         layer_index: int | None,
-        array: np.ndarray,
+        attention: np.ndarray,
+        query_ids: np.ndarray,
         detail: ProbeSiteMetadata,
     ) -> ProbeObservation:
-        """Keep expanded native attention honest until its local-key aggregation is requested.
+        """Aggregate TimeSformer local attention domains back to source clips.
 
-        The tensor is observed from the real module, but its rows have local
-        temporal/spatial key domains.  Writing B×P/B×T rows as separate clips
-        would violate the cohort protocol, so the result is one explicit row
-        per source video rather than a silently incorrect P10/P11 estimate.
+        Native temporal attention has one ``T``-key group for every spatial
+        position, while spatial attention has one ``P+CLS``-key group for each
+        frame.  The groups are equally weighted within a source clip; they are
+        never written as ``B*P`` or ``B*T`` independent samples.
         """
-
         base = self.token_metadata.valid_mask
-        batch = int(np.asarray(base).shape[0]) if base is not None else 0
-        rows = tuple(
-            _unavailable(
-                index,
-                probe,
-                "separated_attention_requires_local_key_aggregation",
-                f"{detail.execution_layout} native attention has local keys; collector did not treat B×P/B×T as videos",
+        converted_mask = _as_numpy(base) if base is not None else None
+        valid = np.asarray(base) if converted_mask is None and base is not None else converted_mask
+        batch = int(valid.shape[0]) if valid is not None and valid.ndim == 2 else 0
+        rows: list[dict[str, Any]] = []
+
+        def local(row: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+            row.update(metadata)
+            return row
+
+        def unavailable(reason: str, message: str) -> ProbeObservation:
+            heads = range(attention.shape[1]) if attention.ndim == 4 else (None,)
+            error_rows = tuple(
+                _unavailable(index, probe, reason, message, head_id=head)
+                for index in range(batch)
+                for head in heads
+                for probe in ("P10", "P11", "P13")
             )
-            for index in range(batch)
-            for probe in ("P10", "P11", "P13")
+            return ProbeObservation(
+                site, layer_index, "attention", batch, None, str(attention.dtype), error_rows
+            )
+
+        if base is None:
+            return unavailable(
+                "attention_validation", "valid_mask is required for TimeSformer attention"
+            )
+        assert valid is not None
+        expected_global = 1 + detail.spatial_tokens * detail.frames
+        if valid.dtype != np.bool_ or valid.shape != (batch, expected_global):
+            return unavailable(
+                "attention_validation", "TimeSformer metadata does not match global mask"
+            )
+        if self.token_metadata.has_cls is not True or self.token_metadata.special_token_indices != (
+            0,
+        ):
+            return unavailable(
+                "attention_validation",
+                "TimeSformer local attention requires verified leading global CLS at index 0",
+            )
+        # Local padding/ragged aggregation has not been verified.  Refusing it
+        # is preferable to renormalising only the groups that happen to fit.
+        if not np.all(valid):
+            return unavailable(
+                "timesformer_padding_not_supported",
+                "native local attention aggregation currently requires a fully valid dense clip",
+            )
+        if attention.ndim != 4 or not np.all(np.isfinite(attention)):
+            return unavailable(
+                "nonfinite", "attention must be a finite [native_batch,H,Q,K] tensor"
+            )
+
+        if detail.execution_layout == "timesformer_temporal":
+            groups, keys = detail.spatial_tokens, detail.frames
+            expected_shape = (batch * groups, attention.shape[1], len(query_ids), keys)
+            domain = "temporal"
+            temporary_cls = "none"
+        elif detail.execution_layout == "timesformer_spatial":
+            groups, keys = detail.frames, 1 + detail.spatial_tokens
+            expected_shape = (batch * groups, attention.shape[1], len(query_ids), keys)
+            domain = "spatial"
+            temporary_cls = "included_as_local_key_and_query"
+        else:
+            return unavailable(
+                "attention_validation", "site metadata is not a local TimeSformer attention layout"
+            )
+        if attention.shape != expected_shape or not len(query_ids) or np.any(query_ids >= keys):
+            return unavailable(
+                "attention_validation",
+                "native attention shape/query sample differs from verified local key domain",
+            )
+
+        heads = attention.shape[1]
+        grouped = attention.reshape(batch, groups, heads, len(query_ids), keys)
+        audit_fields = {
+            "native_domain": domain,
+            "groups_per_clip": groups,
+            "local_key_count": keys,
+            "queries_per_group": len(query_ids),
+            "native_query_rows": groups * len(query_ids),
+            "temporary_cls_policy": temporary_cls,
+            "group_aggregation": "equal_mean",
+        }
+        for index in range(batch):
+            for head in range(heads):
+                if keys < 2:
+                    rows.extend(
+                        local(
+                            _not_applicable(
+                                index,
+                                probe,
+                                "insufficient_local_keys",
+                                "normalised entropy requires at least two local keys",
+                                keys,
+                                keys,
+                                groups * len(query_ids),
+                                head,
+                            ),
+                            audit_fields,
+                        )
+                        for probe in ("P10", "P11")
+                    )
+                    rows.append(
+                        local(
+                            _unavailable(
+                                index,
+                                "P13",
+                                "global_cls_aggregation_not_implemented",
+                                "native local attention does not aggregate the verified global CLS",
+                                keys,
+                                keys,
+                                groups * len(query_ids),
+                                head,
+                            ),
+                            audit_fields,
+                        )
+                    )
+                    continue
+                per_group: dict[str, list[float]] = {
+                    "outgoing_attention_entropy_mean": [],
+                    "outgoing_attention_top4_mass_mean": [],
+                    "sampled_query_incoming_attention_entropy": [],
+                    "sampled_query_incoming_attention_top4_mass": [],
+                    "sampled_query_incoming_attention_gini": [],
+                }
+                valid_groups = True
+                for group in range(groups):
+                    matrix = np.asarray(grouped[index, group, head], dtype=np.float64)
+                    if np.any(matrix < 0) or not np.allclose(
+                        matrix.sum(axis=-1), 1.0, atol=2e-3, rtol=2e-3
+                    ):
+                        valid_groups = False
+                        break
+                    matrix = matrix / matrix.sum(axis=-1, keepdims=True)
+                    statistics = self._p10_p11_statistics(matrix)
+                    for name, value in statistics.items():
+                        per_group[name].append(value)
+                if not valid_groups:
+                    rows.extend(
+                        local(
+                            _unavailable(
+                                index,
+                                probe,
+                                "invalid_attention_probabilities",
+                                "every native local attention row must be non-negative and sum to one",
+                                keys,
+                                keys,
+                                groups * len(query_ids),
+                                head,
+                            ),
+                            audit_fields,
+                        )
+                        for probe in ("P10", "P11", "P13")
+                    )
+                    continue
+                audit = (
+                    f"native_domain={domain}; groups_per_clip={groups}; local_key_count={keys}; "
+                    f"queries_per_group={len(query_ids)}; native_query_rows={groups * len(query_ids)}; "
+                    f"temporary_cls={temporary_cls}; equal_group_mean=true"
+                )
+                for name, values in per_group.items():
+                    probe = "P10" if name.startswith("outgoing") else "P11"
+                    rows.append(
+                        local(
+                            _available(
+                                index,
+                                probe,
+                                name,
+                                float(np.mean(values)),
+                                keys,
+                                keys,
+                                groups * len(query_ids),
+                                head,
+                                audit,
+                            ),
+                            audit_fields,
+                        )
+                    )
+                rows.append(
+                    local(
+                        _unavailable(
+                            index,
+                            "P13",
+                            "global_cls_aggregation_not_implemented",
+                            "native local attention does not aggregate the verified global CLS; "
+                            + audit,
+                            keys,
+                            keys,
+                            groups * len(query_ids),
+                            head,
+                        ),
+                        audit_fields,
+                    )
+                )
+        return ProbeObservation(
+            site, layer_index, "attention", batch, keys, str(attention.dtype), tuple(rows)
         )
-        return ProbeObservation(site, layer_index, "attention", batch, None, str(array.dtype), rows)
 
     def _sequence_mask(self, array: np.ndarray) -> tuple[np.ndarray | None, str | None]:
         mask = self.token_metadata.valid_mask
@@ -1102,6 +1296,27 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             )
         ]
 
+    @staticmethod
+    def _p10_p11_statistics(probabilities: np.ndarray) -> dict[str, float]:
+        """Compute the shared P10/P11 statistics for normalised local rows."""
+        keys = probabilities.shape[1]
+        log_probabilities = np.log(np.maximum(probabilities, np.finfo(float).tiny))
+        entropy = -((probabilities * log_probabilities).sum(axis=1) / np.log(keys))
+        incoming = probabilities.mean(axis=0)
+        return {
+            "outgoing_attention_entropy_mean": float(entropy.mean()),
+            "outgoing_attention_top4_mass_mean": float(
+                np.sort(probabilities, axis=1)[:, -min(4, keys) :].sum(axis=1).mean()
+            ),
+            "sampled_query_incoming_attention_entropy": -float(
+                (incoming * np.log(np.maximum(incoming, np.finfo(float).tiny))).sum() / np.log(keys)
+            ),
+            "sampled_query_incoming_attention_top4_mass": float(
+                np.sort(incoming)[-min(4, keys) :].sum()
+            ),
+            "sampled_query_incoming_attention_gini": _gini(incoming),
+        }
+
     def _summarize_attention(
         self, site: str, layer_index: int | None, attention: np.ndarray, query_ids: np.ndarray
     ) -> ProbeObservation:
@@ -1192,76 +1407,23 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                     continue
                 probabilities = matrix / row_sum
                 detail = "sampled queries, all valid keys; conditional on valid keys when padding is present"
-                log_probabilities = np.log(np.maximum(probabilities, np.finfo(float).tiny))
-                entropy = -((probabilities * log_probabilities).sum(axis=1) / np.log(len(valid)))
-                top = np.sort(probabilities, axis=1)[:, -min(4, len(valid)) :].sum(axis=1)
-                rows.append(
-                    _available(
-                        batch_index,
-                        "P10",
-                        "outgoing_attention_entropy_mean",
-                        float(entropy.mean()),
-                        len(valid),
-                        len(valid),
-                        len(selected_queries),
-                        head,
-                        detail,
+                for name, statistic in self._p10_p11_statistics(probabilities).items():
+                    probe = "P10" if name.startswith("outgoing") else "P11"
+                    rows.append(
+                        _available(
+                            batch_index,
+                            probe,
+                            name,
+                            statistic,
+                            len(valid),
+                            len(valid),
+                            len(selected_queries),
+                            head,
+                            detail
+                            if name.endswith("entropy_mean") or name.endswith("entropy")
+                            else None,
+                        )
                     )
-                )
-                rows.append(
-                    _available(
-                        batch_index,
-                        "P10",
-                        "outgoing_attention_top4_mass_mean",
-                        float(top.mean()),
-                        len(valid),
-                        len(valid),
-                        len(selected_queries),
-                        head,
-                    )
-                )
-                incoming = probabilities.mean(axis=0)
-                in_entropy = -float(
-                    (incoming * np.log(np.maximum(incoming, np.finfo(float).tiny))).sum()
-                    / np.log(len(valid))
-                )
-                rows.append(
-                    _available(
-                        batch_index,
-                        "P11",
-                        "sampled_query_incoming_attention_entropy",
-                        in_entropy,
-                        len(valid),
-                        len(valid),
-                        len(selected_queries),
-                        head,
-                        detail,
-                    )
-                )
-                rows.append(
-                    _available(
-                        batch_index,
-                        "P11",
-                        "sampled_query_incoming_attention_top4_mass",
-                        float(np.sort(incoming)[-min(4, len(valid)) :].sum()),
-                        len(valid),
-                        len(valid),
-                        len(selected_queries),
-                        head,
-                    )
-                )
-                rows.append(
-                    _available(
-                        batch_index,
-                        "P11",
-                        "sampled_query_incoming_attention_gini",
-                        _gini(incoming),
-                        len(valid),
-                        len(valid),
-                        len(selected_queries),
-                        head,
-                    )
-                )
                 rows.extend(
                     self._p13_from_attention(
                         batch_index, head, probabilities, valid, selected_queries

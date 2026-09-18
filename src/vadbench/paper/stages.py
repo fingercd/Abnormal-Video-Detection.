@@ -153,13 +153,23 @@ def observe_clip(
         count = bridge.receipt().block_count
         indices = sorted({max(0, math.ceil(depth * count) - 1) for depth in observation["depths"]})
         sites = bridge.observation_sites(indices)
-        metadata = bridge.probe_token_metadata(geometry, sites)
+        requested_probes = set(
+            observation.get("probes", ("P01", "P02", "P04", "P07", "P10", "P11", "P13", "P16"))
+        )
+        token_requested = bool(requested_probes & {"P01", "P02", "P04", "P07", "P16"})
+        attention_requested = bool(requested_probes & {"P10", "P11", "P13"})
+        observed_sites = {
+            site: module
+            for site, module in sites.items()
+            if (attention_requested if ".probs." in site else token_requested)
+        }
+        metadata = bridge.probe_token_metadata(geometry, observed_sites)
         limits = ProbeLimits(
             max_observations=observation["max_records"],
             max_sampled_tokens=observation["max_tokens"],
             max_attention_queries=observation["max_queries"],
         )
-        collector = ProbeCollector(sites, metadata, limits)
+        collector = ProbeCollector(observed_sites, metadata, limits)
         with torch.no_grad(), collector:
             observed = adapter.encode(clean)
         if collector.dropped_observations:
@@ -212,6 +222,8 @@ def observe_clip(
             identity_layer_shapes=identity_shapes,
             probe_ready=not bool(collector.missing_sites),
             missing_observation_sites=list(collector.missing_sites),
+            requested_probes=sorted(requested_probes),
+            observed_sites=list(observed_sites),
             reduction_ready=False,
             parity=deltas,
             parity_tolerance={"rtol": 1e-5, "atol": 1e-6},

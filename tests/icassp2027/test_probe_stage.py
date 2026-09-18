@@ -146,6 +146,50 @@ def test_geometry_excludes_partial_padding_and_rejects_changed_flatten_order():
     assert not wrong._forward_hooks and not wrong.proj._forward_hooks
 
 
+@pytest.mark.parametrize("family", ["attention", "token"])
+def test_requested_probe_family_skips_unrequested_hooks_and_keeps_native_parity(
+    monkeypatch, family
+):
+    adapter = FixtureAdapter()
+    batch = ClipBatch(
+        frames=np.zeros((1, 4, 4, 4, 3), dtype=np.uint8),
+        timestamps_s=np.array([[0.0, 0.2, 0.4, 0.6]]),
+        frame_indices=np.array([[0, 2, 4, 6]]),
+        valid_mask=np.ones((1, 4), dtype=bool),
+        video_ids=("source",),
+    )
+    config = {"depths": [0.5, 1.0], "max_records": 64, "max_tokens": 8, "max_queries": 4}
+    full = observe_clip(adapter, "videomaev2", batch, config)
+    requested = ["P10", "P11"] if family == "attention" else ["P04"]
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("unrequested probe family was evaluated")
+
+    monkeypatch.setattr(
+        ProbeCollector,
+        "_summarize_tokens" if family == "attention" else "_summarize_attention",
+        forbidden,
+    )
+    targeted = observe_clip(adapter, "videomaev2", batch, {**config, "probes": requested})
+
+    def measured(result):
+        return [
+            (item.site, row)
+            for item in result["observations"]
+            for row in item.rows
+            if row["probe_id"] in requested
+        ]
+
+    assert measured(targeted) == measured(full)
+    assert all(value == 0 for value in targeted["architecture"]["parity"].values())
+    assert targeted["architecture"]["requested_probes"] == requested
+    assert all(
+        (".probs." in site) == (family == "attention")
+        for site in targeted["architecture"]["observed_sites"]
+    )
+    assert all(not module._forward_hooks and not module._forward_pre_hooks for module in adapter.encoder.modules())
+
+
 def test_probe_execution_reuses_manifest_video_path_and_joins_labels_only_after_forward(
     tmp_path, monkeypatch
 ):
