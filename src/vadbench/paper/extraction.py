@@ -709,7 +709,7 @@ def _frozen_adapter(adapter: Any) -> Iterable[None]:
 
 
 def _write_pooled_record(
-    store: FeatureStore,
+    store: FeatureStore | _VideoShardWriter,
     *,
     row: int,
     record: VideoManifestRecord,
@@ -820,6 +820,31 @@ def _merge_shards(run_dir: Path, shard_dirs: Sequence[Path]) -> int:
     return len(merged)
 
 
+class _VideoShardWriter:
+    """Bound clip-index upserts to 64 rows; publish a video index once complete."""
+
+    def __init__(self, root: Path):
+        self.root = root
+        self.count = 0
+        self.blocks: list[Path] = []
+        self.store: FeatureStore | None = None
+
+    def write(self, **kwargs: Any) -> FeatureRecord:
+        if self.count % 64 == 0:
+            block = self.root / "blocks" / f"{self.count // 64:06d}"
+            self.blocks.append(block)
+            self.store = FeatureStore(block)
+        result = self.store.write(**kwargs)
+        self.count += 1
+        return result
+
+    def publish(self, expected: int) -> None:
+        if self.count != expected:
+            raise RuntimeError("per-video shard index is incomplete")
+        if _merge_shards(self.root, self.blocks) != expected:
+            raise RuntimeError("per-video merged index is incomplete")
+
+
 def extract_pooled_features(
     spec: PooledExtractionSpec,
     *,
@@ -830,6 +855,7 @@ def extract_pooled_features(
     run_id: str | None = None,
     backend: Any | None = None,
     encode_context_factory: EncodeContextFactory | None = None,
+    resume_source: str | Path | None = None,
 ) -> PooledExtractionResult:
     """Run one isolated pooled-only paper extraction attempt.
 
@@ -903,6 +929,7 @@ def extract_pooled_features(
             "runtime": runtime,
             "encoder_fingerprint": encoder_fingerprint,
             "paper_identity": paper_identity,
+            "resume_source": None if resume_source is None else str(Path(resume_source).expanduser().resolve()),
         },
     )
     from vadbench.checkpoints import sha256_file
@@ -915,8 +942,23 @@ def extract_pooled_features(
     failures: list[dict[str, str]] = []
     shard_dirs: list[Path] = []
     written = 0
+    reused_videos = reused_clips = decoded_videos = decoded_clips = 0
+    resume = None
+    if resume_source is not None:
+        from .feature_resume import FeatureResumeSource
+
+        try:
+            resume = FeatureResumeSource(
+                Path(resume_source), run_dir,
+                json.loads((run_dir / "resolved.json").read_text(encoding="utf-8")),
+                encode_context_factory=encode_context_factory,
+            )
+        except Exception as exc:
+            failures.append({"video_id": "<resume>", "type": type(exc).__name__, "message": str(exc)})
     evidence_by_video = {item["video_id"]: item for item in data_evidence["videos"]}
     for record in records:
+        if failures:
+            break
         shard = run_dir / "shards" / record.video_id
         try:
             path = record.resolve_path(root)
@@ -929,7 +971,32 @@ def extract_pooled_features(
             ):
                 raise VideoIOError("manifest fps differs from OpenCV probe")
             samples = _samples(spec, info.num_frames)
-            shard_store = FeatureStore(shard)
+            source_video = {
+                "manifest_path": record.path,
+                "actual_num_frames": info.num_frames,
+                "actual_fps": info.fps,
+                "width": info.width,
+                "height": info.height,
+                "summary_fingerprint": compute_encoder_fingerprint(
+                    {"manifest_path": record.path, "num_frames": info.num_frames,
+                     "fps": info.fps, "width": info.width, "height": info.height}
+                ),
+                "content_sha256": evidence_by_video[record.video_id]["sha256"],
+                "content_size_bytes": evidence_by_video[record.video_id]["size_bytes"],
+            }
+            if resume is not None:
+                copied = resume.copy_video(
+                    record=record, samples=samples, source_video=source_video,
+                    destination=shard, runtime_reference=runtime_reference,
+                )
+                if copied:
+                    reused_videos += 1
+                    reused_clips += copied
+                    written += copied
+                    shard_dirs.append(shard)
+                    continue
+            decoded_videos += 1
+            shard_store = _VideoShardWriter(shard)
             for group in _chunked(samples, spec.micro_batch_size):
                 batch = build_clip_batch(
                     path,
@@ -965,24 +1032,7 @@ def extract_pooled_features(
                         paper_identity=paper_identity,
                         runtime=runtime,
                         runtime_reference=runtime_reference,
-                        source_video={
-                            "manifest_path": record.path,
-                            "actual_num_frames": info.num_frames,
-                            "actual_fps": info.fps,
-                            "width": info.width,
-                            "height": info.height,
-                            "summary_fingerprint": compute_encoder_fingerprint(
-                                {
-                                    "manifest_path": record.path,
-                                    "num_frames": info.num_frames,
-                                    "fps": info.fps,
-                                    "width": info.width,
-                                    "height": info.height,
-                                }
-                            ),
-                            "content_sha256": evidence_by_video[record.video_id]["sha256"],
-                            "content_size_bytes": evidence_by_video[record.video_id]["size_bytes"],
-                        },
+                        source_video=source_video,
                         pooled=pooled,
                         token_count=token_count,
                         token_dtype=token_dtype,
@@ -990,8 +1040,8 @@ def extract_pooled_features(
                         reduction_execution=reduction_execution,
                     )
                     written += 1
-            if len(shard_store.records()) != len(samples):
-                raise RuntimeError("per-video shard index is incomplete")
+                    decoded_clips += 1
+            shard_store.publish(len(samples))
             shard_dirs.append(shard)
         except Exception as exc:
             failures.append(
@@ -1020,6 +1070,13 @@ def extract_pooled_features(
         "feature_root": feature_root,
         "encoder_fingerprint": encoder_fingerprint,
         "failures": failures,
+        "resume": {
+            "source_run": None if resume_source is None else str(Path(resume_source).expanduser().resolve()),
+            "reused_videos": reused_videos,
+            "reused_clips": reused_clips,
+            "decoded_videos": decoded_videos,
+            "decoded_clips": decoded_clips,
+        },
     }
     status_path = run_dir / "status.json"
     atomic_write_json(status_path, status)

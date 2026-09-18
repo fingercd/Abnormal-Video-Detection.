@@ -2,7 +2,39 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
-## 最新执行回执（UTC 2026-09-18 02 时）
+## 最新执行回执（UTC 2026-09-18 04 时）
+
+- 正式UCF评测、同seed head重复训练/缓存评分、视频配对质量导出和完整视频detector计时入口
+  已实现。统一集成 **97 passed / 240.18秒**，本机Python3.11、Torch2.13.0+cpu、NumPy2.4.6；
+  Ruff、compileall通过。来源核验绑定独立fit1288/select161、真实checkpoint内部metadata、
+  梯度/参数更新/reload QA以及sealed test；repeat评分只复用同表征/采样的完整test缓存，
+  secondary使用同seed dense head。还没有正式模型评分结果。
+- node3的VJ dense、V2 global_uniform、VJ global_uniform分别在232、726、20个完整训练
+  视频后因外部GPU争用被guard停止。旧输出与中断回执保留；没有停止其他用户的进程。
+  新续跑接口只复制严格核验的完整视频，partial整视频重算，新run重新训练固定预算的head。
+  source数据/采样/模型/校准/精度及数组SHA全部核验，原resolved、索引和数组来源均有记录。
+  非identity还与当前真实bridge/layout/indices逐项核对完整执行回执，且保持原microbatch=8。
+  完整resume回归 **22 passed / 99.16秒**，独立审计复现的回执篡改已被拒绝；真实服务器续跑待验收。
+- 已定位长dense视频的索引瓶颈：旧FeatureStore每clip会重读并重写整个视频索引。
+  paper extractor现用每64 clips一个原FeatureStore分片，完整视频只合并发布一次；不改核心
+  FeatureStore格式、模型输出或缓存语义指纹。这是提取工程优化，不计作插件推理加速。
+- V2 dense的fit/validation已完整完成；最后精确canary快照为2097/3350 clips，head尚未开始。
+  canary为53606帧的训练派生视频，耗时不能误报为head训练缓慢。其他运行状态继续以guard
+  和逐阶段回执核对，不将未最终汇总的失败数写成已验证零失败。
+- 四模型正式clip计时已准备在同一node2 GPU3顺序执行。修正了V2原生backbone实际返回
+  `[B,D]`的接口假设，保留真实native pooled readout；新冻结源`dc61652`，guard16503。
+  旧guard65292仍在waiting时已安全停止，原基线未动；尚无正式计时数字。
+- XD当前raw训练metadata为ready2800、ordinary pending1150、source-corrupt4；四坏成员全部
+  保留原fit角色并隔离。已另行冻结名称组隔离视图1598身份：fit1267/confirm167/select164，
+  当前available830/pending768；不按可用性重选，不称为完整官方train3954。保留一个真实34帧
+  fit视频，不静默padding或删除。XD第二数据集验证范围为V2与Time；UCF四模型主矩阵不变，
+  见[XD范围决定](decisions/xd-validation-scope-v1.md)。raw test坐标门禁仍待完整原视频。
+- XD测试ZIP采用严格4路分块恢复，已验证前缀加分块约4.28GB/10.80GB；未发布ready。
+  新恢复程序用流式SHA和打开ZIP期间的逐成员CRC校验，损坏ZIP/路径越界合成测试已通过。
+  先前控制文件缺失判断已纠正：实际文件全部保留，旧进程是网络截断退出，新程序继续使用
+  已验证分块。一次公网/备用线路中断后已恢复连接，没有据失联推定服务器任务成功或失败。
+
+## 此前执行回执（UTC 2026-09-18 02 时）
 
 - 元数据修复已冻结为 `a710ce4` 并部署。TimeSformer 在 node2 V100 实际完成 identity、
   global_uniform、paired_random、pair_linear 各两个 fit 视频 ×32 clips 的写入/读取，均64

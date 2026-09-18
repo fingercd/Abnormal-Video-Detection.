@@ -64,6 +64,7 @@ class DetectionExperimentRequest:
     method_frozen: bool = False
     audit_report: str | None = None
     run_id: str | None = None
+    resume_source_run: str | None = None
 
     def __post_init__(self) -> None:
         if self.reducer not in {"identity", "global_uniform", "paired_random", "pair_linear"}:
@@ -153,6 +154,19 @@ def _clip_frames(adapter: Any, definition: Mapping[str, Any]) -> int:
     if not isinstance(value, int) or value <= 0:
         raise ValueError("resolved fixed-clip encoder must declare a positive clip frame count")
     return value
+
+
+def _resume_role(source_run: str | None, role: str) -> Path | None:
+    if source_run is None:
+        return None
+    source = Path(source_run).expanduser().resolve()
+    if not source.is_dir():
+        raise FileNotFoundError(f"resume source run does not exist: {source}")
+    if not (source / "features").is_dir():
+        raise ValueError(f"resume source run has no feature extractions: {source}")
+    role_dir = source / "features" / role
+    # A guard may have interrupted an earlier role before this one started.
+    return role_dir if role_dir.exists() else None
 
 
 def run_detection_experiment(
@@ -345,6 +359,7 @@ def run_detection_experiment(
             run_id="train",
             backend=video_backend,
             encode_context_factory=reduction_factory,
+            resume_source=_resume_role(request.resume_source_run, "train"),
         )
         if not train_features.completed:
             raise RuntimeError(f"training feature extraction is incomplete: {train_features.status_path}")
@@ -370,6 +385,7 @@ def run_detection_experiment(
                 run_id="validation",
                 backend=video_backend,
                 encode_context_factory=reduction_factory,
+                resume_source=_resume_role(request.resume_source_run, "validation"),
             )
         )
         if validation_features is not None and not validation_features.completed:
@@ -393,6 +409,7 @@ def run_detection_experiment(
             run_id="evaluation",
             backend=video_backend,
             encode_context_factory=reduction_factory,
+            resume_source=_resume_role(request.resume_source_run, "evaluation"),
         )
         if not evaluation_features.completed:
             raise RuntimeError(

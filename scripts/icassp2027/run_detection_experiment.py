@@ -39,6 +39,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--method-frozen", action="store_true")
     parser.add_argument("--audit-report")
     parser.add_argument("--run-id")
+    parser.add_argument("--resume-source-run", help="reuse strictly validated complete video shards from this prior detection run")
     return parser
 
 
@@ -70,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         method_frozen=args.method_frozen,
         audit_report=args.audit_report,
         run_id=args.run_id,
+        resume_source_run=args.resume_source_run,
     )
     result = run_detection_experiment(request)
     print(json.dumps(result.__dict__, ensure_ascii=False, indent=2))

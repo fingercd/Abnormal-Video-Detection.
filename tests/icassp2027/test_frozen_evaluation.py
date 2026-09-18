@@ -358,7 +358,14 @@ class _Adapter:
 
 
 def _request(
-    tmp_path: Path, method: Path, dense: Path | None, manifest: Path, audit: Path, freeze: Path
+    tmp_path: Path,
+    method: Path,
+    dense: Path | None,
+    manifest: Path,
+    audit: Path,
+    freeze: Path,
+    *,
+    resume_source_evaluation_run: Path | None = None,
 ) -> FrozenEvaluationRequest:
     from vadbench.paper import evaluation
 
@@ -375,6 +382,9 @@ def _request(
         role_lock_path=str(evaluation._DEFAULT_ROLE_LOCK_PATH),
         head_data_contract_path=str(evaluation._DEFAULT_HEAD_DATA_CONTRACT_PATH),
         source_manifest_root=str(evaluation._DEFAULT_HEAD_SOURCE_MANIFEST_ROOT),
+        resume_source_evaluation_run=None
+        if resume_source_evaluation_run is None
+        else str(resume_source_evaluation_run),
         run_id="official",
     )
 
@@ -498,6 +508,87 @@ def test_frozen_evaluation_reuses_two_qa_passed_heads_and_one_test_store(
     resolved = json.loads((tmp_path / "out" / "official" / "resolved.json").read_text())
     assert resolved["coverage"]["input_union_complete"] is True
     assert (tmp_path / "out" / "official" / "result.json").is_file()
+
+
+def test_frozen_evaluation_passes_only_prior_test_store_to_strict_resume(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    method, representation = _source_run(
+        tmp_path, "method", {"name": "identity", "calibration": "none"}
+    )
+    test = write_manifest_jsonl([_record("test", "test")], tmp_path / "sealed.jsonl")
+    audit, freeze = tmp_path / "audit.json", tmp_path / "freeze.json"
+    _write_json(audit, {})
+    _freeze(freeze)
+    _patch_complete_run(monkeypatch, tmp_path, representation)
+    old_run = tmp_path / "interrupted-official"
+    old_resolved = old_run / "features" / "test" / "resolved.json"
+    _write_json(old_resolved, {"old": "untouched"})
+    original = __import__(
+        "vadbench.paper.evaluation", fromlist=["extract_pooled_features"]
+    ).extract_pooled_features
+    seen: list[Path | None] = []
+
+    def extract(*args, **kwargs):
+        value = kwargs.get("resume_source")
+        seen.append(None if value is None else Path(value))
+        return original(*args, **kwargs)
+
+    from vadbench.paper import evaluation
+
+    monkeypatch.setattr(evaluation, "extract_pooled_features", extract)
+    run_frozen_ucf_evaluation(
+        _request(
+            tmp_path,
+            method,
+            None,
+            test,
+            audit,
+            freeze,
+            resume_source_evaluation_run=old_run,
+        ),
+        adapter_factory=lambda _r: (
+            _Adapter(),
+            {"identity": {"adapter": "toy", "constructor": {"clip_frames": 4}}},
+        ),
+    )
+    assert seen == [old_run / "features" / "test"]
+    assert json.loads(old_resolved.read_text(encoding="utf-8")) == {"old": "untouched"}
+    stage = json.loads(
+        next((tmp_path / "out" / "official" / "provenance" / "stages").glob("*.json")).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert stage["config"]["resume_source_evaluation_run"] == str(old_run)
+    assert (
+        stage["inputs"]["resume_source_test_resolved"]["sha256"]
+        == hashlib.sha256(old_resolved.read_bytes()).hexdigest()
+    )
+
+
+def test_frozen_evaluation_rejects_missing_resume_test_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    method, representation = _source_run(
+        tmp_path, "method", {"name": "identity", "calibration": "none"}
+    )
+    test = write_manifest_jsonl([_record("test", "test")], tmp_path / "sealed.jsonl")
+    audit, freeze = tmp_path / "audit.json", tmp_path / "freeze.json"
+    _write_json(audit, {})
+    _freeze(freeze)
+    _patch_complete_run(monkeypatch, tmp_path, representation)
+    with pytest.raises(FileNotFoundError, match="features/test/resolved.json"):
+        run_frozen_ucf_evaluation(
+            _request(
+                tmp_path,
+                method,
+                None,
+                test,
+                audit,
+                freeze,
+                resume_source_evaluation_run=tmp_path / "missing-interrupted-run",
+            )
+        )
 
 
 def test_source_head_rejects_failed_qa_and_wrong_budget(tmp_path: Path) -> None:

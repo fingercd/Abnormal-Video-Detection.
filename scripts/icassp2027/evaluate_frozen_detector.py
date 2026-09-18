@@ -47,6 +47,10 @@ def _parser() -> argparse.ArgumentParser:
         "--source-manifest-root",
         default="outputs/icassp2027/assets/full-ucf-head-data-contract-20260918",
     )
+    parser.add_argument(
+        "--resume-source-evaluation-run",
+        help="interrupted prior official evaluation run; only its features/test is eligible for strict resume",
+    )
     parser.add_argument("--processor-tensor-type", choices=("pt", "np"))
     parser.add_argument("--run-id")
     return parser
@@ -69,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         role_lock_path=args.role_lock_path,
         head_data_contract_path=args.head_data_contract_path,
         source_manifest_root=args.source_manifest_root,
+        resume_source_evaluation_run=args.resume_source_evaluation_run,
         processor_tensor_type=args.processor_tensor_type,
         run_id=args.run_id,
     )

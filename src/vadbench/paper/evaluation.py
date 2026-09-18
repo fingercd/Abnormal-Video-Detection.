@@ -140,6 +140,7 @@ class FrozenEvaluationRequest:
     role_lock_path: str = str(_DEFAULT_ROLE_LOCK_PATH)
     head_data_contract_path: str = str(_DEFAULT_HEAD_DATA_CONTRACT_PATH)
     source_manifest_root: str = str(_DEFAULT_HEAD_SOURCE_MANIFEST_ROOT)
+    resume_source_evaluation_run: str | None = None
     processor_tensor_type: str | None = None
     run_id: str | None = None
 
@@ -973,6 +974,16 @@ def run_frozen_ucf_evaluation(
             **source_kwargs,
         )
     )
+    resume_source = None
+    resume_resolved = None
+    if request.resume_source_evaluation_run is not None:
+        resume_run = Path(request.resume_source_evaluation_run).expanduser().resolve()
+        resume_source = resume_run / "features" / "test"
+        resume_resolved = resume_source / "resolved.json"
+        if not resume_source.is_dir() or not resume_resolved.is_file():
+            raise FileNotFoundError(
+                "resume_source_evaluation_run must contain features/test/resolved.json"
+            )
     if dense is not None and dense.reducer.get("name") != "identity":
         raise ValueError("secondary direct_insert source must be the frozen dense identity head")
     if method.reducer.get("name") == "pair_linear" and request.calibration_run is None:
@@ -997,6 +1008,11 @@ def run_frozen_ucf_evaluation(
         "method_checkpoint": method.checkpoint,
         "dense_checkpoint": None if dense is None else dense.checkpoint,
     }
+    if resume_source is not None and resume_resolved is not None:
+        inputs["resume_source_evaluation_run"] = (
+            Path(request.resume_source_evaluation_run).expanduser().resolve()
+        )
+        inputs["resume_source_test_resolved"] = resume_resolved
     with record_stage(
         run_dir,
         "frozen_ucf_evaluation",
@@ -1109,6 +1125,7 @@ def run_frozen_ucf_evaluation(
             run_id="test",
             backend=video_backend,
             encode_context_factory=context,
+            resume_source=resume_source,
         )
         if not extraction.completed or extraction.feature_root is None:
             raise RuntimeError(
