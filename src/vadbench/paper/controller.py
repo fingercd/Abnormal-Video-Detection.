@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from vadbench.artifacts import new_run_id, record_stage
 from vadbench.data.audit import compute_manifest_sha256
-from vadbench.data.dense_sampling import ShortVideoPolicy
+from vadbench.data.dense_sampling import ShortVideoPolicy, sample_uniform_full_clips
 from vadbench.data.enrich import enrich_video_info
 from vadbench.data.manifest import (
     DatasetSplit,
@@ -18,6 +18,7 @@ from vadbench.data.manifest import (
     load_manifest_jsonl,
     write_manifest_jsonl,
 )
+from vadbench.data.video import build_clip_batch
 from vadbench.features import atomic_write_json
 from vadbench.paper.compatibility import CompatibilityDeclaration, TrainingIdentity
 from vadbench.paper.detection import (
@@ -47,6 +48,8 @@ class DetectionExperimentRequest:
     output_root: str
     project: str = "projects/icassp2027/profile.yaml"
     reducer: str = "identity"
+    reducer_seed: int = 0
+    calibration_run: str | None = None
     frame_stride: int = 2
     short_policy: ShortVideoPolicy = "strict"
     dense_window_stride: int | None = None
@@ -63,8 +66,12 @@ class DetectionExperimentRequest:
     run_id: str | None = None
 
     def __post_init__(self) -> None:
-        if self.reducer != "identity":
-            raise ValueError("only reducer=identity is currently implemented")
+        if self.reducer not in {"identity", "global_uniform", "paired_random", "pair_linear"}:
+            raise ValueError("unsupported paper reducer")
+        if type(self.reducer_seed) is not int or self.reducer_seed < 0:
+            raise ValueError("reducer_seed must be a nonnegative integer")
+        if (self.reducer == "pair_linear") != (self.calibration_run is not None):
+            raise ValueError("only pair_linear requires a completed calibration_run")
         if self.run_mode not in {"engineering", "official"}:
             raise ValueError("run_mode must be engineering or official")
         if self.run_mode == "official" and (not self.method_frozen or not self.audit_report):
@@ -245,13 +252,45 @@ def run_detection_experiment(
                 else "half_native_window_span",
             },
         )
+        reduction_factory = None
+        reducer_identity = {"name": "identity", "calibration": "none"}
+        if request.reducer != "identity":
+            from vadbench.paper.reduction_setup import prepare_reduction
+
+            setup_record = train[0]
+            setup_sample = sample_uniform_full_clips(
+                setup_record.num_frames,
+                num_segments=32,
+                clip_frames=clip_frames,
+                frame_stride=request.frame_stride,
+                short_policy=request.short_policy,
+            )[0]
+            setup_batch = build_clip_batch(
+                setup_record.resolve_path(root),
+                setup_record.video_id,
+                [setup_sample.clip],
+                backend=video_backend,
+            )
+            reduction_factory, reducer_setup = prepare_reduction(
+                adapter,
+                request.encoder,
+                setup_batch,
+                reducer=request.reducer,
+                output_dim=request.output_dim,
+                verified_encoder_identity=verified,
+                calibration_run=None if request.calibration_run is None else Path(request.calibration_run),
+                seed=request.reducer_seed,
+                batch_sizes=range(1, 9),
+            )
+            reducer_identity = dict(reduction_factory.reducer_identity)
+            atomic_write_json(run_dir / "resolved_reducer.json", reducer_setup)
         representation = representation_from_verified_encoder(
             runtime_id=request.encoder,
             adapter=adapter,
             verified_encoder_identity=verified,
             preprocessing={"profile": getattr(adapter, "preprocess_profile", "unknown")},
             readout={"kind": getattr(adapter, "pooling", "pooled")},
-            reducer={"name": "identity", "calibration": "none"},
+            reducer=reducer_identity,
             output_dim=request.output_dim,
             precision=request.precision,
             position_strategy={"kind": "native"},
@@ -305,6 +344,7 @@ def run_detection_experiment(
             output_root=run_dir / "features",
             run_id="train",
             backend=video_backend,
+            encode_context_factory=reduction_factory,
         )
         validation_features = (
             None
@@ -327,6 +367,7 @@ def run_detection_experiment(
                 output_root=run_dir / "features",
                 run_id="validation",
                 backend=video_backend,
+                encode_context_factory=reduction_factory,
             )
         )
         evaluation_features = extract_pooled_features(
@@ -347,6 +388,7 @@ def run_detection_experiment(
             output_root=run_dir / "features",
             run_id="evaluation",
             backend=video_backend,
+            encode_context_factory=reduction_factory,
         )
         if (
             not train_features.completed
@@ -358,7 +400,7 @@ def run_detection_experiment(
             )
         fit_digest = "sha256:" + compute_manifest_sha256(train)
         declaration = CompatibilityDeclaration(
-            mode="direct_insert",
+            mode="direct_insert" if request.reducer == "identity" else "refit_head",
             training_representation=representation,
             evaluation_representation=representation,
             training_sampling=train_sampling,

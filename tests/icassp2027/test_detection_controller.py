@@ -77,13 +77,14 @@ class _Adapter:
     def encode(self, batch, train=False):
         assert not train and set(batch.metadata) <= {"source_num_frames", "source_fps"}
         pooled = np.repeat(np.arange(4, dtype=np.float32)[None, :], batch.batch_size, axis=0)
+        tokens = getattr(self, "context_tokens", 2)
         return EncoderOutput(
-            features=np.repeat(pooled[:, None, :], 2, axis=1),
+            features=np.repeat(pooled[:, None, :], tokens, axis=1),
             pooled=pooled,
             timeline=TokenTimeline(
-                start_s=np.zeros((batch.batch_size, 2), dtype=np.float32),
-                end_s=np.ones((batch.batch_size, 2), dtype=np.float32),
-                valid_mask=np.ones((batch.batch_size, 2), dtype=bool),
+                start_s=np.zeros((batch.batch_size, tokens), dtype=np.float32),
+                end_s=np.ones((batch.batch_size, tokens), dtype=np.float32),
+                valid_mask=np.ones((batch.batch_size, tokens), dtype=bool),
             ),
         )
 
@@ -262,3 +263,74 @@ def test_real_profile_uses_external_assets_and_rejects_inactive(
     else:
         assert run_detection_experiment(request, video_backend=_CV()).completed
         assert len(received) == 1
+
+
+@pytest.mark.parametrize("reducer", ["global_uniform", "paired_random", "pair_linear"])
+def test_reduced_controller_binds_context_across_all_roles(tmp_path, monkeypatch, reducer):
+    from vadbench.features import FeatureStore
+    from vadbench.paper import reduction_setup
+
+    train = [_record("fit-normal", "train", False), _record("fit-positive", "train", True)]
+    validation = [_record("select", "val", False)]
+    evaluation = [_record("canary", "val", True)]
+    paths = {}
+    for name, records in (("train", train), ("validation", validation), ("evaluation", evaluation)):
+        for record in records:
+            (tmp_path / record.path).touch()
+        paths[name] = str(write_manifest_jsonl(records, tmp_path / f"{name}.jsonl"))
+    adapter = _Adapter()
+    identity = {"adapter": "toy", "constructor": {"clip_frames": 4},
+                "checkpoint": {"id": "toy", "sha256": {"toy.bin": "fixture"}}}
+
+    class Context:
+        reducer_identity = {"name": reducer, "seed": 0}
+        calls = 0
+        exits = 0
+
+        def __call__(self, batch):
+            assert all(value.startswith("sample-") for value in batch.video_ids)
+            self.calls += 1
+            return self
+
+        def __enter__(self):
+            adapter.context_tokens = 1
+            return self
+
+        def __exit__(self, *_args):
+            del adapter.context_tokens
+            self.exits += 1
+
+        def validate_execution(self):
+            return {"native_input_tokens": 2, "gathered_tokens": 1}
+
+    context = Context()
+    setup_calls = []
+
+    def prepare(actual, encoder, batch, **kwargs):
+        assert actual is adapter and encoder == "toy"
+        assert batch.batch_size == 1 and batch.num_frames == 4
+        assert kwargs["reducer"] == reducer and kwargs["output_dim"] == 4
+        assert kwargs["verified_encoder_identity"] == identity
+        setup_calls.append(kwargs)
+        return context, {"status": "synthetic_fixture_only", "reducer": reducer}
+
+    monkeypatch.setattr(reduction_setup, "prepare_reduction", prepare)
+    request = DetectionExperimentRequest(
+        encoder="toy", device="cpu", dataset_root=str(tmp_path),
+        train_manifest=paths["train"], validation_manifest=paths["validation"],
+        evaluation_manifest=paths["evaluation"], output_root=str(tmp_path / "runs"),
+        output_dim=4, reducer=reducer,
+        calibration_run=str(tmp_path / "calibration") if reducer == "pair_linear" else None,
+    )
+    result = run_detection_experiment(
+        request, adapter_factory=lambda _summary: (adapter, {"constructor": {"clip_frames": 4}, "identity": identity}),
+        video_backend=_CV(),
+    )
+    assert result.completed and len(setup_calls) == 1
+    assert context.calls == context.exits and context.calls > 3
+    assert not hasattr(adapter, "context_tokens")
+    for role in ("train", "validation", "evaluation"):
+        store = FeatureStore(Path(result.run_dir) / "features" / role)
+        assert all(row.metadata["reduction_execution"]["gathered_tokens"] == 1 for row in store.records())
+        resolved = json.loads((store.root / "resolved.json").read_text())
+        assert resolved["spec"]["representation"]["reducer"]["name"] == reducer

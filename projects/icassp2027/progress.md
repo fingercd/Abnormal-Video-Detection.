@@ -4,6 +4,22 @@
 
 ## 最新执行回执（UTC 2026-09-18 00 时）
 
+- 4条完整dense基线实际运行：V2在node2 GPU3、TimeSformer新版np在node2 GPU1、VideoMAE
+  新版np在node2 GPU7、V-JEPA2在node3 GPU3。新np开关在真实GPU完成8批B8的像素/pooled
+  逐位一致性核验。旧VideoMAE因外部GPU contention被guard中止；旧Time经PID/命令树核对后
+  停止并保留superseded回执，未触及其他作业。V-JEPA2微实验64/64，真实输出维数1024，
+  batch8峰值allocated约5.21GB/reserved约7.44GB（工程回执，非正式网络速度）。
+- 固定fit128、256clips、3epochs的真实gate校准已启动，本机数据执行前完整SHA核验。
+  V2完成768/768，三epoch平均relative MSE为0.164982/0.113354/0.098786，768个非零有限
+  gate梯度步、主干无梯度、dense/reduced实际读出parity及磁盘reload误差均0；Time/VMA也已
+  exit0，V-JEPA2继续运行。所有结果仍是校准QA，不是检测质量。
+- 已接通global_uniform、静态seed0 paired_random和pair_linear的原生部署context、严格
+  校准加载与同一FeatureStore/controller；不包装adapter、不修改model.forward，保留原生
+  backbone身份，reducer单独绑定代码/权重/校准指纹。75项定向集成测试通过，66.58秒；Ruff
+  通过。真实固定mask和完整质量/净速度验证仍须完成。
+- XD后续两个卷提前EOF造成size mismatch，原part保留；独立clone严格206续传已分别恢复
+  train2805和test_videos并出现真实字节增长，原train3320 writer继续。无错误CRC改写或完整
+  数据集ready主张。
 - 四模型pair gate真实RTX4060工程训练已在冻结 `8c35f62` 顺序完成，均exit0。每模型只训练
   w[D]两步，主干eval/requires_gradFalse且grad全None；identity与zero-gate/mean最大差0，
   真实磁盘checkpoint回读输出最大差0。V-JEPA2 native mean工程readout与该clip的adapter
