@@ -88,7 +88,8 @@ def _case(tmp_path, monkeypatch):
             category="Abuse" if number else "Normal", is_anomaly=bool(number),
             num_frames=64, fps=8.0,
             metadata={
-                "original_role": "fit", "training_role": "official-fulltrain-final",
+                "original_role": "fit" if number == 0 else "select",
+                "training_role": "official-fulltrain-final",
                 "content_sha256": sha256_file(tmp_path / f"{video_id}.mp4"),
                 "content_size_bytes": (tmp_path / f"{video_id}.mp4").stat().st_size,
             },
@@ -100,12 +101,22 @@ def _case(tmp_path, monkeypatch):
     }))
     contract = tmp_path / "view-contract.json"
     contract.write_text("{}")
+    role_lock = tmp_path / "role-lock.json"
+    role_lock.write_text(json.dumps({"partitions": {
+        "source-0": "fit", "source-1": "select"
+    }}))
     calls = []
 
     def load(path, expected_sha256, **_kwargs):
         assert Path(path) == contract and expected_sha256 == sha256_file(contract)
         calls.append(str(path))
-        return tuple(records), {"dataset": "ucf_crime", "dataset_root": str(tmp_path)}
+        return tuple(records), {
+            "dataset": "ucf_crime",
+            "dataset_root": str(tmp_path),
+            "inputs": {
+                "role_lock": {"path": role_lock.name, "sha256": sha256_file(role_lock)}
+            },
+        }
 
     monkeypatch.setattr(official_training, "load_official_training_view", load)
     request = OfficialDenseExtractionRequest(
@@ -126,6 +137,8 @@ def test_subset_real_feature_store_complete_and_bound(tmp_path, monkeypatch):
     request, adapter, factory, authority_calls = _case(tmp_path, monkeypatch)
     result = run_official_dense_extraction(request, adapter_factory=factory, video_backend=_CV())
     assert result["status"] == "completed" and len(authority_calls) == 2
+    assert result["data_role"] == "engineering-subset-of-official-fulltrain"
+    assert result["development_role"] is None
     contract_path = Path(result["contract"]["path"])
     assert result["contract"]["sha256"] == sha256_file(contract_path)
     contract = json.loads(contract_path.read_text())
@@ -142,6 +155,57 @@ def test_subset_real_feature_store_complete_and_bound(tmp_path, monkeypatch):
     for key in ("resolved", "status", "index"):
         entry = contract["feature_store"][key]
         assert sha256_file(entry["path"]) == entry["sha256"]
+
+
+def test_development_fit_extracts_exact_original_role_and_binds_role_lock(tmp_path, monkeypatch):
+    request, adapter, factory, authority_calls = _case(tmp_path, monkeypatch)
+    result = run_official_dense_extraction(
+        replace(request, run_id="development-fit", engineering_video_ids=(), development_role="fit"),
+        adapter_factory=factory,
+        video_backend=_CV(),
+    )
+    assert result["status"] == "completed" and len(authority_calls) == 2
+    assert result["data_role"] == "development-fit" and result["development_role"] == "fit"
+    contract = json.loads(Path(result["contract"]["path"]).read_text())
+    assert contract["data_role"] == "development-fit"
+    assert contract["development_role"] == "fit"
+    assert contract["engineering_video_ids"] == []
+    assert contract["original_role_lock"]["sha256"] == sha256_file(
+        contract["original_role_lock"]["path"]
+    )
+    manifest = load_manifest_jsonl(contract["training_manifest"]["path"])
+    assert {row.metadata["original_role"] for row in manifest} == {"fit"}
+    assert contract["videos"] == len(manifest) == 1
+
+
+def test_development_select_extracts_exact_original_role(tmp_path, monkeypatch):
+    request, _adapter, factory, _ = _case(tmp_path, monkeypatch)
+    result = run_official_dense_extraction(
+        replace(request, run_id="development-select", engineering_video_ids=(), development_role="select"),
+        adapter_factory=factory,
+        video_backend=_CV(),
+    )
+    contract = json.loads(Path(result["contract"]["path"]).read_text())
+    manifest = load_manifest_jsonl(contract["training_manifest"]["path"])
+    assert contract["data_role"] == "development-select"
+    assert contract["development_role"] == "select"
+    assert contract["videos"] == len(manifest) == 1
+    assert manifest[0].video_id == "source-1"
+    assert manifest[0].metadata["original_role"] == "select"
+
+
+def test_development_role_rejects_engineering_ids_before_output(tmp_path, monkeypatch):
+    request, _adapter, _factory, _ = _case(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="cannot be combined"):
+        replace(request, development_role="fit")
+    assert not Path(request.output_root).exists()
+
+
+def test_development_role_rejects_confirm_before_authority_access(tmp_path, monkeypatch):
+    request, _adapter, _factory, _ = _case(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="must be fit, select, or null"):
+        replace(request, engineering_video_ids=(), development_role="confirm")
+    assert not Path(request.output_root).exists()
 
 
 def test_protocol_tamper_rejects_before_model_or_output(tmp_path, monkeypatch):

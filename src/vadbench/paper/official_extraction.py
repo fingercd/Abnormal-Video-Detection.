@@ -11,7 +11,7 @@ import json
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from vadbench.artifacts import new_run_id, record_stage
 from vadbench.checkpoints import sha256_file
@@ -44,6 +44,7 @@ class OfficialDenseExtractionRequest:
     run_id: str | None = None
     resume_source: str | None = None
     engineering_video_ids: tuple[str, ...] = ()
+    development_role: Literal["fit", "select"] | None = None
 
     def __post_init__(self) -> None:
         if self.encoder not in {"videomaev2", "timesformer", "vjepa2", "videomae"}:
@@ -58,6 +59,10 @@ class OfficialDenseExtractionRequest:
             raise ValueError("processor override is only supported by TimeSformer and VideoMAE")
         if len(set(self.engineering_video_ids)) != len(self.engineering_video_ids):
             raise ValueError("engineering subset contains duplicate video IDs")
+        if self.development_role not in {None, "fit", "select"}:
+            raise ValueError("development_role must be fit, select, or null")
+        if self.development_role is not None and self.engineering_video_ids:
+            raise ValueError("development role extraction cannot be combined with engineering video IDs")
 
 
 def _bound_json(path: str | Path, expected: str) -> tuple[Path, dict[str, Any]]:
@@ -69,6 +74,34 @@ def _bound_json(path: str | Path, expected: str) -> tuple[Path, dict[str, Any]]:
 
 def _entry(path: Path) -> dict[str, str]:
     return {"path": str(path.resolve()), "sha256": sha256_file(path)}
+
+
+def _development_role_records(
+    records: tuple[Any, ...], authority: Mapping[str, Any], training_contract_path: Path, role: str
+) -> tuple[tuple[Any, ...], dict[str, str]]:
+    """Select a frozen development role through the source contract's role lock."""
+    inputs = authority.get("inputs")
+    if not isinstance(inputs, Mapping) or not isinstance(inputs.get("role_lock"), Mapping):
+        raise ValueError("official training authority lacks its original role-lock binding")
+    binding = inputs["role_lock"]
+    relative = Path(binding.get("path", ""))
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("original role-lock path escapes the official training contract")
+    lock_path = (training_contract_path.parent / relative).resolve()
+    expected = binding.get("sha256")
+    if not isinstance(expected, str):
+        raise ValueError("original role-lock binding lacks SHA-256")
+    _bound_json(lock_path, expected)
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    partitions = lock.get("partitions")
+    if not isinstance(partitions, Mapping) or set(partitions) != {record.video_id for record in records}:
+        raise ValueError("original role lock does not cover the exact official training view")
+    if any(record.metadata.get("original_role") != partitions[record.video_id] for record in records):
+        raise ValueError("official training manifest original_role differs from its frozen role lock")
+    selected = tuple(record for record in records if partitions[record.video_id] == role)
+    if not selected:
+        raise ValueError(f"original role lock has no {role} development videos")
+    return selected, _entry(lock_path)
 
 
 def run_official_dense_extraction(
@@ -92,7 +125,13 @@ def run_official_dense_extraction(
         raise ValueError("encoder is outside this dataset's declared scope")
     root = Path(authority["dataset_root"]).resolve()
     data_role = "official-fulltrain-final"
-    if request.engineering_video_ids:
+    original_role_lock = None
+    if request.development_role is not None:
+        records, original_role_lock = _development_role_records(
+            records, authority, training_contract_path, request.development_role
+        )
+        data_role = f"development-{request.development_role}"
+    elif request.engineering_video_ids:
         selected = set(request.engineering_video_ids)
         if not selected <= {item.video_id for item in records}:
             raise ValueError("engineering subset contains a video outside the official training view")
@@ -195,7 +234,12 @@ def run_official_dense_extraction(
             resume_source=request.resume_source,
         )
         if not result.completed:
-            failure = {"status": "failed", "extraction": asdict(result), "data_role": data_role}
+            failure = {
+                "status": "failed",
+                "extraction": asdict(result),
+                "data_role": data_role,
+                "development_role": request.development_role,
+            }
             atomic_write_json(run_dir / "result.json", failure)
             return failure
         feature_root = Path(result.feature_root).resolve()
@@ -235,11 +279,18 @@ def run_official_dense_extraction(
             "clips": expected_clips,
             "training_sampling_note": "test_dense is the existing sampler's name; all data are official training videos",
             "engineering_video_ids": list(request.engineering_video_ids),
+            "development_role": request.development_role,
+            "original_role_lock": original_role_lock,
             "detector_training_executed": False,
             "test_scoring_executed": False,
         }
         path = run_dir / "extraction-contract.json"
         atomic_write_json(path, contract)
-        result_document = {"status": "completed", "contract": _entry(path), "data_role": data_role}
+        result_document = {
+            "status": "completed",
+            "contract": _entry(path),
+            "data_role": data_role,
+            "development_role": request.development_role,
+        }
         atomic_write_json(run_dir / "result.json", result_document)
         return result_document

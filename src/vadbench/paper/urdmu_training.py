@@ -84,7 +84,7 @@ class URDMUTrainingRequest:
     device: str
     seed: int = 0
     protocol_path: str = "projects/icassp2027/decisions/official-detector-protocol-v2.json"
-    run_mode: Literal["formal", "engineering"] = "formal"
+    run_mode: Literal["formal", "development", "engineering"] = "formal"
     steps: int = 3000
     bags_per_class: int = 64
     extraction_contract_path: str | None = None
@@ -97,7 +97,8 @@ class URDMUTrainingRequest:
     def __post_init__(self) -> None:
         _require(self.dataset in {"ucf_crime", "xd_violence"}, "unsupported UR-DMU dataset")
         _require(
-            self.run_mode in {"formal", "engineering"}, "run_mode must be formal or engineering"
+            self.run_mode in {"formal", "development", "engineering"},
+            "run_mode must be formal, development or engineering",
         )
         _require(type(self.seed) is int and self.seed in {0, 1, 2}, "UR-DMU seed must be 0, 1 or 2")
         _require(
@@ -107,14 +108,14 @@ class URDMUTrainingRequest:
             and self.bags_per_class > 0,
             "optimizer steps and bags per class must be positive integers",
         )
-        if self.run_mode == "formal":
+        if self.run_mode in {"formal", "development"}:
             _require(
                 self.steps == 3000 and self.bags_per_class == 64,
-                "formal UR-DMU requires 3000 steps and 64 normal + 64 abnormal bags",
+                "formal/development UR-DMU requires 3000 steps and 64 normal + 64 abnormal bags",
             )
             _require(
                 bool(self.extraction_contract_path and self.extraction_contract_sha256),
-                "formal UR-DMU requires the externally bound official dense extraction contract",
+                "formal/development UR-DMU requires an externally bound dense extraction contract",
             )
         if self.aggregation_cache is not None:
             _require(
@@ -182,6 +183,14 @@ def _protocol(request: URDMUTrainingRequest) -> dict[str, Any]:
     return document
 
 
+def _data_role(request: URDMUTrainingRequest) -> str:
+    return {
+        "formal": "official-fulltrain-final",
+        "development": "development-fit",
+        "engineering": "engineering_only",
+    }[request.run_mode]
+
+
 def _source(
     request: URDMUTrainingRequest,
 ) -> tuple[tuple[Any, ...], dict[str, Any], dict[str, str]]:
@@ -189,10 +198,10 @@ def _source(
         request.source_contract_path, request.source_contract_sha256, "training source contract"
     )
     actual = load_manifest_jsonl(request.train_manifest)
-    if request.run_mode == "formal":
+    if request.run_mode in {"formal", "development"}:
         from vadbench.data.official_training import load_official_training_view
 
-        records, receipt = load_official_training_view(
+        authoritative_records, receipt = load_official_training_view(
             path, request.source_contract_sha256, dataset_root=request.dataset_root
         )
         _require(
@@ -200,9 +209,21 @@ def _source(
             "official training dataset differs from request",
         )
         _require(
-            [r.to_dict() for r in actual] == [r.to_dict() for r in records],
+            request.run_mode != "formal"
+            or [r.to_dict() for r in actual] == [r.to_dict() for r in authoritative_records],
             "training manifest differs from the authoritative complete official view",
         )
+        if request.run_mode == "development":
+            from vadbench.paper.official_extraction import _development_role_records
+
+            records, lock = _development_role_records(authoritative_records, receipt, path, "fit")
+            _require(
+                [r.to_dict() for r in actual] == [r.to_dict() for r in records],
+                "development UR-DMU requires the complete original fit manifest",
+            )
+            receipt = {**receipt, "development_role_lock": lock}
+        else:
+            records = authoritative_records
     else:
         receipt = _json(path)
         _require(
@@ -236,12 +257,12 @@ def _source(
     if request.run_mode == "engineering":
         paths.append(Path(receipt["source_role_contract"]["path"]).resolve())
     sources = {str(p): sha256_file(p) for p in paths}
-    if request.run_mode == "formal":
+    if request.run_mode in {"formal", "development"}:
         sources.update(receipt["source_hashes"])
     return records, receipt, sources
 
 
-def _dense_source(request, records, sources):
+def _dense_source(request, records, sources, source_receipt=None):
     root = Path(request.feature_store).expanduser().resolve()
     entry = {
         name: {"path": str(root / filename), "sha256": sha256_file(root / filename)}
@@ -258,13 +279,21 @@ def _dense_source(request, records, sources):
             "dense extraction contract",
         )
         contract = _json(contract_path)
+        expected_role = _data_role(request)
         _require(
             contract.get("schema") == "icassp2027.official-dense-extraction/v1"
             and contract.get("status") == "ready"
-            and contract.get("data_role") == "official-fulltrain-final"
+            and contract.get("data_role") == expected_role
             and contract.get("dataset") == request.dataset,
-            "dense extraction contract is not the complete official training view",
+            "dense extraction contract data role differs from the training mode",
         )
+        if request.run_mode == "development":
+            _require(contract.get("development_role") == "fit", "development UR-DMU can train only fit")
+            lock = source_receipt.get("development_role_lock") if source_receipt else None
+            _require(
+                isinstance(lock, dict) and contract.get("original_role_lock") == lock,
+                "development extraction role-lock differs from the authoritative fit source",
+            )
         view = contract["training_view_contract"]
         _require(
             _bound(view["path"], view["sha256"], "extraction training view")
@@ -319,7 +348,7 @@ def _dense_source(request, records, sources):
         expected_video_count=len(records),
         feature_root_loader=lambda *_: root,
     )
-    if request.run_mode == "formal":
+    if request.run_mode in {"formal", "development"}:
         observed = {r["video_id"]: (r["sha256"], r["size_bytes"]) for r in evidence["videos"]}
         expected = {
             r.video_id: (r.metadata["content_sha256"], r.metadata["content_size_bytes"])
@@ -364,6 +393,7 @@ def _aggregate(request, records, document, representation, sources, run):
         "labels": labels,
         "shape": [len(records), 200, representation.output_dim],
         "aggregation": AGGREGATION,
+        "data_role": _data_role(request),
     }
     if request.aggregation_cache is not None:
         root = Path(request.aggregation_cache).resolve()
@@ -423,9 +453,6 @@ def _aggregate(request, records, document, representation, sources, run):
             "source_sha256": dict(sources),
             "source_dense_lengths": lengths,
             "bags_sha256": sha256_file(root / "bags.npy"),
-            "data_role": "official-fulltrain-final"
-            if request.run_mode == "formal"
-            else "engineering_only",
         }
         atomic_write_json(root / "receipt.json", receipt)
         atomic_write_json(
@@ -486,9 +513,9 @@ def run_urdmu_training(request: URDMUTrainingRequest) -> dict[str, Any]:
         protocol = _protocol(request)
         records, source_receipt, sources = _source(request)
         document, representation, sampling, feature_receipt = _dense_source(
-            request, records, sources
+            request, records, sources, source_receipt
         )
-        if request.run_mode == "formal":
+        if request.run_mode in {"formal", "development"}:
             _require(
                 representation.backbone.runtime_id
                 in protocol["datasets"][request.dataset]["encoders"],
@@ -604,9 +631,8 @@ def run_urdmu_training(request: URDMUTrainingRequest) -> dict[str, Any]:
             "status": "completed_training",
             "run_mode": request.run_mode,
             "dataset": request.dataset,
-            "data_role": "official-fulltrain-final"
-            if request.run_mode == "formal"
-            else "engineering_only",
+            "data_role": _data_role(request),
+            "development_role": "fit" if request.run_mode == "development" else None,
             "checkpoint_role": "dense_reference"
             if representation.reducer.get("name") == "identity"
             else "refit_head",
@@ -696,6 +722,8 @@ def run_urdmu_training(request: URDMUTrainingRequest) -> dict[str, Any]:
             "status": "completed",
             "run_dir": str(run),
             "run_mode": request.run_mode,
+            "data_role": _data_role(request),
+            "development_role": "fit" if request.run_mode == "development" else None,
             "checkpoint_path": str(checkpoint),
             "checkpoint_sha256": artifact.sha256,
             "training_qa_sha256": sha256_file(run / "training_qa.json"),

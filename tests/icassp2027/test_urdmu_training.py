@@ -15,7 +15,7 @@ import torch
 
 from vadbench.checkpoints import sha256_file
 from vadbench.data.dense_sampling import DenseSamplingPlan
-from vadbench.data.manifest import VideoManifestRecord, write_manifest_jsonl
+from vadbench.data.manifest import VideoManifestRecord, load_manifest_jsonl, write_manifest_jsonl
 from vadbench.features import FeatureStore, compute_encoder_fingerprint
 from vadbench.paper import urdmu_training as training
 from vadbench.paper.compatibility import (
@@ -267,6 +267,50 @@ def test_formal_budget_cannot_be_replaced_by_engineering_smoke(source):
         replace(source, run_mode="formal")
     with pytest.raises(ValueError, match="extraction contract"):
         replace(source, run_mode="formal", steps=3000, bags_per_class=64)
+
+
+def test_development_budget_cannot_be_replaced_by_engineering_smoke(source):
+    with pytest.raises(ValueError, match="3000 steps"):
+        replace(source, run_mode="development")
+    with pytest.raises(ValueError, match="extraction contract"):
+        replace(source, run_mode="development", steps=3000, bags_per_class=64)
+
+
+def test_development_source_requires_exact_complete_fit_role(source, monkeypatch):
+    from vadbench.data import official_training
+
+    full = list(load_manifest_jsonl(source.train_manifest))
+    roles = {full[0].video_id: "fit", full[1].video_id: "select", full[2].video_id: "fit", full[3].video_id: "confirm"}
+    full = [replace(record, metadata={**record.metadata, "original_role": roles[record.video_id]}) for record in full]
+    fit_manifest = write_manifest_jsonl((full[0], full[2]), Path(source.feature_store).parent / "fit.jsonl")
+    lock = Path(source.source_contract_path).parent / "roles.json"
+    _write(lock, {"partitions": roles})
+
+    def load(path, expected_sha256, **_kwargs):
+        assert Path(path).resolve() == Path(source.source_contract_path).resolve()
+        assert expected_sha256 == source.source_contract_sha256
+        return tuple(full), {
+            "dataset": source.dataset,
+            "inputs": {"role_lock": {"path": lock.name, "sha256": sha256_file(lock)}},
+            "source_hashes": {},
+        }
+
+    monkeypatch.setattr(official_training, "load_official_training_view", load)
+    request = replace(
+        source,
+        run_mode="development",
+        train_manifest=str(fit_manifest),
+        steps=3000,
+        bags_per_class=64,
+        extraction_contract_path=str(lock),
+        extraction_contract_sha256=sha256_file(lock),
+    )
+    records, receipt, _ = training._source(request)
+    assert [record.video_id for record in records] == [full[0].video_id, full[2].video_id]
+    assert receipt["development_role_lock"] == {"path": str(lock.resolve()), "sha256": sha256_file(lock)}
+    wrong = write_manifest_jsonl((full[0], full[1]), Path(source.feature_store).parent / "wrong.jsonl")
+    with pytest.raises(ValueError, match="complete original fit"):
+        training._source(replace(request, train_manifest=str(wrong)))
 
 
 def test_uniform32_source_is_rejected_before_training(source):

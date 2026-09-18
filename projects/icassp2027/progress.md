@@ -2,6 +2,39 @@
 
 更新日期：2026-09-18。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
+## 新执行任务接手（2026-09-18）
+
+- 用户选择的现有目录方案已生效：在 `D:/PythonProject/VAD` 接续
+  `d555ca8ed2d761f73935359d1fa18ca1da486f1f`，本任务 ID 为
+  `01a0b40b-ae65-7222-ae63-6c2a5f3f28bd`。已按 `GOAL_NEXT_TASK.txt` 全文建立 active Goal，
+  不设 token 预算，不再等待旧 worktree 或启动确认。下方“待创建/待审阅”均为历史记录。
+- 首次 `git status --short` 只有受保护的 `VAD_Idea/` 和两个根目录临时脚本未跟踪。
+  本轮未读取旧方向、未重装环境、未访问官方模型测试分数。
+- 经公网线路实连 node3，复核四组 native UR-DMU 验收 aggregate 及逐模型 receipt SHA，
+  aggregate 仍为 `16fa0a7a56b7fe4084e2fee2f4633ca0db6da7d87792ca2eaf016929adbcaa6c`，
+  guard completed/exit0。UCF1610 训练视图合同 SHA 与交接一致；不重跑已完成验收。
+- 实时发现五条旧 train32/TopKMIL 原型作业仍运行。核对 owner、完整 argv、进程启动标识、
+  guard/child 后，保存现有索引摘要并通过其 guard 的 `cancel` 文件有序停止，保留所有产物。
+  请求回执：服务器 `/users/fotile/icassp2027-runs/control/goal-resume-20260918/`
+  下 `superseded-train32-request.json`；五项随后均 confirmed cancelled/SIGTERM/exit -15，
+  child 均已退出，见同目录 `superseded-train32-result.json`。未停止无关用户或服务。
+- XD 实时复核：train2805 writer 已退出且传输 progress=completed；test105262、train3320
+  83455 均仍为原 fotile writer，继续运行，无重复启动。传输完成仍需 CRC/SHA、解压和
+  raw 坐标审计；四个源坏成员尚未据此宣布修复。共享 `/users` 剩余约 149 GiB。
+- 当前实现重点为严格绑定原 fit1288/select161 的 UR-DMU 开发期 dense 提取、固定预算
+  训练和视频级开发评分；confirm 及官方 test 不并入该训练。旧 TopKMIL 契约不削弱。
+  提取/训练接口已实现：`--development-role fit|select` 与 `--run-mode development`。
+  仍强制完整角色、3000 steps、64+64 bags 和200bin；拒绝confirm、任意子集及来源变更。
+  本机 `.venv/Scripts/python.exe` 的提取/训练测试分别10、21项通过，Ruff和compileall通过。
+  这31项是工程测试，尚未声称开发训练基线已完成。
+- 性质审查保留 P16/P07 的拒绝及操作负结果；正在核对 P04 局部冗余的未使用确认样本。
+  新的[P04确认计划](decisions/p04-heldout-confirmation-v1.md)已在读取新结果前登记：
+  VideoMAEv2单一embedding冗余统计、剩余confirm97中哈希固定64、原fit-normal匹配阈值，
+  失败即停止该性质干预。在独立确认和受控干预通过前，不实现或训练论文压缩规则/LoRA。
+- 完整开发fit/select四模型预检共2,923,485 clips。现有FeatureStore分配估算约52GiB，
+  另留4GiB缓存/日志；XD当前剩余归档及raw写入约49.48GiB，预计保留约32GiB磁盘余量，
+  后续以实际增长复核。此为容量预算，不是实测提取速度或正式效率数字。
+
 ## 用户七点澄清后的最新执行决定
 
 - 用户最新明确倾向A，并优先考虑LoRA。计划及Goal正文已补充：保持同一性质驱动的

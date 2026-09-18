@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-id")
     parser.add_argument("--resume-source")
     parser.add_argument("--engineering-video-id", action="append", default=[])
+    parser.add_argument("--development-role", choices=("fit", "select"))
     parser.add_argument("--cuda-memory-fraction", type=float, default=0.5)
     args = parser.parse_args(argv)
     if not 0 < args.cuda_memory_fraction <= 1:
