@@ -10,7 +10,7 @@
 当前F04已包含四模型完整fit观察；绝对local cosine方向一致，但rank下降与local−nonlocal额外增量
 未在VJ复现。仍无新独立确认或压缩有效性结论，不能直接确定统一方法。
 
-## V-JEPA 2 注意力观察修复（2026-09-19；原生权重验收待完成）
+## V-JEPA 2 注意力观察修复（2026-09-19；原固定八视频原生验收通过）
 
 新增研究用 `SDPAQueryRowObserver`，在所选原生 attention 模块进入 SDPA backend 时读取
 实际 post-RoPE Q/K，只重建均匀采样 query 对完整 K 的 float32 softmax 行。
@@ -22,8 +22,7 @@ Q/K/V shape、query 索引和坐标等证据。
 P10/P11 继续使用既有统计定义，但新增独立 reconstructed site；原生概率缺失记录保留。
 P13 在已验证无 CLS 的模型上标为不适用，不再随 SDPA 是否返回概率改变语义。
 本地定向验证已覆盖只读输出/梯度/参数与 RNG、registry 恢复、非零位置旋转、完整 K、
-source JSON、旧 native missing 隔离和 TimeSformer 分离布局；真实 foundation Transformers
-4.57.3、预训练 V-JEPA 2 与固定 pilot 八视频的验收尚未执行。本地小模型或单元测试
+source JSON、旧 native missing 隔离和 TimeSformer 分离布局。本地小模型或单元测试
 不构成正常—异常性质证据，不替代真实观察开关的数值一致性回执，旧冻结观察不追溯改写。
 
 本轮 `.venv/Scripts/python.exe -m pytest` 合并执行 research、TimeSformer attention、runtime
@@ -34,15 +33,72 @@ torch 2.13.0+cpu、2层/2头/N8；observer 与 identity 的 features/pooled 最�
 ruff 与 `git diff --check` 均通过。
 这些验证没有启动新确认分区、训练 LoRA 或读取官方测试数据。
 
+原生验收已在独立 `code-6630829` 冻结目录完成，沿用原debug8的64行cohort和八行train
+manifest，按字节镜像且SHA不变；仍为fit/debug/train，并非新确认样本。初次增量bundle因
+服务器主仓库缺少e82cd7d前置提交而未通过校验，保留失败身份后改用完整历史bundle，成功创建
+detached工作树，原origin tracked工作树未变。代码上传与预检记录均在
+`outputs/icassp2027/control/vjepa2-sdpa-native-pilot-20260919-a01/`。
+
+本次native PID1533/startticks1348257281、guard PID1452/startticks1348257229，使用GPU6
+UUID `GPU-71a55fac-63a9-8504-5651-4c72fdf1f2b1`，启动时无其他compute PID。实际导入
+torch2.8.0/Transformers4.57.3及新冻结src；2线程、interop1、cuDNN/TF32关闭、allocator.5。
+固定四层b5/11/17/23、每层64 query对完整8192 K，P10/P11/P13-only，原八视频×八窗口，
+共192次baseline/observer/identity前向。run为`probe-20260919T022308454825Z-7f4ccde1`。
+epoch1789784926全64 clips产物审计通过：全部四层Q/K/V为[1,16,8192,64]、重建矩阵
+[1,16,64,8192]，实际scale=.125，native/reconstruction均float32。每clip的observer与identity
+features/pooled最大绝对差全部为0；4096个输入帧索引、query IDs与网格/tubelet坐标、
+模型权重/源码来源均核对。64个shard与最终JSONL逐条一致：重建P10/P11 available20480，
+原生概率unavailable512、P13无CLS not_applicable256；native与guard正常退出，未见tensor dump。
+回执`audit-receipt-a01.json` SHA为`5636a509da0ace369be7c1fba0eb39405fb0d172e1b5dee8a3db55ca76e3c445`。
+本轮实测产物266,128,171 B（253.7996 MiB），接近256 MiB预算，不能沿用此前低于128 MiB的
+估算扩展；下一轮FIT补观察使用独立NAS命名空间及6 GiB输出预算。这里的峰值allocated
+1,834,341,888 B、reserved2,092,957,696 B仅为含观察器的工程容量。
+本次是工程观察验收，即使guard标记idle策略可计时，也没有正式计时请求或论文效率数字。
+
+在八视频全验收通过后，原FIT128的V-JEPA注意力补观察已真正启动。原cohort为1024行/128
+视频/1024唯一clips，保持fit/explore/train、八窗口、原采样和query32/token256/record128；
+cohort/manifest/plan SHA原样保持，新suite只请求P10/P11/P13，并保留新来源身份。
+数据根仍为原`UCF-Crime-official-verified`，不使用debug路径代替，也不创造新确认分区。
+
+新研究工作树为`/data2/localdisk/fotile-icassp2027-vjepa-sdpa-fit-20260919-a01/code-6630829`，
+与heads/scoring的24 GiB命名空间完全分开。a01/a02部署稿在静态审查被拒，均未执行；
+实际执行a03，复用已验收pilot wrapper并绑定全部输入/源码摘要，NAS原子写/rename及
+真实CLI dry-run通过。预检分别核root15 GiB+64 MiB、NAS15 GiB+6 GiB，实测root free
+58,488,651,776 B、NAS free5,612,703,318,016 B；6 GiB为规划预算，不是物理quota。
+预检SHA`41f34c6cd4b853af8035daa1bd64834641c180f058f0d384de4a15b0466ae9b2`。
+
+实际run为`probe-20260919T023815898253Z-e49df322`，guard PID14010/startticks1348347976、
+native PID14097/startticks1348348049，GPU6、原foundation环境和同一backend/thread/cap规则。
+epoch1789785515实际核验进程身份、NAS导入路径与首clip已发布，仍运行中；全1024 clips的
+完成、与旧FIT逐clip frame-map对齐、性质比较尚未完成。控制材料为
+`outputs/icassp2027/control/vjepa2-sdpa-fit-reobserve-20260919-a01/a03/`，不得重复启动。
+epoch1789785719首consumer审计通过，快照57/1024 clips、7/128视频，两个PID身份仍live。
+仅首clip `Abuse005_x264:segment-00`已逐项与旧FIT核对：完整sampling/source_frame_indices及
+11项几何字段一致，实际query32/fullK8192、四parity均0；project/run/shard均为NAS device44、
+owner fotile，与/users不同device。首shard为2,076,253 B；不能将首clip审计扩大为1024全部通过。
+回执`a03/first-consumer-review.json` SHA为
+`df44d0cdba59ce123e3d4e58ff2b4002578a812c17b4a0fa19762c987fd4d6eb`。
+
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
+- epoch1789784305新快照`baseline-live-20260919-a08/snapshot.json`：VideoMAEv2 498/1288、
+  TimeSformer498/1288（497复用、1个新完成）、VideoMAE547/1288、V-JEPA 2 448/1288。
+  四native owner/argv/startticks一致，均extract_dense；root free59,271,155,712 B，
+  RAM available1,424,325,664,768 B。下方a07保留为此前时点，不能据视频计数换算计算完成率。
+- Time新完成视频已单独核对为Normal_Videos307_x264：628,020帧@30fps，78,502条完整
+  dense索引坐标、首尾窗口及end_anchored通过；所有记录无reused_from，78,502个新唯一inode
+  均nlink1且不与oldpartial重叠。旧partial的489个block index/31,264 clips及31,753个文件
+  stat/索引SHA前后未变、原top index仍不存在。本轮只核metadata与stat，不重读NPZ payload；
+  原64 clips的bitwise证据仍仅覆盖64，不能将31,264条声明SHA相等扩大为新payload验证。
+  回执`time-first-new-complete-20260919-a01/receipt.json` SHA为
+  `0ae6f863334aa3b4628d08e6f097948a3608d86fed3f90b992c1e935df5d2d3c`。
 - 2026-09-19T02:19:31Z只读复核评分controller PID24721/startticks1347808693：owner、argv
   匹配，state=S；completed=[]、needs_review=[]，四组waiting=live。四FIT仍running，
   training_status/run_dir为空，尚无score cases或质量结果。回执
   `development-select-scoring-20260919-a01/poll-receipts/controller-poll-20260919T021931Z.json`
   SHA256为`0685e8c4e44410c926397f2e38477223a3ac01291cd4a4d59ab97f2b3ec3c379`。
   指定远端poll脚本不存在，因此改用等价只读检查并在回执标明；未重启或修改队列。
-- node3最新只读测量epoch1789780308：完整fit视频分片为VideoMAEv2 498/1288、
+- 此前node3只读测量epoch1789780308：完整fit视频分片为VideoMAEv2 498/1288、
   TimeSformer 497/1288、VideoMAE 498/1288、V-JEPA 2 407/1288；四条native的owner/argv/startticks
   均匹配，仍处于dense提取。Time的497个视频为已复用完成的原完整缓存，其余视频继续编码。
   回执为`outputs/icassp2027/control/baseline-live-20260919-a07/snapshot.json`；
