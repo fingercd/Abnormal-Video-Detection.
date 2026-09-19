@@ -126,7 +126,10 @@ def test_attention_uses_all_keys_and_checks_native_normalisation():
     assert entropy["query_count"] == 2
     assert all(row["status"] == "not_applicable" for row in rows if row["probe_id"] == "P13")
     observer.run(layer, attention * 2)
-    assert all(row["status"] == "unavailable" for row in observer.observations[0].rows)
+    assert all(
+        row["status"] == ("not_applicable" if row["probe_id"] == "P13" else "unavailable")
+        for row in observer.observations[0].rows
+    )
 
 
 def test_missing_geometry_is_explicit_and_limits_are_reported():
@@ -169,8 +172,9 @@ def test_registered_but_nontriggering_or_tensorless_sites_emit_explicit_receipts
     assert collector.missing_sites == ("block.0.attn.probs.output",)
     missing = next(item for item in collector.observations if item.site.endswith("probs.output"))
     assert {row["probe_id"] for row in missing.rows} == {"P10", "P11", "P13"}
-    assert {row["status"] for row in missing.rows} == {"unavailable"}
-    assert {row["statistic_name"] for row in missing.rows} == {"hook_not_triggered"}
+    for row in missing.rows:
+        assert row["status"] == ("not_applicable" if row["probe_id"] == "P13" else "unavailable")
+        assert row["statistic_name"] == ("cls_attention" if row["probe_id"] == "P13" else "hook_not_triggered")
 
 
 class _NativeAttentionTuple(nn.Module):
@@ -200,10 +204,11 @@ def test_probability_site_rejects_context_only_native_attention_tuples(second):
     assert values.grad is not None
     observation = collector.observations[0]
     assert {row["probe_id"] for row in observation.rows} == {"P10", "P11", "P13"}
-    assert {row["status"] for row in observation.rows} == {"unavailable"}
-    assert {row["statistic_name"] for row in observation.rows} == {
-        "hook_output_has_no_usable_tensor"
-    }
+    for row in observation.rows:
+        assert row["status"] == ("not_applicable" if row["probe_id"] == "P13" else "unavailable")
+        assert row["statistic_name"] == (
+            "cls_attention" if row["probe_id"] == "P13" else "hook_output_has_no_usable_tensor"
+        )
     assert collector.missing_sites == ("block.0.attn.probs.output",)
 
 
@@ -219,3 +224,32 @@ def test_probability_site_accepts_only_native_second_probability_tensor():
     assert any(row["probe_id"] == "P10" and row["status"] == "available" for row in rows)
     assert any(row["probe_id"] == "P11" and row["status"] == "available" for row in rows)
     assert all(row["probe_id"] != "P01" for row in rows)
+
+
+def test_reconstructed_attention_keeps_native_missing_and_serializes_source():
+    import json
+
+    native_site = "block.0.attn.probs.output"
+    auxiliary_site = "block.0.attn.probs.reconstructed"
+    layer = _NativeAttentionTuple(None)
+    collector = ProbeCollector({native_site: layer}, metadata())
+    probabilities = torch.tensor([[[[0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1]]]])
+    evidence = {"source_kind": "reconstructed_from_native_post_rope_qk", "key_count": 4}
+    with collector:
+        layer(torch.ones(1, 4, 2))
+        collector.capture_reconstructed_attention(auxiliary_site, probabilities, [0, 3], evidence)
+    assert collector.missing_sites == (native_site,)
+    assert collector.reconstructed_attention_sites == (auxiliary_site,)
+    auxiliary = next(item for item in collector.observations if item.site == auxiliary_site)
+    assert {row["probe_id"] for row in auxiliary.rows} == {"P10", "P11"}
+    assert all(row["status"] == "available" and row["query_count"] == 2 for row in auxiliary.rows)
+    serialized = json.loads(json.dumps(auxiliary.to_rows(
+        run_id="fixture", encoder_id="vjepa2", checkpoint_digest=None,
+        clip_ids=["a:0"], video_ids=["a"],
+    )))
+    for row in serialized:
+        assert row["attention_capture"]["query_token_ids"] == [0, 3]
+        assert row["attention_capture"]["query_coordinates"] == [[0, 0, 0], [1, 0, 1]]
+        assert row["attention_capture"]["source_kind"] == evidence["source_kind"]
+    native = next(item for item in collector.observations if item.site == native_site)
+    assert all(row["status"] == "not_applicable" for row in native.rows if row["probe_id"] == "P13")

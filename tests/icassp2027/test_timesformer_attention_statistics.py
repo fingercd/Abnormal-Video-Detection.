@@ -177,7 +177,9 @@ def test_separated_attention_rejects_unverified_layouts_with_head_identity(kind:
     collector = ProbeCollector({site: layer}, metadata)
     collector.run(layer, attention)
     rows = collector.observations[0].rows
-    assert {row["status"] for row in rows} == {"unavailable"}
+    for row in rows:
+        expected = "not_applicable" if kind == "unknown_global_cls" and row["probe_id"] == "P13" else "unavailable"
+        assert row["status"] == expected
     assert {row["head_id"] for row in rows} == {0, 1}
 
 

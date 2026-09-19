@@ -10,8 +10,38 @@
 当前F04已包含四模型完整fit观察；绝对local cosine方向一致，但rank下降与local−nonlocal额外增量
 未在VJ复现。仍无新独立确认或压缩有效性结论，不能直接确定统一方法。
 
+## V-JEPA 2 注意力观察修复（2026-09-19；原生权重验收待完成）
+
+新增研究用 `SDPAQueryRowObserver`，在所选原生 attention 模块进入 SDPA backend 时读取
+实际 post-RoPE Q/K，只重建均匀采样 query 对完整 K 的 float32 softmax 行。
+原 backend 仍只调用一次、原返回对象保持不变；不切换 eager，不改变模型配置，退出后恢复
+registry 的 local/global 状态。当前只支持 eval、无 mask、非 causal、零 dropout、非 GQA
+路径，其余条件显式拒绝；重建显式关闭外层 autocast，并保留源码 SHA、实际 scale、dtype、
+Q/K/V shape、query 索引和坐标等证据。
+
+P10/P11 继续使用既有统计定义，但新增独立 reconstructed site；原生概率缺失记录保留。
+P13 在已验证无 CLS 的模型上标为不适用，不再随 SDPA 是否返回概率改变语义。
+本地定向验证已覆盖只读输出/梯度/参数与 RNG、registry 恢复、非零位置旋转、完整 K、
+source JSON、旧 native missing 隔离和 TimeSformer 分离布局；真实 foundation Transformers
+4.57.3、预训练 V-JEPA 2 与固定 pilot 八视频的验收尚未执行。本地小模型或单元测试
+不构成正常—异常性质证据，不替代真实观察开关的数值一致性回执，旧冻结观察不追溯改写。
+
+本轮 `.venv/Scripts/python.exe -m pytest` 合并执行 research、TimeSformer attention、runtime
+layouts、SDPA observer、probe stage/streaming、bridges、V-JEPA SDPA stage 八个受影响测试文件，
+结果为 **66 passed in 9.96s**。真实安装版 tiny V-JEPA 测试采用 Transformers 5.16.1、
+torch 2.13.0+cpu、2层/2头/N8；observer 与 identity 的 features/pooled 最大绝对差均为0，
+原 registry、RNG、参数/buffer 和 hook 清理验证通过。`compileall -q src tests`、受影响文件
+ruff 与 `git diff --check` 均通过。
+这些验证没有启动新确认分区、训练 LoRA 或读取官方测试数据。
+
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
+- 2026-09-19T02:19:31Z只读复核评分controller PID24721/startticks1347808693：owner、argv
+  匹配，state=S；completed=[]、needs_review=[]，四组waiting=live。四FIT仍running，
+  training_status/run_dir为空，尚无score cases或质量结果。回执
+  `development-select-scoring-20260919-a01/poll-receipts/controller-poll-20260919T021931Z.json`
+  SHA256为`0685e8c4e44410c926397f2e38477223a3ac01291cd4a4d59ab97f2b3ec3c379`。
+  指定远端poll脚本不存在，因此改用等价只读检查并在回执标明；未重启或修改队列。
 - node3最新只读测量epoch1789780308：完整fit视频分片为VideoMAEv2 498/1288、
   TimeSformer 497/1288、VideoMAE 498/1288、V-JEPA 2 407/1288；四条native的owner/argv/startticks
   均匹配，仍处于dense提取。Time的497个视频为已复用完成的原完整缓存，其余视频继续编码。

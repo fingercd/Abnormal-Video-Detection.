@@ -193,6 +193,7 @@ class ProbeObservation:
                 "native_query_rows",
                 "temporary_cls_policy",
                 "group_aggregation",
+                "attention_capture",
             ):
                 if name in row:
                     result[name] = row[name]
@@ -309,6 +310,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
     _active: bool = field(default=False, init=False, repr=False)
     _triggered_sites: set[str] = field(default_factory=set, init=False, repr=False)
     _captured_sites: set[str] = field(default_factory=set, init=False, repr=False)
+    _reconstructed_sites: set[str] = field(default_factory=set, init=False, repr=False)
     dropped_observations: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
@@ -338,6 +340,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
         self.dropped_observations = 0
         self._triggered_sites.clear()
         self._captured_sites.clear()
+        self._reconstructed_sites.clear()
         try:
             for site, module in self.observation_sites.items():
                 if site.endswith(".input"):
@@ -371,6 +374,64 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
         """Sites that were registered but did not yield a usable tensor."""
 
         return tuple(site for site in self.observation_sites if site not in self._captured_sites)
+
+    @property
+    def reconstructed_attention_sites(self) -> tuple[str, ...]:
+        """Separate auxiliary sites; these never satisfy a native hook site."""
+        return tuple(sorted(self._reconstructed_sites))
+
+    def capture_reconstructed_attention(
+        self,
+        site: str,
+        probabilities: Any,
+        query_ids: Sequence[int],
+        evidence: Mapping[str, Any],
+    ) -> None:
+        """Summarize bounded post-RoPE SDPA rows without claiming native capture.
+
+        The native backend observer owns mathematical reconstruction. This
+        boundary reuses P10/P11 definitions and supplies the verified token
+        coordinates; it retains no probability or Q/K tensor after return.
+        """
+        if not self._active or site in self.observation_sites:
+            raise ProbeCollectionError("reconstruction needs an active, distinct auxiliary site")
+        if self.token_metadata.has_cls is not False:
+            raise ProbeCollectionError("this reconstruction path requires the verified CLS-less layout")
+        ids = np.asarray(query_ids)
+        if ids.ndim != 1 or ids.dtype.kind not in {"i", "u"} or np.any(ids < 0):
+            raise ProbeCollectionError("reconstructed query IDs must be actual nonnegative token indices")
+        if len(self._observations) >= self.limits.max_observations:
+            self.dropped_observations += 1
+            return
+        array = _as_numpy(probabilities)
+        if array is None or array.ndim != 4 or array.shape[2] != len(ids):
+            raise ProbeCollectionError("reconstructed rows must be [B,H,Q_selected,K]")
+        layer_index, _ = _site_parts(site)
+        observation = self._summarize_attention(site, layer_index, array, ids)
+        coordinates = _as_numpy(self.token_metadata.coordinates)
+        rows = []
+        for row in observation.rows:
+            if row["probe_id"] not in {"P10", "P11"}:
+                continue
+            capture = dict(evidence)
+            capture["query_token_ids"] = ids.tolist()
+            capture["coordinate_source"] = self.token_metadata.coordinate_source
+            if coordinates is not None and len(ids) and ids.max() < coordinates.shape[1]:
+                capture["query_coordinates"] = coordinates[row["batch_index"], ids].tolist()
+            rows.append({**row, "attention_capture": capture})
+        self._observations.append(replace(observation, rows=tuple(rows)))
+        self._reconstructed_sites.add(site)
+
+    def _unavailable_probe(
+        self, batch_index: int, probe: str, statistic: str, detail: str,
+        *counts: Any, **named_counts: Any
+    ) -> dict[str, Any]:
+        if probe == "P13" and self.token_metadata.has_cls is False:
+            return _not_applicable(
+                batch_index, probe, "cls_attention",
+                "bridge receipt states that this encoder has no CLS", *counts, **named_counts,
+            )
+        return _unavailable(batch_index, probe, statistic, detail, *counts, **named_counts)
 
     def run(self, forward: Callable[..., Any], /, *args: Any, **kwargs: Any) -> Any:
         """Run a forward under hooks and guarantee cleanup even when it raises."""
@@ -486,7 +547,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                 else "hook_not_triggered"
             )
             rows = tuple(
-                _unavailable(
+                self._unavailable_probe(
                     batch_index,
                     probe,
                     reason,
@@ -588,7 +649,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
         def unavailable(reason: str, message: str) -> ProbeObservation:
             heads = range(attention.shape[1]) if attention.ndim == 4 else (None,)
             error_rows = tuple(
-                _unavailable(index, probe, reason, message, head_id=head)
+                self._unavailable_probe(index, probe, reason, message, head_id=head)
                 for index in range(batch)
                 for head in heads
                 for probe in ("P10", "P11", "P13")
@@ -678,7 +739,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                     )
                     rows.append(
                         local(
-                            _unavailable(
+                            self._unavailable_probe(
                                 index,
                                 "P13",
                                 "global_cls_aggregation_not_implemented",
@@ -714,7 +775,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                 if not valid_groups:
                     rows.extend(
                         local(
-                            _unavailable(
+                            self._unavailable_probe(
                                 index,
                                 probe,
                                 "invalid_attention_probabilities",
@@ -754,7 +815,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                     )
                 rows.append(
                     local(
-                        _unavailable(
+                        self._unavailable_probe(
                             index,
                             "P13",
                             "global_cls_aggregation_not_implemented",
@@ -1329,7 +1390,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
         if error or len(query_ids) != queries or np.any(query_ids >= keys):
             detail = error or "attention query IDs do not map to token key axis"
             rows.extend(
-                _unavailable(index, probe, "attention_validation", detail)
+                self._unavailable_probe(index, probe, "attention_validation", detail)
                 for index in range(batch)
                 for probe in ("P10", "P11", "P13")
             )
@@ -1339,7 +1400,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
         assert mask is not None
         if not np.all(np.isfinite(attention)):
             rows.extend(
-                _unavailable(index, probe, "nonfinite", "attention contains NaN/Inf")
+                self._unavailable_probe(index, probe, "nonfinite", "attention contains NaN/Inf")
                 for index in range(batch)
                 for probe in ("P10", "P11", "P13")
             )
@@ -1350,7 +1411,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             valid = np.flatnonzero(mask[batch_index])
             if len(valid) < 2:
                 rows.extend(
-                    _unavailable(
+                    self._unavailable_probe(
                         batch_index,
                         probe,
                         "insufficient_valid_tokens",
@@ -1366,7 +1427,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
             selected_queries = query_ids[query_slots]
             if not len(selected_queries):
                 rows.extend(
-                    _unavailable(
+                    self._unavailable_probe(
                         batch_index,
                         probe,
                         "no_valid_queries",
@@ -1381,7 +1442,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                     full_rows.sum(axis=-1), 1.0, atol=2e-3, rtol=2e-3
                 ):
                     rows.extend(
-                        _unavailable(
+                        self._unavailable_probe(
                             batch_index,
                             probe,
                             "invalid_attention_probabilities",
@@ -1394,7 +1455,7 @@ class ProbeCollector(AbstractContextManager["ProbeCollector"]):
                 row_sum = matrix.sum(axis=1, keepdims=True)
                 if np.any(matrix < 0) or np.any(row_sum <= 0):
                     rows.extend(
-                        _unavailable(
+                        self._unavailable_probe(
                             batch_index,
                             probe,
                             "invalid_attention_probabilities",

@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 from collections import Counter
+from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -170,8 +171,28 @@ def observe_clip(
             max_attention_queries=observation["max_queries"],
         )
         collector = ProbeCollector(observed_sites, metadata, limits)
-        with torch.no_grad(), collector:
+        reconstruction = None
+        reconstruction_receipts = {}
+        if encoder_id == "vjepa2" and requested_probes & {"P10", "P11"}:
+            reconstruction = bridge.sdpa_observation_recipe(indices)
+        reconstruction_context = nullcontext()
+        if reconstruction is not None:
+            from vadbench.research.sdpa_observer import SDPAQueryRowObserver
+
+            def capture_reconstructed(capture):
+                collector.capture_reconstructed_attention(
+                    capture.site, capture.sampled_probabilities, capture.query_ids, capture.metadata
+                )
+                reconstruction_receipts[capture.site] = dict(capture.metadata)
+
+            reconstruction_context = SDPAQueryRowObserver(
+                reconstruction["registry"], reconstruction["targets"], capture_reconstructed,
+                limits.max_attention_queries, reconstruction["source_identity"],
+            )
+        with torch.no_grad(), collector, reconstruction_context:
             observed = adapter.encode(clean)
+        if reconstruction is not None and set(reconstruction_receipts) != set(reconstruction["targets"]):
+            raise RuntimeError("selected native SDPA calls did not produce every reconstructed site")
         if collector.dropped_observations:
             raise ValueError(
                 "max_records truncated observation sites; increase the explicit collection budget"
@@ -224,6 +245,10 @@ def observe_clip(
             missing_observation_sites=list(collector.missing_sites),
             requested_probes=sorted(requested_probes),
             observed_sites=list(observed_sites),
+            reconstructed_attention_sites=reconstruction_receipts,
+            cls_probe_applicability=(
+                "not_applicable_no_cls" if bridge.receipt().has_cls is False else "requires_native_cls"
+            ),
             reduction_ready=False,
             parity=deltas,
             parity_tolerance={"rtol": 1e-5, "atol": 1e-6},

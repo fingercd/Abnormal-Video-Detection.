@@ -476,6 +476,63 @@ class EncoderBridge:
         )
         return result
 
+    def sdpa_observation_recipe(self, depths: Iterable[int]) -> dict[str, Any] | None:
+        """Identify the installed V-JEPA backend boundary without changing it.
+
+        Native module hooks remain separate: this recipe describes reconstructed
+        rows, never probabilities returned by the native attention module.
+        """
+        import inspect
+        from pathlib import Path
+
+        from vadbench.hashing import sha256_file
+
+        if self._encoder_id != "vjepa2":
+            return None
+        if getattr(getattr(self._root, "config", None), "_attn_implementation", None) != "sdpa":
+            return None
+        targets = {}
+        modeling = None
+        for depth in depths:
+            self._validate_depth(depth)
+            attention = self._blocks[depth].attention
+            source_module = inspect.getmodule(type(attention))
+            if (
+                type(attention).__name__ != "VJEPA2RopeAttention"
+                or source_module is None
+                or source_module.__name__ != "transformers.models.vjepa2.modeling_vjepa2"
+                or attention.training
+                or attention.config._attn_implementation != "sdpa"
+            ):
+                raise BridgeUnsupportedError("reconstruction requires native VJEPA2RopeAttention in SDPA eval mode")
+            if modeling is not None and source_module is not modeling:
+                raise BridgeUnsupportedError("selected V-JEPA attention modules have different implementations")
+            modeling = source_module
+            targets[f"block.{depth}.attn.probs_reconstructed"] = attention
+        if not targets:
+            raise BridgeUnsupportedError("SDPA reconstruction requires selected attention layers")
+        registry = modeling.ALL_ATTENTION_FUNCTIONS
+        backend = registry["sdpa"]
+        if (
+            backend.__module__ != "transformers.integrations.sdpa_attention"
+            or backend.__name__ != "sdpa_attention_forward"
+        ):
+            raise BridgeUnsupportedError("SDPA registry does not contain the native audited integration")
+        modeling_path = Path(inspect.getfile(modeling)).resolve()
+        backend_path = Path(inspect.getfile(backend)).resolve()
+        return {
+            "registry": registry,
+            "targets": targets,
+            "source_identity": {
+                "modeling_file": str(modeling_path),
+                "modeling_sha256": sha256_file(modeling_path),
+                "sdpa_file": str(backend_path),
+                "sdpa_sha256": sha256_file(backend_path),
+                "attention_class": f"{modeling.__name__}.VJEPA2RopeAttention",
+                "backend_callable": f"{backend.__module__}.{backend.__name__}",
+            },
+        }
+
     def observation_sites(self, depths: Iterable[int] | None = None) -> Mapping[str, nn.Module]:
         """Return readable hook sites without changing model execution.
 
