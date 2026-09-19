@@ -12,10 +12,11 @@
 
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
-- node3切换前分项只读测量epoch1789773942/1789774060：完整fit视频分片为VideoMAEv2 497/1288、
-  TimeSformer 497/1288、VideoMAE 498/1288、V-JEPA 2 368/1288；四条native的owner/argv/startticks
-  均匹配，仍处于dense提取。回执在`outputs/icassp2027/control/hardlink-resume-native-20260919/`
-  的`fresh-budget-a01/current.json`及`handoff-inputs.json`；这些是分项时点，非原子全机快照。
+- node3最新只读测量epoch1789780308：完整fit视频分片为VideoMAEv2 498/1288、
+  TimeSformer 497/1288、VideoMAE 498/1288、V-JEPA 2 407/1288；四条native的owner/argv/startticks
+  均匹配，仍处于dense提取。Time的497个视频为已复用完成的原完整缓存，其余视频继续编码。
+  回执为`outputs/icassp2027/control/baseline-live-20260919-a07/snapshot.json`；
+  root可用60,821,815,296 B、RAM available1,425,347,682,304 B，各目录扫描并非原子快照。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
   VideoMAE此前停留497的原因已核实：Normal_Videos307含628,020帧、约5.815小时，需39,251
   个dense窗口。epoch1789767169时块index已有28,880条记录（含当前块，非完整视频）；
@@ -51,6 +52,11 @@
 - V-JEPA 2完整8探针观察已完成128视频/1024逻辑窗口，guard24800 exit0；CPU a03 worker2160
   随即完成10,000视频bootstrap、exit0，父monitor13537也已正常结束。787可用+12不可用签名完整保留。
   全量几何/parity/源帧及787项统计点复核通过，四文件原字节镜像与worker输出SHA一致；科学更新见下节。
+  后续只读源码检查明确：P10/P11未取得概率是SDPA返回None的工程观测缺口，不能把missing-sites
+  直接解释成hook从未执行或模型没有attention；真实CLS类P13因VJ无CLS应语义上N/A。
+  可在实际post-RoPE Q/K边界旁路重建有限query、完整keys的数学概率；必须标重建来源并重新做
+  数值/几何/生命周期验证。当前尚未实现或运行此扩展，未回填旧结果或改变P04候选/确认门槛。
+  只读依据见`vjepa2-sdpa-observer-feasibility-20260919/README.md`。
 - VideoMAE同128个fit视频的早期P02/P04切片已完整完成：1024窗口，GPU5 guard exit0。
   CPU队列a02随即完成10,000次视频级bootstrap，worker28963与monitor8874均正常退出，
   13次资源采样、max RSS 600,162,304 B、无资源中止。原a01退役记录及a02运行身份保留。
@@ -115,10 +121,52 @@
   更新到epoch1789775626：target已有119个完整视频，119个均属于固定已验源集合，集合外为0；
   monitor/native身份稳定，状态仍为`resume_running/extract_dense`。快照为
   `hardlink-resume-native-20260919/handoff-progress-snapshot-a01.json`。
+  全部固定497视频/309,593 clips现已复用完成，并通过metadata-only整体复核：原source index与
+  target lineage SHA仍等冻结plan；坐标、采样、fingerprint、数组声明及runtime引用一致；
+  309,593个唯一共享inode当前nlink均2，dev/inode/size/mtime与journal一致。当前stat+声明SHA
+  重建的滚动摘要仍等此前全量payload验收。此次没有再读/解压NPZ，不能写成重复全payload审计。
+  receipt SHA `def18eb57eae79951d0319bff94a568075388aabef2416b866555464bf8c599e`，目录
+  `time-fit-hardlink-complete-reuse-audit-20260919/`；CPU审计退出0，原提取进程未受干预。
+  Normal_Videos307已开始真实重新编码：其628,020帧对应78,502个原生dense窗口；前64 clips
+  与旧partial的数组逐元素相等（max abs=0），64对NPZ字节SHA也相同，但为不同inode且没有reuse标记。
+  这只证明前64窗口的真实重新编码等价，完整长视频尚未完成；回执`reencoded-prefix-equivalence-a01.json`。
+- **已纠正训练容量漏项，并落实双卷存储。** 检查实际`urdmu_training._aggregate`后发现，
+  原单卷remaining模型没有单列四份float32 `[1288,200,D]` 的`bags.npy`；纯payload共
+  3,429,171,200 B，包含header/4KiB与16MiB规划余量后新增3,445,964,800 B。
+  因而不能继续把旧2GiB heads/scores预留当作完整训练容量保证。修正的单卷实测规划曾缺
+  3,091,933,184 B；原门槛与历史回执保留，未通过下调15GiB safety掩盖缺口。
+  已在NFS `/data2/localdisk/fotile-icassp2027-20260919-a01` 创建本项目owned0700目录，
+  device44与`/users` device64768分开，实际memmap与fsync/atomic rename canary通过。
+  在四job仍extract_dense且原heads不存在时，以create-only symlink将未来heads映射至该卷；
+  原训练函数的`Path(output_root).resolve()/run_id`使aggregation、checkpoint、QA和result均落此处。
+  未移动既有数据、重启native、修改训练代码或删除权重。独立路径/预算审查通过。
+  双卷snapshot epoch1789778921：root required60,859,205,632 B/free61,203,390,464 B，
+  原15GiB safety、2GiB heads/scores、1GiB XD、512MiB transient均保留；secondary required
+  21,699,575,808 B低于24GiB规划预算，实际free5,612,705,415,168 B。规划预算不等于文件系统配额预留。
+  证据集中于`outputs/icassp2027/control/aggregation-budget-repair-20260919/`；后续需继续检查两卷空间。
+- **开发SELECT评分已接续排队，但尚未产生质量结果。** 现有`score_urdmu.py`支持严格的
+  `development_video/direct_insert`；已固化四份完整SELECT的真实路径/contract/manifest SHA，
+  仍将actual trained run保留null，待各自真实3000步、seed0、dense_reference、完整QA全部通过。
+  代码中的`official_frame`仍在读测试来源前拒绝执行；计划第94段已纠正“开发评分未接线”的旧描述。
+  对最长SELECT形状做了单次合成算子容量验收：Time `[1,17737,768]` 使用classic torch2.3.0，
+  VJ `[1,2217,1024]` 使用foundation torch2.8.0；query_chunk256始终保留全K/V，输出finite、
+  shape正确、权重不变。实际allocated/reserved为745,642,496/803,209,216 B及
+  127,467,008/142,606,336 B。该数据仅为工程head+合成输入的容量证据，不是质量或正式速度结果。
+  GPU4 guard与两个native均exit0；回执在`urdmu-select-shape-capacity-20260919/native-a02/`。
+  新评分controller24721/t1347808693已通过实机CPU预检并启动，唯一control为
+  `code-e82cd7d/outputs/icassp2027/control/development-select-scoring-20260919-a01`，plan SHA
+  `410ac89a6370321f58bcc587b19d2bfa6613944ccbafce331b8494459e01a308`。epoch1789780215进程身份
+  匹配，四case均等待live fit、needs_review=[]、score case目录0；等待时不申请GPU。
+  完成head后才逐case冻结真实artifact，经GPU4 lease串行运行；query_chunk256、workspace2GiB、
+  allocator0.5及cuDNN/TF32关闭固定。head与score大输出落新NFS卷，控制器/原生wrapper均重新检查
+  实时空间和静态来源；旧start/intent拒绝重入，不自动重试。正式测试、额外seed与方法选择不在队列内。
 - XD 测试原视频800份的新坐标审计已sealed并通过独立proof和consumer检查，详情见下节。
   训练仍有4个原始坏成员未修复；有界公开镜像检索没有找到可用原始payload。
   官方OneDrive浏览器下载仍待已提出的D盘目录设置/直接原始文件链接，尚未启动约15GB到C盘的下载。
   UCF研究继续推进。官方模型测试分数未读取，最终TF/LoRA方法与完整三seed质量矩阵尚未完成。
+  当前CUA surface已做一次只读复核，仍无browser surface且返回nodeRepl.fetch失败；没有新下载途径，
+  未再次搜索镜像或启动大下载，人工D盘目录问题仍待答复。新记录为
+  `xd-four-bad-repair-20260918/capability-review-20260919/current-surface-recheck.md`。
 
 ## 四模型性质观察完成：保留异质性（2026-09-19）
 
