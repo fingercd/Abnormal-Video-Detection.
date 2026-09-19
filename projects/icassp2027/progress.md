@@ -12,11 +12,12 @@
 
 ## 当前运行快照（2026-09-19；各项以其注明的采集时点为准）
 
-- node3实际快照epoch1789766894：完整fit视频分片为VideoMAEv2 439/1288、
-  TimeSformer 421/1288、VideoMAE 497/1288、V-JEPA 2 314/1288；四条native的owner/argv/startticks
-  均匹配，仍处于dense提取。只读回执在`outputs/icassp2027/control/baseline-live-20260919-a04/`。
+- node3切换前分项只读测量epoch1789773942/1789774060：完整fit视频分片为VideoMAEv2 497/1288、
+  TimeSformer 497/1288、VideoMAE 498/1288、V-JEPA 2 368/1288；四条native的owner/argv/startticks
+  均匹配，仍处于dense提取。回执在`outputs/icassp2027/control/hardlink-resume-native-20260919/`
+  的`fresh-budget-a01/current.json`及`handoff-inputs.json`；这些是分项时点，非原子全机快照。
   视频长短不同，这些计数不是计算完成率；UR-DMU 的 3000 步开发训练尚未开始。
-  VideoMAE停留497的原因已核实：当前Normal_Videos307含628,020帧、约5.815小时，需39,251
+  VideoMAE此前停留497的原因已核实：Normal_Videos307含628,020帧、约5.815小时，需39,251
   个dense窗口。epoch1789767169时块index已有28,880条记录（含当前块，非完整视频）；
   同PID/startticks间隔132秒CPU增加15,751 ticks、wchar增加67,287,953 B，明确仍在写入。
   `baseline-live-20260919-a04/vma-live-progress-verification.json`保存核验，不据此重启或报告模型速度。
@@ -54,20 +55,66 @@
   CPU队列a02随即完成10,000次视频级bootstrap，worker28963与monitor8874均正常退出，
   13次资源采样、max RSS 600,162,304 B、无资源中止。原a01退役记录及a02运行身份保留。
   统计、几何与输出等价性完成独立复核，全部缺失项保留；科学结果见下节及更新的F04。
-- 四个 fit 的新旧 native 表示/采样兼容盘点已经完成；批量写入迁移仍处于准备和审查阶段，
-  尚未取消旧fit或启动Time迁移。单独的inactive权重备份已完成4,957,392,176 B传输与完整SHA验证，
+- 四个 fit 的新旧 native 表示/采样兼容盘点已经完成；TimeSformer 已通过正式 handoff 并由
+  新 native 接管，具体状态见下；其他fit没有迁移。单独的inactive权重备份已完成4,957,392,176 B传输与完整SHA验证，
   verified-stream-a03回执绑定本地/远端同一SHA90e6a81a…5b0aa；服务器原文件仍保留，未据此删除权重。
-  新迁移必须再次满足容量门禁、源完整视频验证及新进程接管检查，不能把准备脚本写成完成。
+  本次迁移已再次核验容量门禁、源完整视频及新进程接管；完整提取与训练仍未完成。
   受限`resume_transport=hardlink_npz`现已实现：仅identity、完整视频、同文件系统的两成员NPZ，
   保留原SHA/身份/shape/dtype检查，独立重建索引/lineage并记录共享inode；默认copy不变。
   本机相关测试94 passed/3 skipped，skip均为Windows真实symlink权限；隔离拒绝分支通过。
-  compileall、限定五文件Ruff及diff-check通过。新模式尚未用于真实缓存，未修改旧helper门禁。
-  node3仅新建synthetic NPZ的文件系统canary证明link共享inode且字节不变；真实源只读首clip格式
-  样本符合两成员约束，不将其当全277,054个完整视频blob的验收。
-  当前Time源metadata扫描S=3,827,105,792 B，其中完整NPZ候选H=2,269,626,368 B；新journal、
+  compileall、限定五文件Ruff及diff-check通过。实现验收时未用于真实缓存；旧helper原样保留，
+  实际迁移采用下面独立的新control和重新审核的门禁。
+  实现已冻结为`e82cd7d`并上传独立工作树；Linux classic环境96项通过，唯一VJ旧reducer测试因
+  该环境没有VJEPA2Model类失败，随后在现成foundation环境单独1项通过。合计97个独立测试
+  已在各自适用环境通过，Linux真实symlink负例不再跳过；原失败日志保留，未重装环境。
+  node3最初新建synthetic NPZ的文件系统canary证明link共享inode且字节不变；真实源首clip格式
+  样本符合两成员约束，后续全量核验见下。初期426完整视频的Time metadata扫描
+  S=3,827,105,792 B，其中完整NPZ候选H=2,269,626,368 B；新journal、
   三层索引、lineage和目录开销另计，不能简单按S−H宣称迁移容量够用。
   八个普通dense store精确共2,923,485 clips，原始数组payload17.055GiB不是总占盘上界。
+  最终采用root修正的serializer-a03：四个真实resolved原字节与远端新鲜SHA一致，补齐
+  declared_readout及三层各3个浮点字段宽度；原获取时间无据则null，不沿用手写时间。
+  三层JSON逻辑包络24,830,642,412 B、逐index 4KiB模型24,912,494,592 B；旧a01/a02保留。
+  两native环境真实NPZ格式+其链接的zlib raw-DEFLATE bound得到D768≤6,672B、D1024≤8,722B；
+  对应4KiB数据块模型8/12KiB。XFS实查inode512B、block4096B、noquota；目录/extent/日志
+  分配仍另计，不把逻辑字节界称为完整磁盘保证。初步容量预检只读取完整源index/stat，
+  后续payload验收和真实迁移见下。
   两项已结束FIT探针及CPU分析的剩余写入已核验为0；未来工作仍需另预算，15GiB safety保持。
+  后续固定497个完整视频/309,593 clips的全NPZ核验已通过：每个blob完整SHA、ZIP恰好两成员、
+  fp32/shape/nbytes/finite、features与pooled相等、前后inode/mtime/size及索引SHA均一致；
+  309,593个独立inode实际分配2,536,185,856 B。完整源生产进程仍运行，未冻结整个root。
+  回执`time-fit-hardlink-source-validation-20260919/receipt.json`绑定逐视频摘要SHA
+  `ef28fba1a40afc110cf321c3462601d05f30c8f97475d1743e63bddbb0c53056`，CPU worker已正常退出。
+  新e82代码在classic CPU加载现有权重后，representation/semantic runtime/encoder fingerprint
+  与源完全相符，未初始化CUDA。数据摘要在该身份检查中沿用旧值，实际extractor仍须重新核对。
+  四SELECT及旧冻结probe的terminal证据已单独绑定；零未来写入仅适用于这些已完成阶段。
+  最新剩余写入模型required=65,315,596,288 B、free=65,830,965,248 B，差515,368,960 B；
+  已含15GiB safety、2GiB heads/scores、1GiB XD及512MiB transient。此为有余量的规划模型，
+  并非已执行迁移；切换前还要新鲜检查，旧源全部保留。旧source与新official的模型microbatch
+  都是8；此次提取优化是reader复用和批量索引写入，不是将模型batch从1改为8。
+  一次实际格式canary已通过：Assault038的17 clips先按字节复制至隔离source，再做hardlink/copy，
+  标准FeatureStore消费者的数组/dtype/覆盖及新索引一致；真实源字节/index/inode/nlink未变。
+  包含worker输出实际2,117,632 B，小于64MiB；receipt SHA
+  `77774955547d3a74c966e6c3e0916e73a7bd1b0b90427da986e5d6ae33072e82`。
+  正式迁移control为`dense-batch-migration-20260919-timesformer-hardlink-a01`，plan SHA
+  `7b00352edaabfa42fd4ce3cd3b250ff6494ebc0fbffb2c02fa63deda27eaa55c`；四helper与具体plan
+  完成独立审阅。实机preflight-only通过，required65,065,486,336 B、free65,475,231,744 B，
+  所有reserves之后余409,745,408 B；真正取消前后又重新校验容量和全部497个完整index。
+  epoch1789775072旧guard1以SIGTERM结束自身slot，native24420退出；原源完整/partial文件均保留。
+  epoch1789775095新monitor确认接管：monitor26697/t1347304509、native29605/t1347307375，
+  同GPU1 UUID、classic torch2.3.0+cu121、allocator0.5、identity/batch8，仍为非正式计时质量任务。
+  原Normal_Videos307只有部分block，需重新提取。epoch1789775208–5223的新native两次只读核验
+  中身份稳定、CPU增加1494 ticks，rchar增加12,926,554,088 B，正读取UCF原视频进行数据身份检查。
+  此时新target尚未发布任何完整分片，不能把进程接管写成497视频已经复用完成或完整fit已完成。
+  epoch1789775502已真实复用81个完整视频；首视频Abuse002的108 clips完成独立消费核验：
+  新旧数组/坐标/encoder fingerprint一致，实际GPU提取resolved的spec/data evidence与源一致，
+  两路径确实同device/inode、nlink=2，源index SHA不变，108条journal及新runtime引用正确。
+  回执`first-real-reuse-verification-a02.json`；初版只读核验脚本误把既有relative runtime引用
+  当绝对路径而断言失败，已按实际`base=extraction_run,path=resolved.json`修正并保留失败记录，
+  没有修改生产格式或重启任务。81是复用完成数，不是新编码或1288完整fit完成数。
+  更新到epoch1789775626：target已有119个完整视频，119个均属于固定已验源集合，集合外为0；
+  monitor/native身份稳定，状态仍为`resume_running/extract_dense`。快照为
+  `hardlink-resume-native-20260919/handoff-progress-snapshot-a01.json`。
 - XD 测试原视频800份的新坐标审计已sealed并通过独立proof和consumer检查，详情见下节。
   训练仍有4个原始坏成员未修复；有界公开镜像检索没有找到可用原始payload。
   官方OneDrive浏览器下载仍待已提出的D盘目录设置/直接原始文件链接，尚未启动约15GB到C盘的下载。
