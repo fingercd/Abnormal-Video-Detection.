@@ -1,0 +1,13 @@
+\begin{table*}[t]
+\centering\small
+\caption{PairSelect quality at nominal token-deletion budgets. Metrics use a 0--100 scale; $\Delta_{40}$ and its paired 95\% confidence interval (CI) are percentage-point changes from the corresponding dense run. Dashes mark the two unmeasured budgets, not zero change. Actual token counts are in Table~\ref{tab:budgets}.}
+\label{tab:quality}
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{@{}lrrrrrc@{}}
+\toprule
+Encoder & Dense & Delete 20\% & Delete 40\% & Delete 60\% & $\Delta_{40}$ & 95\% CI of $\Delta_{40}$\\
+\midrule
+\tableinput{tables/quality_rows}
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,45 @@
+{
+  "created": "2026-09-22",
+  "input_archive": "ICASSP2027_论文咨询包_20260922.zip",
+  "archive_sha256": "07726d1175310aeb6ee78a6f71fcb89e08b3c55372b9427af7bd55e0d11339bb",
+  "sources": [
+    {
+      "relative_path": "01_论文正文/main.tex",
+      "sha256": "e1244ac34d4189f2f32746f6f31b84a60ce1698a84e380e56d91f7ab12e87412"
+    },
+    {
+      "relative_path": "01_论文正文/references.bib",
+      "sha256": "3be083c3d1cc62e03f4477df9326f53a28a7f0d895309d2db77e49c30658b9e7"
+    },
+    {
+      "relative_path": "02_实验结果/quality_matrix_detail.csv",
+      "sha256": "320fcda17995664de1de4003ceaba58d268fb31d2c1dabe3907e229eecbafaee"
+    },
+    {
+      "relative_path": "03_压缩方法代码/token_reduction/token_selection.py",
+      "sha256": "d7f4a2d969677694e891b02de811a1e4cb6bc64743fc8dc5735dbbf20e419ea5"
+    },
+    {
+      "relative_path": "03_压缩方法代码/token_reduction/deployment.py",
+      "sha256": "cbbecae3ee6fb42d08dffaf63880f674408e24ff1ed1b1adabe637b3d85941d9"
+    },
+    {
+      "relative_path": "05_核验与审计/efficiency_protocol.md",
+      "sha256": "f1b4cdf244a75be6647285efbd6b1dcd31fa6d3b7a8b4ad98df110c6acd205cf"
+    }
+  ],
+  "styles": [
+    {
+      "file": "spconf.sty",
+      "unchanged_from_supplied_template": true,
+      "sha256": "dc5d632639040cb183f2ab62780f314845aa021be73048c8a9ec9c2072d64a86",
+      "verification": "Live 2027 kit and online style definitions inspected; bundled bytes preserved. Fresh binary download was not completed."
+    },
+    {
+      "file": "IEEEbib.bst",
+      "unchanged_from_supplied_template": true,
+      "sha256": "7e6ca0c8b72158d504a12bb091f817c07032a021ba41ca783cca4c2dd80d570b",
+      "verification": "Live 2027 kit and online style definitions inspected; bundled bytes preserved. Fresh binary download was not completed."
+    }
+  ]
+}

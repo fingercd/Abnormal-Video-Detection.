@@ -1,0 +1,14 @@
+\begin{table*}[t]
+\centering\small
+\caption{Efficiency ledger for the same dense and PairSelect configurations. $F_{\rm blocks}$ is an analytical principal-block GFLOPs/clip estimate, not a measurement. $F_{\rm full}$, latency, throughput, and peak allocated/reserved memory require hardware exports and are intentionally unfilled. One MAC is counted as two FLOPs.}
+\label{tab:efficiency}
+\setlength{\tabcolsep}{5.5pt}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Encoder & Delete & Tokens & $F_{\rm blocks}$ & $F_{\rm full}$ & Latency & Throughput & Peak memory\\
+ & & & GFLOPs & GFLOPs & ms/clip & clips/s & alloc./res. GiB\\
+\midrule
+\tableinput{tables/efficiency_rows}
+\bottomrule
+\end{tabular}
+\end{table*}

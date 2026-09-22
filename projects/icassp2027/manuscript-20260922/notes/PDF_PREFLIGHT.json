@@ -1,0 +1,92 @@
+{
+  "status": "PASS_LOCAL_FORMAT_CHECK",
+  "scope": "Local technical format preflight only. Not a venue acceptance, research-validity or LLM-policy certification.",
+  "pdf": "main.pdf",
+  "page_count": 5,
+  "last_technical_text_page": 4,
+  "pdf_size_bytes": 1377646,
+  "encrypted": false,
+  "abstract_whitespace_word_count": 135,
+  "font_embedded_and_subset_no_type3": true,
+  "font_report": "name                                 type              encoding         emb sub uni object ID\n------------------------------------ ----------------- ---------------- --- --- --- ---------\nACHJVK+NimbusRomNo9L-Medi            Type 1            Custom           yes yes yes     97  0\nLGXCUC+NimbusRomNo9L-ReguItal        Type 1            Custom           yes yes yes     98  0\nVPXNPA+CMMI8                         Type 1            Builtin          yes yes yes     99  0\nVPWTYV+CMSY8                         Type 1            Builtin          yes yes yes    100  0\nILEUTO+NimbusRomNo9L-Regu            Type 1            Custom           yes yes yes    101  0\nDYPOPH+CMSY9                         Type 1            Builtin          yes yes yes    103  0\nIKYELX+CMR9                          Type 1            Builtin          yes yes yes    104  0\nEOWQPE+CMMI9                         Type 1            Builtin          yes yes yes    105  0\nSJISBO+NimbusRomNo9L-MediItal        Type 1            Custom           yes yes yes    106  0\nSQOUWR+CMR6                          Type 1            Builtin          yes yes yes    136  0\nNEWBBX+CMMI6                         Type 1            Builtin          yes yes yes    138  0\nTBDEOM+CMMIB9                        Type 1            Builtin          yes yes yes    140  0\nQDTWCG+MSBM10                        Type 1            Builtin          yes yes yes    141  0\nZAREPU+CMSY6                         Type 1            Builtin          yes yes yes    142  0\nFMDTGR+CMEX9                         Type 1            Builtin          yes yes yes    144  0\nTACQNQ+CMMI5                         Type 1            Builtin          yes yes yes    146  0\nPOWUVC+CMR5                          Type 1            Builtin          yes yes yes    148  0\n",
+  "pages": [
+    {
+      "page": 1,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "text_bounds_points": [
+        54.425,
+        94.007,
+        558.996,
+        723.301
+      ],
+      "min_prose_size_pdf_points": 8.9664,
+      "prose_smaller_than_9texpt": []
+    },
+    {
+      "page": 2,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "text_bounds_points": [
+        54.425,
+        75.163,
+        558.996,
+        724.951
+      ],
+      "min_prose_size_pdf_points": 8.9664,
+      "prose_smaller_than_9texpt": []
+    },
+    {
+      "page": 3,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "text_bounds_points": [
+        54.425,
+        81.132,
+        558.997,
+        723.3
+      ],
+      "min_prose_size_pdf_points": 8.9664,
+      "prose_smaller_than_9texpt": []
+    },
+    {
+      "page": 4,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "text_bounds_points": [
+        54.425,
+        81.132,
+        558.996,
+        723.3
+      ],
+      "min_prose_size_pdf_points": 8.9664,
+      "prose_smaller_than_9texpt": []
+    },
+    {
+      "page": 5,
+      "size_points": [
+        612.0,
+        792.0
+      ],
+      "text_bounds_points": [
+        54.425,
+        75.081,
+        558.996,
+        528.065
+      ],
+      "min_prose_size_pdf_points": 8.9664,
+      "prose_smaller_than_9texpt": []
+    }
+  ],
+  "latex_warnings": [],
+  "failures": [],
+  "expected_pending": "Two quality budgets, all hardware measurements, author declarations, F04 raw observation evidence, substantive author writing."
+}

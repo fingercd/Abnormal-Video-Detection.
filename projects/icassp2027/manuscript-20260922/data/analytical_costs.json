@@ -1,0 +1,80 @@
+[
+  {
+    "encoder": "videomae",
+    "keep_ratio": 0.8,
+    "native_tokens": 1568,
+    "retained_tokens": 1254,
+    "actual_removal_percent": 20.02551020408163,
+    "token_compression_factor": 1.2503987240829346,
+    "dense_principal_block_gflops": 356.989796352,
+    "reduced_principal_block_gflops": 313.987571712,
+    "principal_block_reduction_percent": 12.045785364016071,
+    "mac_to_flops": 2,
+    "scope": "principal_12_transformer_blocks_only_excludes_selector"
+  },
+  {
+    "encoder": "videomae",
+    "keep_ratio": 0.6,
+    "native_tokens": 1568,
+    "retained_tokens": 941,
+    "actual_removal_percent": 39.98724489795919,
+    "token_compression_factor": 1.6663124335812964,
+    "dense_principal_block_gflops": 356.989796352,
+    "reduced_principal_block_gflops": 274.739595264,
+    "principal_block_reduction_percent": 23.03993053260812,
+    "mac_to_flops": 2,
+    "scope": "principal_12_transformer_blocks_only_excludes_selector"
+  },
+  {
+    "encoder": "videomae",
+    "keep_ratio": 0.4,
+    "native_tokens": 1568,
+    "retained_tokens": 627,
+    "actual_removal_percent": 60.01275510204081,
+    "token_compression_factor": 2.5007974481658692,
+    "dense_principal_block_gflops": 356.989796352,
+    "reduced_principal_block_gflops": 238.995081216,
+    "principal_block_reduction_percent": 33.05268563464894,
+    "mac_to_flops": 2,
+    "scope": "principal_12_transformer_blocks_only_excludes_selector"
+  },
+  {
+    "encoder": "timesformer",
+    "keep_ratio": 0.8,
+    "native_tokens": 1569,
+    "retained_tokens": 1233,
+    "actual_removal_percent": 21.41491395793499,
+    "token_compression_factor": 1.2725060827250607,
+    "dense_principal_block_gflops": 389.81025792,
+    "reduced_principal_block_gflops": 347.151826944,
+    "principal_block_reduction_percent": 10.943383379293914,
+    "mac_to_flops": 2,
+    "scope": "principal_12_transformer_blocks_only_excludes_selector"
+  },
+  {
+    "encoder": "timesformer",
+    "keep_ratio": 0.6,
+    "native_tokens": 1569,
+    "retained_tokens": 897,
+    "actual_removal_percent": 42.82982791586998,
+    "token_compression_factor": 1.7491638795986622,
+    "dense_principal_block_gflops": 389.81025792,
+    "reduced_principal_block_gflops": 305.013620736,
+    "principal_block_reduction_percent": 21.75331086371839,
+    "mac_to_flops": 2,
+    "scope": "principal_12_transformer_blocks_only_excludes_selector"
+  },
+  {
+    "encoder": "timesformer",
+    "keep_ratio": 0.4,
+    "native_tokens": 1569,
+    "retained_tokens": 561,
+    "actual_removal_percent": 64.24474187380498,
+    "token_compression_factor": 2.7967914438502675,
+    "dense_principal_block_gflops": 389.81025792,
+    "reduced_principal_block_gflops": 263.395639296,
+    "principal_block_reduction_percent": 32.42978245327342,
+    "mac_to_flops": 2,
+    "scope": "principal_12_transformer_blocks_only_excludes_selector"
+  }
+]

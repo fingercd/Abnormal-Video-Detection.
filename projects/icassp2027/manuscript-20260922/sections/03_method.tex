@@ -1,0 +1,86 @@
+\section{PairSelect}
+\label{sec:method}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/pairselect_framework}
+\caption{Overall framework of PairSelect. We insert a training-free token selection module after the middle layer of a pre-trained video Transformer encoder. Tokens are grouped into spatially adjacent pairs, and the token with the larger $L_2$ norm is kept in each pair, followed by a group-wise quota to achieve the desired compression ratio. The selected tokens are fed to the remaining encoder blocks and the frozen detection head to predict video-level anomaly scores.}
+\label{fig:overview}
+\end{figure}
+
+\begin{table}[t]
+\centering\small
+\caption{Actual token budgets and analytical reduction of the principal twelve-block computation. Deletion is nominal unless marked actual.}
+\label{tab:budgets}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+Delete & $K$ & Actual delete & $N/K$ & Block FLOPs $\downarrow$\\
+\midrule
+\tableinput{tables/theory_rows}
+\bottomrule
+\end{tabular}
+\end{table}
+\subsection{Frozen pipeline and design rationale}
+Let $E_{1:b}$ and $E_{b+1:L}$ denote the prefix and suffix of a pretrained encoder, $R$ its clip readout, and $H$ the temporal detection head. For scheduled clips $\{v_t\}_{t=1}^{M}$, inference is
+\begin{equation}
+ z_t^{(r)}=R\!\left(E_{b+1:L}\!\left(S_r(E_{1:b}(v_t))\right)\right),
+ \quad \hat{\boldsymbol y}^{(r)}=H(\{z_t^{(r)}\}_{t=1}^{M}).
+ \label{eq:pipeline}
+\end{equation}
+Only $S_r$, the selection operator at retention budget $r$, is inserted. We set $L=12$ and $b=6$ for all three encoders. The clip count $M$, output dimension, and head weights remain unchanged. Training-free refers to compression: the original detection head is trained once on dense features for each configuration.
+
+Local redundancy motivates comparing nearby candidates rather than globally ranking all tokens. To avoid an additional mixing operation before an unchanged head, $S_r$ gathers existing vectors. ATS motivates activation magnitude as an inexpensive signal~\cite{fayyaz2022ats}, but our block-output L2 norm is not its attention-weighted value norm. Nor is a high norm an anomaly probability: high-norm transformer tokens can also occur in background regions~\cite{darcet2024registers}. We therefore combine magnitude preference with local quotas instead of treating magnitude as a global anomaly oracle.
+% AUTHOR_TODO F04: recover the original finding card, cohort definition, layer,
+% effect sizes and uncertainty before claiming an experimentally established
+% normal-versus-anomalous redundancy difference. The present text does not
+% fabricate that missing observation. See notes/EVIDENCE_AND_LITERATURE.md.
+
+\subsection{Local quotas and pair-member priority}
+For VideoMAE and VideoMAEv2, the block output is $X\in\mathbb{R}^{N\times D}$ with a known patch grid. We form nonoverlapping horizontal pairs, ordered by native coordinates. Consecutive groups contain at most ten tokens (five pairs). A group with $n_g$ tokens retains
+\begin{equation}
+ q_g(r)=\left\lfloor rn_g+\tfrac12\right\rfloor,
+ \qquad r\in\{0.8,0.6,0.4\}.
+ \label{eq:quota}
+\end{equation}
+For pair $j$ with members $(x_{j,0},x_{j,1})$, define
+\begin{equation}
+ a_j=\arg\max_{u\in\{0,1\}}\norm{x_{j,u}},\qquad
+ s_j=\max_{u\in\{0,1\}}\norm{x_{j,u}}.
+ \label{eq:score}
+\end{equation}
+Ties retain native order. Let $w_j=x_{j,a_j}$ and $\ell_j=x_{j,1-a_j}$. If $\pi$ sorts the $m_g$ pairs by descending $s_j$, the group's priority list is
+\begin{equation}
+ \mathcal{P}_g=
+ (w_{\pi_1},\ldots,w_{\pi_{m_g}},\ell_{\pi_1},\ldots,\ell_{\pi_{m_g}}).
+ \label{eq:priority}
+\end{equation}
+We take the first $q_g$ entries, then restore the selected indices to native order before gathering. At $r=0.8$ or $0.6$, every pair in a full group retains a representative; at $r=0.4$, only four of its five representatives survive. This is a coverage property of the rule, not a guarantee about anomaly preservation. No averaging or rescaling is applied to a selected vector.
+
+% Queue the quality table early so it appears on page 3, not after the technical boundary.
+\input{figures/quality_table}
+\subsection{Divided attention and actual budgets}
+TimeSformer requires a different unit: all $T$ tokens at a spatial location form a trajectory, scored by the maximum member norm. Each group of ten trajectories retains its top $q_g$ trajectories. The current bridge requires the retained spatial count to be a multiple of the native patch width $W$; we round the total downward and remove excess quota from tail groups. With $P=196$, $T=8$, and $W=14$,
+\begin{equation}
+ P'=W\left\lfloor\frac{\sum_g q_g(r)}{W}\right\rfloor,
+ \qquad K=TP'+1,
+ \label{eq:trajectory}
+\end{equation}
+where the CLS token is preserved. This width constraint belongs to the current implementation, not to all divided-attention models. Dynamic selections occupy a fixed quota-slot skeleton: gathered content is unchanged, but slot coordinates use approximate anchors rather than an exact reconstruction of the original lattice. Complete trajectories preserve their time indices; the geometry adjustment can empty tail groups.
+
+
+
+\subsection{Computational accounting}
+For joint attention with hidden width $D$ and MLP ratio four, the principal block cost in multiply--accumulate operations (MACs) is
+\begin{equation}
+ C_{\mathrm J}(N,D)=12ND^2+2N^2D.
+ \label{eq:joint}
+\end{equation}
+The linear term includes QKV, output projection, and the MLP; only attention products scale quadratically in $N$. For standard divided attention, including the temporal projection and replicated CLS in spatial attention~\cite{bertasius2021timesformer},
+\begin{equation}
+ \begin{split}
+ C_{\mathrm T}(P,T,D)={}&(17PT+4T+8)D^2\\
+ &+2D\{PT^2+T(P+1)^2\}.
+ \end{split}
+ \label{eq:divided}
+\end{equation}
+The twelve-block cost ratio is $\tfrac12(1+C_{\rm reduced}/C_{\rm dense})$. Table~\ref{tab:budgets} uses $D=768$ and counts one MAC as two FLOPs. It excludes embedding, readout, normalization, and selection costs. The selector adds norm computation, bounded-size sorting, and gathering; these may have non-negligible runtime despite low arithmetic cost. Token compression, full-encoder FLOPs, latency, and peak memory are therefore distinct quantities.

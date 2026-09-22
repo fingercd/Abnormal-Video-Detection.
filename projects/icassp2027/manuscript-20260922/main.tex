@@ -1,0 +1,49 @@
+% Author working draft, revised from the supplied ICASSP project on 2026-09-22.
+% This is not a submission-ready manuscript. See notes/AUTHOR_HANDOFF_ZH.md.
+\documentclass[10pt,letterpaper]{article}
+\usepackage{template/official/spconf}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,graphicx,booktabs,array,tabularx}
+\usepackage{balance}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+ pdftitle={PairSelect: Training-Free Token Selection for Efficient Weakly Supervised Video Anomaly Detection},
+ pdfauthor={Zitong Qi; Yu Ji; Yihan Zhang; Ruihan Liu; Zhixiang Liu; Yu Pan; Jianbo Yu},
+ pdfsubject={Author working draft; unmeasured experiments remain pending},
+ pdfkeywords={WSVAD, PairSelect, training-free, token selection, ICASSP 2027}}
+\setlength{\emergencystretch}{2em}
+\newcommand{\method}{PairSelect}
+\newcommand{\tableinput}[1]{\csname @@input\endcsname{#1}}
+\newcommand{\pending}{\textemdash}
+\newcommand{\draftnote}[1]{\par\noindent\textit{Author working draft: #1}\par}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert_2}
+\input{author_config}
+\title{PAIRSELECT: TRAINING-FREE TOKEN SELECTION FOR EFFICIENT\\WEAKLY SUPERVISED VIDEO ANOMALY DETECTION}
+\begin{document}
+% Venue-provided nine-point option; no margin or template modification.
+\ninept
+\maketitle
+\begin{abstract}
+Detecting rare events requires sustained observation, but not necessarily full computation for every internal video token. We introduce PairSelect, a training-free token selection operator for frozen weakly supervised video anomaly detectors. After dense contextualization in the first half of a video encoder, PairSelect allocates local quotas and retains activation-magnitude-guided representatives without averaging their vectors. It uses adjacent spatial pairs for joint-attention encoders and complete spatial trajectories for divided space--time attention. Neither input clip coverage nor the dense-trained detection head is changed. Across three encoders and two datasets, the completed middle-budget evaluation removes approximately 40--43\% of subsequent tokens, with primary-metric changes from $-0.16$ to $+0.68$ percentage points. Analytical accounting predicts 21.75--23.04\% fewer operations in the twelve principal transformer blocks. Additional budgets and measurements of full-encoder FLOPs, latency, throughput, and peak GPU memory remain to be completed.
+\end{abstract}
+\begin{keywords}
+video anomaly detection, weak supervision, token selection, training-free compression, efficient inference
+\end{keywords}
+\draftnote{unmeasured results are marked with dashes; author revision and verification are required before submission.}
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_method}
+\input{sections/04_experiments}
+\input{sections/05_limitations}
+\input{sections/06_conclusion}
+\label{lasttechnical}
+% The fifth page is not a technical appendix. Keep every technical float before this boundary.
+\clearpage
+\balance
+\input{sections/07_declarations}
+\begingroup
+\small
+\bibliographystyle{template/official/IEEEbib}
+\bibliography{references}
+\endgroup
+\end{document}

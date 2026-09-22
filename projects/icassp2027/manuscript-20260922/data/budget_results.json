@@ -1,0 +1,102 @@
+{
+  "ucf_crime": {
+    "videomaev2": {
+      "0.80": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      },
+      "0.40": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      }
+    },
+    "videomae": {
+      "0.80": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      },
+      "0.40": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      }
+    },
+    "timesformer": {
+      "0.80": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      },
+      "0.40": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      }
+    }
+  },
+  "xd_violence": {
+    "videomaev2": {
+      "0.80": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      },
+      "0.40": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      }
+    },
+    "videomae": {
+      "0.80": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      },
+      "0.40": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      }
+    },
+    "timesformer": {
+      "0.80": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      },
+      "0.40": {
+        "quality": null,
+        "delta_pp": null,
+        "ci_low_pp": null,
+        "ci_high_pp": null,
+        "source": null
+      }
+    }
+  }
+}

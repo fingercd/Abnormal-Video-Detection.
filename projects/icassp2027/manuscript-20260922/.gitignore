@@ -1,0 +1,13 @@
+# LaTeX build noise; main.pdf and main.bbl are kept on purpose (main.bbl makes
+# the project compilable on Overleaf without a local bibtex run).
+main.aux
+main.log
+main.blg
+main.out
+main.toc
+main.lof
+main.lot
+main.fls
+main.fdb_latexmk
+main.synctex.gz
+*.synctex.gz
