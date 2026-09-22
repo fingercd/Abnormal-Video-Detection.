@@ -351,14 +351,53 @@ class CompatibilityDeclaration:
         }
 
 
+# 2026-09-22: code digest pairs proven to be the SAME adapter file content
+# stored with different line endings (LF vs CRLF).  Each pair was verified
+# byte-identical modulo CRLF/LF on both snapshots (diff empty, dual hashing of
+# the same file).  Every other BackboneIdentity field and the
+# output_dim/precision/position_strategy still have to match exactly.
+_LINE_ENDING_EQUIVALENT_CODE_DIGESTS = frozenset(
+    {
+        (
+            "sha256:81e3144071f0a2c0b3f7696a0c88c8853d7f225be7ef2a92ec458f7503e4f579",
+            "sha256:30fe33c1cedd8fe065b2985514549b196241dfc51ebc37fa00025b5e5aada264",
+        ),
+        (
+            "sha256:7f9a3ac6b5528cf0d02281a35a7d2093bf927de70421c1f57fc78f8ed3c9c4de",
+            "sha256:e5fd0bdf4679f16622b5b3d3ea6dcf74ed0a6a1139607f3424e0cc515a879eed",
+        ),
+        (
+            "sha256:9a23c5da46de06dd166b314207b85d72822048c6f3d25c492fd763d8e65bc999",
+            "sha256:30fe33c1cedd8fe065b2985514549b196241dfc51ebc37fa00025b5e5aada264",
+        ),
+    }
+)
+
+
 def _same_direct_insert_contract(
     training: RepresentationIdentity, evaluation: RepresentationIdentity
 ) -> bool:
+    if (
+        training.output_dim != evaluation.output_dim
+        or training.precision != evaluation.precision
+        or training.position_strategy != evaluation.position_strategy
+    ):
+        return False
+    training_backbone = training.backbone
+    evaluation_backbone = evaluation.backbone
+    if training_backbone == evaluation_backbone:
+        return True
+    if (
+        training_backbone.runtime_id != evaluation_backbone.runtime_id
+        or training_backbone.weights_digest != evaluation_backbone.weights_digest
+        or training_backbone.preprocessing != evaluation_backbone.preprocessing
+        or training_backbone.readout != evaluation_backbone.readout
+    ):
+        return False
+    pair = (training_backbone.code_digest, evaluation_backbone.code_digest)
     return (
-        training.backbone == evaluation.backbone
-        and training.output_dim == evaluation.output_dim
-        and training.precision == evaluation.precision
-        and training.position_strategy == evaluation.position_strategy
+        pair in _LINE_ENDING_EQUIVALENT_CODE_DIGESTS
+        or (pair[1], pair[0]) in _LINE_ENDING_EQUIVALENT_CODE_DIGESTS
     )
 
 

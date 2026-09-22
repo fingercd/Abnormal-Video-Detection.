@@ -1,4 +1,717 @@
+## 2026-09-22 17:00 六格矩阵装配成功并解封（M1/M2 达成）
+
+**执行依据**：`C:\Users\lenovo\Desktop\课件\ICASSP2027_next_steps_v2_20260922.md`（v2 计划）。负责人对三个关口问题的批示：①完整显存证据**不是**解封硬门槛（依据 `reducer-evaluation-freeze-v1.json` 的 `claims_not_established` 明确列 `peak_memory_reduction` 为未建立主张，且 `access_gates` 四项 / `official-detector-protocol-v3` 的 `execution_gates` 七项均不含显存要求）；②**不补开** GPU monitor；③解封与阶段 B **全程自主，做完一次性汇报**。
+
+**主线实测（收官）**：
+- XD 九份 extraction 合同全部落盘（最后一份 TS group_random，status=completed、800 视频、291781 clips、failures 为空；合同作为数据写完后的最后提交标记，符合 v2 计划对"合同晚于进程退出"的修正）。
+- XD 九个压缩预测全部 `completed`；XD 九份质量报告全部 `available`（16:35 最后一份落盘）。
+- **18/18 压缩质量报告齐备**（UCF 9 + XD 9）+ 6 个 dense 基线。矩阵相关进程全部正常退出，调度器无失败。
+- `assemble_urdmu_matrix.py`（fail-closed）运行成功：`{"status":"completed","cells":6}`，rc=0。本地与远端快照脚本 SHA 一致（`f38384c4…`）。
+
+**A1 逐视频闭合核验：18/18 PASS。** 对每个压缩 run 的 `coverage.per_video` 与对应 dense 视图 `video_provenance` 逐视频比对：视频 ID 集合精确一致、无重复/缺失/额外；每视频 `intervals` == dense `record_count`；`gap_frames==0`；`coverage_ratio==1.0`；`covered_frames<=num_frames`；clips 总数 == dense 记录总数；合同 `status==ready` 且 `test_only==true`。clip 数按编码器不同（V2/VMA 69364/145703，TS 138853/291781），但每个编码器压缩侧与 dense 侧严格相等。已核实装配器 `METHOD_RUN_UCF`/`METHOD_RUN_XD` 硬编码的 run-id（V2→r03、VMA→r02、TS→r02；XD V2 pair_select→r03）与实测存在的正式 run 逐一吻合；V2 的 `pair_select-0p60-r01/r02` 为历史废弃 attempt，无合同、不参与矩阵。
+
+**A2 预测核验：18/18 PASS。** `result.json` `status==completed` 且 `official_frame_scores_read==false`；`predictions.jsonl` 实测为**一 clip 一行**（例 XD TS pair_select 582,733 行覆盖 800 唯一视频），故按 v2 计划不以行数为判据，而以唯一视频数与 chunk receipt 覆盖为判据；`(video_id, clip_id)` 无重复；所有 XD 评分日志 `direct_insert may only` 报错数 == 0。
+
+**代码级四项核验（派子代理只读取证）**：①检查点为固定最终 step 3000，上游 `xd_main.py` 的"按测试 AP 存最佳"逻辑从未被加载（`xd_main.py` 不在 `SOURCE_SHA256` 与 `_DEFINITIONS` 清单内），训练循环单趟、唯一存盘点 `checkpoints/final.pt`，下游加载侧强制 `checkpoint_selection=="fixed_final_step_no_test_selection"` 与 `steps==3000`；②official_frame 帧覆盖恰为 `[0,num_frames)`，未覆盖帧直接报错，无插值/padding/静默截断旁路；③装配器全脚本唯一 print 只输出 status/cells/output，stdout/stderr 不含任何指标数值；④行尾豁免仅作用于 `code_digest` 且仅在 direct_insert 路径，`refit_head` 不放行，放行表无传递闭包（更保守）。
+
+**三对行尾豁免的实推（含此前的计数更正）**：本行及 14:20 条目原写"4 对"，系计数错误。由 6 个 dense head 的 `checkpoints/final.pt` 元数据实推 `representation.backbone.code_digest`：VMA×UCF `81e31440…`↔压缩 `30fe33c1…`、VMA×XD `9a23c5da…`↔`30fe33c1…`、TS×两数据集共用 `7f9a3ac6…`↔`e5fd0bdf…`；V2 两侧同为 `19720d4e…` 原生一致不需豁免。18 路中 12 路（VMA×6 + TS×6）走豁免、6 路（V2）原生匹配。远端放行表实测含 5 个唯一 digest、`19720d4e` 不在表中。该更正已同步 AGENTS.md、CLAUDE.md、STATUS_DATA_SUMMARY_20260922.md、PROMPT_FOR_ADVISORS_20260922.md。
+
+**一次提前读分事件（如实记录，未重跑改写）**：我为核对 quality export 的 JSON schema 以确认装配器字段，调试打印输出了 UCF × VideoMAEv2 × pair_select 的 `metric.dense_value`（frame ROC-AUC 唯一一个 dense 基线值）。暴露范围仅此 1 个 dense 基线值，未读取任何压缩方法值、其他格子或 XD 指标；该值三方法共用，不指示任何压缩方法优劣，未影响方法选择。已记入 `handoff_v2/unseal_receipt.json` 的 `early_score_exposure`，并已向负责人披露。此后所有检查只打印结构字段。
+
+**两个必须报告的数据质量发现（非失败，但是论文纪律问题）**：
+1. **TimeSformer 实际 token 保留比 0.5717**，低于名义 keep_ratio 0.60（V2/VMA 为 0.6001）；成因是 TS 选择单元为完整空间轨迹、粒度取整。同一编码器内三方法保留比完全一致，跨方法预算匹配成立。论文须报告实际值。
+2. **FeatureStore `plugin_overhead_ms` 不可用作效率证据**：该字段是随 chunk 重算的滑动平均（同 chunk 内恒定、跨 chunk 单调收敛 3335345→1895034→18998），早期值被初始化污染；且 pair_select 记 `transform_ms`、两个对照记 `gather_ms`，走不同代码路径。论文效率表一律采用阶段 D 干净测量。
+
+**解封后一次性交付（`projects/icassp2027/handoff_v2/`，另同步至远端 `$B/handoff_v2/`）**：`audit_summary.md`（来源/覆盖/预算/head QA，公开版不含分数）、`lineending_equivalence.md`（三对豁免证据与作用域）、`unseal_receipt.json`（矩阵摘要、有效规则版本、关口读数、提前读分事件）、`quality_matrix.md`（六格主表 + XD 补充指标 + 预算 + CI + bootstrap provenance）、`quality_matrix_detail.csv`（6 dense + 18 compressed 可追溯明细）、`method_recommendation.md`（五问回答）、`selection_decision.md`（待负责人填写）、`efficiency_protocol.md`（阶段 D 预写协议）、`paper_claims_checklist.md`（七项方法学自查）。新增 `scripts/icassp2027/emit_quality_matrix.py`。
+
+**阶段 B 核心结论（详见 method_recommendation.md）**：三个方法质量**不可区分**——18/18 格通过 0.5 pp 非劣性边际，所有"方法−dense"百分点差落在 [−0.43, +1.14] pp，方法间点估计差 ≤0.51 pp，全部小于方法-vs-dense 的 CI 宽度（约 ±1–2 pp）。pair_select 六格最差 −0.16 pp（三者中最稳）、两数据集平均皆正（UCF +0.075、XD +0.537），但 **UCF 上平均不如 group_random**（−0.147 pp）；group_random UCF 平均最好（+0.222 pp）且最差仅 −0.09 pp。质量候选建议 pair_select 但必须写"效率待确认"。方法-vs-方法配对 bootstrap CI 待补（议程 §B2 许可先交点估计），在它出来前不得写"统计显著优于"。
+
+**红线保持**：正式分数在装配+审计通过后才用于分析；失败目录全部保留未覆盖；未伪造任何指纹；node2 未接入；10,000 次 paired bootstrap 未减少未改定义。
+
+---
+
+## 2026-09-22 14:20 全面收尾状态与今日事件归档
+
+node3 实测：UCF 九路压缩"提取→预测→质量报告"全链路闭环（9/9 exports available，TS 最后一份 14:09 前落盘，UCF 压缩侧正式完成）；XD 九路提取 6788/7200=94.3%（V2 2240、VMA 2354、TS 2194，各 /2400），单 run 约 1 视频/分钟，预计 60–90 分钟内出 extraction 合同；已完成预测 15/24（6 dense + 9 UCF 压缩）。调度器 13:51 重启后 6 个曾失败任务全部自动恢复：根因为 VMA/TS 共用的适配器包装文件 dense 侧 LF、压缩侧 CRLF 行尾差异，被按原始字节计算的代码指纹判为两个代码版本——文件内容 diff 为空（0 行不同），且用仓库原装 _verified_code_digest 复算 XD-VMA 全部 68 个、XD-TS 全部 135 个 dense 源运行均等于 head 记录值，与压缩侧仅差该文件行尾；model/processor/configs/libs/weights 全部一致。按用户拍板走窄豁免（未留决策文档）：compatibility.py 的 direct_insert 校验加入仅 3 对已证明"仅行尾不同"的指纹放行表，runtime_id/weights/preprocessing/readout/output_dim/precision/position_strategy 仍严格比对；原版备份 compatibility.py.bak-pre-lineending-equivalence-20260922，未改动任何运行中任务的记录与数据。**2026-09-22 16:0x 更正**：本条原写"4 对"系计数错误，正确为三对（由 6 个 dense head 的 final.pt 元数据实推 code_digest：VMA-UCF `81e31440`↔`30fe33c1`、VMA-XD `9a23c5da`↔`30fe33c1`、TS 两数据集共用 `7f9a3ac6`↔`e5fd0bdf`；V2 两侧同为 `19720d4e` 原生一致）；18 路中 12 路走豁免、6 路原生匹配；远端放行表 5 个唯一摘要、XD 评分日志 0 条兼容报错。同一更正已同步 AGENTS.md、CLAUDE.md、STATUS_DATA_SUMMARY_20260922.md、PROMPT_FOR_ADVISORS_20260922.md。GPU 显存 monitor 已于 09:00 退出（541 行日志止于 01:00:13Z），显存峰值只覆盖 08:57–09:00 约 3 分钟，效率审计显存项不完整，建议对预测阶段补开。node2 本轮 SSH 连接超时，8 路补充提取未复核。新增文档：STATUS_DATA_SUMMARY_20260922.md（数据深度总结）、NEXT_STEPS_PLAN_20260922.md（收尾操作计划）、PROMPT_FOR_ADVISORS_20260922.md（外部顾问提示词）。正式分数未读取、未用于方法选择；失败目录全部保留；红线保持。
+
+## 2026-09-22 09:12 最新 clip 现场
+
+xtract_count=18 仍保持。当前 compressed clip records 约 1,046,227/2,582,304=40.5%，其中 UCF 541,896/832,743=65.1%、XD 504,331/1,749,561=28.9%；scheduler 六 dense jobs completed、exports=0，compressed contract 尚未生成。计数继续增长，未见失败。
+
+## 2026-09-22 09:09 最新 clip 写入量
+
+node3 正式 18 路仍有 xtract_count=18。当前已写 compressed clip records 约 1,026,830 / 2,582,304 = 39.8%：UCF 约 531,099/832,743=63.8%，XD 约 495,731/1,749,561=28.3%。clip 进度低于视频目录进度，符合 XD 长视频尾部的实际计算量特征。scheduler 六个 dense job 仍 completed、exports=0；尚无 compressed contract。
+
+## 2026-09-22 09:18 最新闭合量
+
+逐视频 clip-count 对齐复核：UCF V2 199/290 三路、VMA 195–199/290、TimeSformer 187–188/290；XD V2 338–353/800、VMA 338–364/800、TimeSformer 315–331/800。合并为 UCF 1753/2610=67.2%、XD 3075/7200=42.7%、全部 18 路 4828/9810=49.2%。已有目录均闭合且无 partial/extra，尚无正式 compressed contract 或 scoring/export。
+
+## 2026-09-22 09:15 GPU monitor 汇总入口准备
+
+新增并同步 scripts/icassp2027/summarize_urdmu_gpu_monitor.py，本地 compileall 与远端 classic runtime py_compile 均通过。它在 monitor 结束后按 PID/GPU 汇总显存采样的峰值、均值、采样区间和命令，并明确 observed_peak 只覆盖 monitor 启动后的观测窗口，不冒充完整进程峰值。当前不读取、不修改运行中的任务。
+
+## 2026-09-22 09:05 最新闭合量
+
+最新逐视频核对：UCF V2 188/290 三路、VMA 188–199/290、TS 159–187/290；XD V2 328–334/800、VMA 325–343/800、TS 297–313/800。汇总为 UCF 1666/2610=63.8%、XD 2917/7200=40.5%、全部 18 路 4583/9810=46.7%。已有目录均为完整 clip 覆盖，仍无 extraction contract 或 compressed scoring/export。
+
+## 2026-09-22 09:02 最新闭合视频进度
+
+逐视频 clip-count 对齐复核显示：UCF VideoMAEv2 三路均 188/290，VideoMAE 为 188–197/290，TimeSformer 为 155–178/290；XD VideoMAEv2 为 324–331/800，VideoMAE 为 322–335/800，TimeSformer 为 292–309/800。合并为 UCF 1641/2610=62.9%、XD 2880/7200=40.0%、全部 18 路 4521/9810=46.1%。所有已有目录仍为完整视频 clip 数，无 partial/extra；18 路仍未发布 extraction contract，compressed scoring/export 尚未启动。
+
+## 2026-09-22 08:57 GPU 进程效率监视器启动
+
+已在 node3 启动低开销 monitor（PPID=1，远端 PID 23427），日志为 /users/fotile/icassp2027-runs/codex-takeover-20260920/logs/urdmu-matrix-gpu-monitor-r08.csv。它每 20 秒记录 extraction、UR-DMU scoring 和 quality export 进程的 GPU UUID、PID、显存和命令，直到 scheduler/评分进程全部退出；不干预任务。用于后续六格矩阵的峰值显存、运行时段和吞吐审计，不能把 monitor 启动前的显存峰值写成已观测值。
+
+## 2026-09-22 08:56 矩阵脚本远端同步验证
+
+ssemble_urdmu_matrix.py 已同步至当前 node3 代码快照；本地/远端 SHA 均为 38384c4ea5175bbff696c5e8be314ef46366d862bc171eb2ff299b118d9837d，远端 classic runtime py_compile 通过。它尚未被 scheduler 调用，等待正式 compressed quality exports 完成后手动装配矩阵。
+
+## 2026-09-22 08:53 六格矩阵装配入口完成
+
+新增 scripts/icassp2027/assemble_urdmu_matrix.py，本地 compileall 通过。它要求 18 份 post-freeze quality export 全部 status=available 且覆盖 290/800 视频，核对 dense view、prediction、compressed extraction、head checkpoint/training QA、method contract 和 freeze receipt 的 SHA；并流式汇总每个 compressed FeatureStore 的实际 native/retained token、ratio、clip 数和 plugin overhead。缺证据会 fail-closed，不会把未完成 run 或测试分数缺失填成完成。待远端 exports 齐全后运行并生成正式矩阵。
+
+## 2026-09-22 08:55 当前提取范围与闭环计划说明
+
+正式压缩 test extraction 的范围不是重复训练视图：UCF sealed test 为 290 个视频、XD sealed test 为 800 个视频；三条 encoder × 两数据集 × 三个冻结方法（pair_select 主方法、group_uniform/group_random 同预算 controls）共 18 个 method runs，即 9810 个 encoder×dataset×method 视频实例，预计 2,582,304 个 compressed clip records。dense test views 已完整发布并复用，不再重复提取；六个 full-train head 也已完成 QA，不再重训。全量 290/800 是 paired video bootstrap 和官方 coverage 的必要条件，64+64 screen 或抽样子集不能替代正式 test。node2 的 8 个任务只是独立接力/故障备用，不扩展科学范围，也不覆盖 node3 正式目录。计划保持：node3 18 路 contract 完成 → 逐 run provenance/coverage audit → scheduler 自动启动 compressed direct_insert prediction → 18 份 paired quality export（UCF ROC-AUC、XD 梯形 AP 与 step AP、video-level、Δ/CI）→ 汇总实际 retained token/clip ratio、插件/端到端效率和六格矩阵；当前不安排 refit_head，除非主线闭环后仍有预算且独立补充所需。
+
+## 2026-09-22 08:50 六格 dense head 训练指标与 QA 复核
+
+已直接读取六个正式 head 的 	raining-steps.jsonl、esult.json 和 	raining_qa.json。六格均正好 3000 steps，所有 loss 分量 finite，每步均为 64 normal + 64 abnormal bags，
+onzero_gradient_parameters=34 且 QA 记录 
+onzero_gradient_steps=3000；六格 	raining_qa.status=passed、strict reload missing/unexpected keys 为空、reload xact_equal=true、max_abs_difference=0.0，六个 official_model_scores_read=false。训练目标从约 1.11 起步并降到各自低位；VideoMAEv2×UCF 的尾部 loss 中位数约 0.0237、最终 0.0205，高于其他 head 且有少量有限尖峰，但没有 NaN/Inf、梯度或 reload 异常，先作为训练侧诊断记录，不据此读取测试或改方法。训练文件不产生正式 UCF/XD AUC/AP；正式质量指标仍只在冻结后的 evaluation 阶段导出。
+
+## 2026-09-22 08:45 提取 ETA（按真实 clip 速率）
+
+最新现场仍有 node3 18 路、node2 8 路 extraction 运行。node3 形式 run 按 clip 数约完成 29.0%（UCF 约 45.1%，XD 约 21.3%），按已闭合视频目录约 40.3%；XD 长视频尾部使 video% 不能直接换算完成时间。以各进程实际运行时长和当前 clip 写入速率外推，node3 正式压缩特征 extraction 大约在今日 14:30–16:00 HKT 完成，区间受剩余视频长度和共享 I/O 影响，暂不承诺单点时间。随后 scheduler 才能启动 18 路 compressed official_frame prediction；按 dense scoring 已见运行量，质量 export 还需数小时，预计直接质量闭环在傍晚至晚间完成，待第一批 extraction contract 发布后再收窄 ETA。
+
+## 2026-09-22 08:35 按视频身份核对的压缩提取进度
+
+远端按每个视频的 dense clip 数逐目录核对：当前已有 shard 目录的每个视频均已写满该视频应有的 clip，未见 partial/extra 身份。node3 18 路正式提取的完成比例为：UCF VideoMAEv2 50.3–52.1%（146–151/290），UCF VideoMAE 51.0–56.6%（148–164/290），UCF TimeSformer 39.7–44.1%（115–128/290）；XD VideoMAEv2 35.4–36.5%（283–292/800），XD VideoMAE 34.1–36.5%（273–292/800），XD TimeSformer 31.4–32.9%（251–263/800）。按三种方法合并统计，UCF 为 1285/2610=49.2%，XD 为 2490/7200=34.6%，六格全部合并为 3775/9810=38.5%。当前仍在继续提取，尚未发布 extraction contract，也未开始压缩质量评分。
+
+## 2026-09-22 08:30 当前六格压缩评测状态
+
+六格 dense UR-DMU `official_frame` prediction 已全部完成：UCF/XD × VideoMAEv2/VideoMAE/TimeSformer 均有 `result.json`、`predictions.jsonl` 和 query-chunk receipt，且 `official_frame_scores_read=false`。node3 上 18 个正式压缩 extraction 仍在写入 shard，覆盖三 encoder × 两数据集 × `pair_select/group_uniform/group_random@0.60`；当前尚无压缩 `result.json` 或 `extraction-contract.json`，因此质量 scheduler 尚未启动压缩 prediction 或 export。node2 另有 8 个独立补充 extraction（六格 `pair_select` 加 V2-UCF 两个同预算对照）持续产出，输出根与 node3 隔离。当前未读取正式 test 分数做方法选择；下一门仍是压缩 extraction 合同完成后自动评分并导出 UCF ROC-AUC、XD 梯形 AP/step AP 和 paired bootstrap CI。
+
+## 2026-09-22 08:06 node2 prediction watcher
+
+node2 补充 extraction 已启动独立 watcher `/users/fotile/icassp2027-runs/code-takeover-20260920/eval/launch_node2_official_matrix.py`（PPID=1）。它等待 node2 的完整 native extraction contract/status 后，在 node2 空闲卡上运行 `official_frame` direct_insert prediction，并将结果与已完成的六格 dense prediction 配对导出质量文件；不会覆盖 node3 的 output root，也不改变冻结方法。
+## 2026-09-22 08:03 node2 额外提取接力
+
+node3 上 18 个压缩 extraction 继续运行，未覆盖完整视图。为利用用户授权的 16 卡范围且不触碰 node3 现有目录，已在空闲 node2 V100 上启动 8 个独立输出的补充 extraction：三 encoder 的 UCF/XD `pair_select@0.60`，以及 VideoMAEv2 的 UCF `group_uniform/group_random`。输出根为 `/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-test-node2`，run-id 带 `node2-r01`，每个任务使用独立日志和完整 sealed manifest/contract。node2 任务已开始写入 shard；它们只在完整 contract 发布后才可进入 scoring，不会覆盖 node3 结果。
+## 2026-09-22 07:40 六格 dense official prediction 完成、压缩提取继续
+
+远端 scheduler 已为六个 encoder×dataset 格子完成 `official_frame` 的 dense `direct_insert` UR-DMU prediction。六个 run 的 `result.json` 与 `resolved.json` 均为 `completed`，`official_frame_scores_read=false`，使用 exact all-key query-chunk attention（query chunk 256）；UCF/XD 的 prediction JSONL、query receipt、feature contract 和 head checkpoint provenance 均已落盘。当前没有任何正式质量分数用于方法选择。
+
+三种冻结压缩方法的 18 个 sealed-test extraction 仍在 node3 以 PPID=1 运行：VideoMAEv2/VMA/TimeSformer × UCF/XD × `pair_select`, `group_uniform`, `group_random`。当前没有压缩 extraction `result.json`，所以 scheduler 尚未启动压缩 prediction，也尚未生成 paired quality export。其 detached scheduler 继续等待每个原生 extraction contract 完成；早先失败 run 保留为失败证据，不复用其目录。
+## 2026-09-22 07:33 官方 prediction/压缩矩阵接力（未读分数）
+
+六格 dense test view 已全部发布为 ready merged view：UCF 的 VideoMAEv2、VideoMAE、TimeSformer 与 XD accepted3950 的三条 encoder 均有完整目标列表和 merge contract；合并视图允许多个独立 shard fingerprint，但 representation/sampling 与行级 identity 仍由合同核验。六格正式 head 仍保持此前 3000 steps、64+64 bags、3000 nonzero-gradient、exact reload QA 通过。
+
+方法已冻结在 `six-cell-method-freeze-v2`；兼容 official_frame gate 的 `method-freeze-contract-v2.json` 当前 SHA 为 `50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc`，绑定 markdown、selection receipt、scope 和训练侧证据。没有 test 分数参与方法选择。
+
+当前远端有 18 个独立压缩特征提取进程（3 encoder × 2 dataset × dense-free candidate/control 三方法），V2 使用 foundation + VideoMAEv2 overlay，VMA/TS 使用 classic 环境；UCF 修正后的数据根为 `UCF-Crime-official-verified`。早先环境/目录错误 run 和日志均保留，当前仍未生成质量分数。
+
+官方 UR-DMU prediction scheduler 已 detached 运行，状态文件为 `/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-matrix-r08-state.json`。UCF V2/VMA dense prediction 已完成；UCF TS 与 XD 三个 dense prediction 正在运行。下一步由同一 scheduler 等待各压缩 extraction contract 完成，再运行 direct_insert prediction，并生成 UCF frame ROC-AUC、XD 梯形 PR-AUC 与单列 step average precision 的 paired video bootstrap export。当前未读取、未用于选择的官方测试分数保持空白。
+
+本阶段新增评测实现：`urdmu_evaluation.py` 支持显式 SHA 绑定的 merged test view contract，并保留 native sealed extraction contract 路径；`urdmu_quality_export.py` 提供 XD 作者梯形 AP 与 separate average-precision 导出。受影响代码已 `compileall`；本机未运行 pytest，因为当前解释器没有 pytest 模块。
 # ICASSP 2027 当前进度
+
+## 2026-09-21 23:25 六格 dense 基线接力与 quarantine-aware head 修复
+
+当前六格目标继续按 `videomaev2/videomae/timesformer × UCF/XD` 执行。UCF 三个
+`official-fulltrain-final` 头已有 1610 videos、3000 steps、非零梯度和 reload QA 回执；XD
+VideoMAEv2 accepted3950 合并视图已发布并通过合同验收：run-id
+`xd-v2-full-20260921-r02`，3950 videos、1,018,483 clips、`complete=true`，合同 SHA
+`d60438982d201a064cce9533e80cd19bdc79f70f2d942f66b379be4702cb3250`。VideoMAE×XD 与
+TimeSformer×XD 的完整 merge 仍在 node3 运行，分别使用 accepted3950 的 68/135 个已审计逻辑来源，
+合同尚未发布；不得把目录数量当作 ready。
+
+VideoMAEv2×XD 第一次正式 head 在 23:11 因 quarantine-aware authority receipt 只从顶层读取
+`accepted_members`，把 accepted3950 错判成 declared3954，保留为失败回执。已修复
+`src/vadbench/paper/urdmu_training.py`：优先读取 `quarantine_exemption.accepted_members`，兼容旧的
+顶层字段；本地受影响回归 `39 passed`，`compileall src tests` 通过，并已同步到远端代码快照。新的
+独立重试输出 `training-full/videomaev2/xd-formal-dense-s0-r02` 已于 23:22:08 在 GPU2 启动，
+现已完成 aggregation/训练和 QA：3950 videos、3000 steps、3000 nonzero-gradient、exact reload
+（`max_abs_difference=0.0`），checkpoint SHA `35f320f3f34e3a82e5d7e2eef70e509104d7383e84dbe48ed47c2111fde20d99`，
+training QA SHA `759e2f8b87e1bf2d16c4c1c1073c6f86fd81769d9f2badcea60ce55124904b32`。旧失败目录和日志保留，不覆盖。
+
+三个 XD watcher 已改为读取各自 merge run-id 子目录的合同；VMA/TS ready 后会分别自动启动独立
+formal head。当前尚未开始 XD test 评分；测试集只能在方法冻结合同、数据审计和 dense/压缩矩阵冻结后进入
+evaluation。现阶段继续保留 accepted=3950/declared=3954/excluded=4 身份，不使用 screen600 或
+64+64 结果代替正式 full-train。
+
+新增 UR-DMU prediction-only 质量导出入口 `scripts/icassp2027/export_urdmu_quality.py` 与
+`vadbench.paper.urdmu_quality_export`：它对 dense/method 两份完整预测 JSONL 和独立 truth JSONL 做
+共同 frame partition，对 UCF 使用 frame ROC-AUC、对 XD 使用作者梯形 PR-AUC，并附 weighted step AP、
+视频级辅助 ROC-AUC、10,000 次视频配对 bootstrap 和源文件 SHA。当前仅通过合成测试（2 passed）；
+真实 test 导出仍等待六格 dense head、test truth seal、method-freeze-v2 和同覆盖压缩预测。
+
+六格范围合同已登记为 `decisions/six-cell-scope-contract-v1.json`（SHA
+`eac12d9248b4970e1d3528af30efc14a3a9d90ee7c7558965215b1cd9d6d7e25`）。它绑定六个格子、训练角色门、
+accepted3950 身份、UR-DMU 预算和正式指标，但明确标记为 `active_scope_not_official_test_freeze`；
+训练侧 selector/layer/budget 选择完成后仍需单独发布 method-freeze-v2。当前旧方法冻结文件之间存在
+历史候选范围差异，不能直接冒充新的六格最终冻结合同。
+
+为解决旧 evaluator 方法集合与当前三 encoder scope 的冲突，已登记新的六格方法冻结合同
+`decisions/six-cell-method-freeze-v2.json`（当前 SHA `4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658`）。
+它在官方测试前冻结 dense、同预算 group_uniform/group_random、pair_select、0.60 budget、中间 verified
+layer、direct_insert 主模式和可选 budget-matched refit；实际 retained ratio/geometry snap 仍必须由
+每格 receipt 写出。该合同不读取 test 分数，也不替代 raw-coordinate/test audit 门。
+
+训练侧选择回执为 `decisions/six-cell-method-selection-receipt-v2.json`（SHA
+`260c9d26a80d5d796ab6cea2149b284c8f4f0bc1f224927135e69537e015f442`），固定 pair_select 与
+group_uniform/group_random 同预算 0.60、中间 verified layer、seed0，并保留 pair-mean 和跨 encoder
+小口径不复现证据。
+
+VideoMAE×XD merge 已在 00:15 HKT 发布 ready：run-id `xd-vma-full-20260921-r02`，3950 videos、
+1,018,483 clips，合同 SHA `5dca3e8b8d24aeb0f402ba0a9ead084fd575ad66915c8087e03ca2696bdf33cc`；对应
+formal head watcher 已在 GPU3 启动。TimeSformer×XD 使用已补齐来源的 `xd-ts-full-20260922-r02`
+继续合并；TimeSformer UCF test 290 视图也在独立合并，尚未进入评分。
+
+VideoMAE×XD formal head 已通过完整 QA：`training-full/videomae/xd-formal-dense-s0`，3950 videos、
+3000 steps、3000 nonzero-gradient、exact reload（`max_abs_difference=0.0`），checkpoint SHA
+`4b273e634b61a9187ab8c64856f489ff97485b117742a249204df2cd57d1a90e`，training QA SHA
+`ed05f79c965d51f31608e0743abd37a373fb6828244c65c11249233528401fa7`。当时已完成
+5/6，随后 TimeSformer×XD 接力完成并写入下方 dense receipt。
+
+TimeSformer×XD r03 merge 已于 05:24 HKT 发布 ready：3950 videos、2,038,777 clips、`complete=true`，
+合同 SHA `3ed55c0560a62f08b4f111415054937a90a2654d8df71e987b45ef32c86048c9`。TS formal watcher 已
+于 05:24:49 在 GPU4 启动，训练输出为 `training-full/timesformer/xd-formal-dense-s0`；至此六格
+dense head 都已具备对应完整视图并进入/完成 head 链，TS 的 3000-step QA 已通过。
+
+六格 dense receipt 已在远端生成并镜像到 `work/codex-takeover-20260920/heads/six-cell-dense-receipt-20260922.json`，
+SHA `cf8b42828ffc4b0ff93f31b85b1bde66fd8464ee1daa7ea11f8e39b09a8e7a18`。该 receipt 已逐格验证 view
+contract ready、video coverage、3000 steps、3000 nonzero gradients 和 exact reload；TS receipt 的
+checkpoint/QA 也已纳入后续验收，当前下一门是 method-freeze-v2 后的压缩特征和 prediction export。
+
+V2×XD 的冻结方法 test feature 生成已启动：foundation-video-v2 + cudnn-off + VideoMAEv2 overlay 环境，
+`pair_select@0.60`、`group_uniform@0.60`、`group_random@0.60(seed0)` 三路独立 output/log，分别运行于
+GPU2/5/6。前两次环境错误在模型加载前失败并保留；r03 已进入真实 encoder 前向，尚未读取 GT 或写质量分数。
+
+TimeSformer×XD dense head 已完成 QA：`training-full/timesformer/xd-formal-dense-s0`，3950 videos、
+3000 steps、3000 nonzero-gradient、exact reload（`max_abs_difference=0.0`），checkpoint SHA
+`85586f8959cebfdf280cf777cf912f354ae1a54280392608347bf40c7e05cf69`，training QA SHA
+`5f7e1fcc400ccbb9853fd71794e1ce73738d0c4ce84d5460d9d9d9c81cff7f75`。三 encoder×两 dataset 的
+六格 dense baseline 现已全部通过 head QA；正式压缩和 test evaluation 仍未开始。
+
+TimeSformer×XD 首次 merge 在 9/21 23:44 因部分 `nativerep` 分片当时尚未发布
+`resolved.json/status.json` 而 fail-closed；随后只读复核确认当前 135 个选定逻辑来源均已
+`status=completed`、`resolved/index/status` 齐全，缺口是时序而非数据身份问题。已用同一 accepted3950
+video list、同一 authority/role-lock 合同重启 `xd-ts-full-20260922-r03`（此前 r02 脚本将 001–009
+写成两位编号，已修复并保留旧失败日志）；TS watcher 已切换到该新 run-id 子目录，待合同发布后
+自动启动 head。VideoMAE merge 仍在原
+`xd-vma-full-20260921-r02` 运行。
+
+为补齐 UCF 六格评测基础设施，已从 sealed UCF test manifest 生成 290-video ID 清单
+`control/ucf-test-290-video-ids-20260922.txt`（SHA `8d9cb84d872e3df0fdc0211e0a8c210683daf5d243ea399fb9faca87fcf85dbb`），
+并生成独立 frame-truth JSONL `control/ucf-test-frame-truth-20260922.jsonl`；未读取模型分数。TimeSformer
+UCF test 的 dense slice（dense + slice01–05）正在合并到 `merged/timesformer/dense-test-view`，
+合同发布后才进入冻结后的 scoring。
+
+XD 的 800-video sealed raw-coordinate receipt 已只读获取并验证，使用 canonical metadata 与 GT 生成
+`work/xd-evaluation-20260922/truth.jsonl`（800 videos，truth receipt 标记 `model_scores_read=false`，
+output SHA `538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330`）。新增
+`scripts/icassp2027/make_xd_truth_from_seal.py` 支持从 sealed receipt 生成 canonical prefix truth；
+UR-DMU 质量导出合成测试仍为 `2 passed`，真实预测尚未读取。
+
+TimeSformer UCF test merge 已发布 ready：290 videos、138,853 records、`complete=true`，合同 SHA
+`5015cc388b1bd679c06464149877fb3c25cb715b8f5cea26a71c0645adf0ea44`。这只完成 test FeatureStore
+基础设施，不代表已读取模型分数；正式 scoring 仍等待 method-freeze-v2 与统一 UR-DMU prediction
+export 门通过。
+
+## 2026-09-21 训练范围修正与 ADGS screen 收尾
+
+用户明确：64 normal +64 anomalous 只用于训练集内部的压缩规则筛选；所有正式训练必须使用对应
+encoder×dataset 的完整训练集。刚完成的 `screen600-retry32` 仅使用每个数据集 32 normal +32 anomalous
+视频，UCF/XD 两个训练回执已通过，但保留为 training-side screen，不升级为正式结果。
+
+screen 的压缩生成在产生有效结果前已停止。小样本数据入口的同设备硬链接核对 r02 已通过：UCF/XD
+各抽查 1 个正常和 1 个异常视频，source/destination inode、SHA、features/pooled 数值和严格读取/200-bin
+汇总均通过；回执为 `outputs/icassp2027/control/codex-takeover-20260920/idea/v2-adgs-screen-20260921/canary_receipt-r02.json`。
+
+正式训练规则回执与时间估算见 [`TRAINING_SCOPE_AND_RUNTIME_ESTIMATE_20260921.md`](TRAINING_SCOPE_AND_RUNTIME_ESTIMATE_20260921.md)。
+现有正式回执中 UCF VideoMAEv2 与 VideoMAE 已完成 full1610/3000 steps/QA；XD accepted3950 和
+TimeSformer 的正式 full-train 仍需使用完整视图、合同和 QA，不得使用 screen600 模型替代。
+
+## 2026-09-21 15:15–18:20 idea_screen_64x64（V2 ADGS 筛选）中点交接
+
+按 `NEXT_PHASE_PLAN_20260921_V2.md` 执行。已完成：ADGS selector 与测试（本地+服务器快照各 16 passed）；
+128 视频 screen manifest 锁定（sha f6f36fd6…，UCF/XD 各 32N+32A，seed 20260921，XD 逐视频特征完整）；
+工程门 11/11 通过（identity/observer/token 数/attention 捕获/digest 确定性/缓存逐值一致，见
+`outputs/icassp2027/control/codex-takeover-20260920/idea/v2-adgs-screen-20260921/gates_receipt.json`）。
+未达成：dense head 600 步训练尚未产出——dense 缓存重打包为 native store 的初版太慢（逐 clip 重写约 2.2 clips/s），
+已按用户指示改为 /data2 同设备硬链接 + 1N+1A canary 先行方案，代码改到一半。
+环境教训：node3 系统 LD_LIBRARY_PATH 的 cudnn 9.5 会击碎 torch 2.8（须 env -u + cudnn-off hook + overlay PYTHONPATH）；
+禁止 pkill -f 杀远程任务（会误杀自身 wrapper）。另如实披露：用户要求保留的 PID 28421 临时目录被我一次
+`rm -rf heads` 误删。完整现场、路径、剩余改动与执行顺序见
+[`HANDOFF_ADGS_SCREEN_20260921.md`](HANDOFF_ADGS_SCREEN_20260921.md)，交接 Codex 继续。
+
+## 2026-09-21 08:00–10:01 idea 首轮：F09 工程门通过，尚未成为方法
+
+提取健康先验：node2/node3 16卡持续运行；没有为了idea停提取。F09 reference-preserving时间候选已完成
+CPU规则/真实前向smoke，使用两个固定的训练侧正常窗口（UCF、XD），没有test、没有检测分数、没有训练。
+31个窄测试通过：V2/CLIP identity、真实序列长度、native坐标、T/U/R quota/tie/seed、CLIP prefix一次+
+reference/target分离suffix、无跨帧attention、无padding回dense、无double-prefix，以及真实部署规则分支。
+
+预训练CPU smoke结果：CLIP reference帧在T/U/R中的max-abs为0；V2 identity max-abs约2.4e-7/3.6e-7。
+相对dense pooled MSE：CLIP UCF T/U/R=0.00290/0.00333/0.00263，XD=0.00164/0.00350/0.00320；
+V2 UCF=0.00223/0.00717/0.00499，XD=0.00699/0.00729/0.00727。两窗口内V2的T优于U/R，CLIP方向跨数据集不一致；
+这只支持接口和候选排序的下一步，不支持质量、不掉点或GPU净加速主张。CPU时间也不是正式速度测量。
+完整receipt：`outputs/icassp2027/control/codex-takeover-20260920/idea/f09-cpu-engineering-r01-root.json`。
+
+方法边界核查：FrameFusion已做相邻帧对应token相似合并再importance pruning；TempMe已做跨连续clip渐进合并；ToFu/MLERP已做最大范数平均校正；
+Eventful Transformers已展示跨输入变化token gating和稀疏更新。因此“时间冗余优先”本身不是创新；能否形成WSVAD可辩护贡献取决于异常/正常匹配证据、
+同预算基线、训练侧质量和实际端到端收益。下一步只保留T/U/R同路径训练侧小表；F07历史缓存因producer dispatch未生效仍不能作为成员范数因果证据。
+
+### 05:29 简查
+
+16卡持续增长，无空卡、重复writer或停滞；TS100与VMA52/53已自动接力并产出，无新增故障。
+
+### 05:21 简查
+
+16卡全部增长，无空卡、重复writer或停滞；TS098/099已自动接力且有产物，无新增故障。
+
+### 05:11 简查
+
+16卡全部增长，无空卡、重复writer或停滞；VMA50/51、TS095–097已正常接力并有产物。
+本轮仅检查live run，不全量重扫、不派agent，无新增故障。
+
+### 05:00 简查
+
+16卡均持续增长，无空卡、重复writer或停滞；调度状态正常更新，无需额外通知。
+
+### 04:50 简查
+
+16卡全部增长，无空卡或重复writer；TS093/094已自动接力且有产物，无新增故障。
+
+### 04:40 简查与覆盖更新
+
+16卡均持续产出，无空卡或重复writer。node2 04:38:43–04:39:18去重覆盖：VMA train667,563/test0；
+TS train1,313,912/test0。条件完成窗口仍为今天12:00–18:00，无新增故障。
+回执`infra/direct-check-20260921-0439.json`；未改源码、未派agent、未中断任务。
+
+### 04:30 简查
+
+16卡均有writer，既有run全部增长；node3 GPU6刚切换VMA49，已对启动后的产出作补充核验。
+无重复writer或新增故障，未全量重扫、未派agent。
+
+### 04:20 简查
+
+16卡全部增长，无空卡或重复writer；TS087–091已自动接力并有产物。无新增故障，未全量重扫或派agent。
+
+### 04:10 简查：已登记恢复全部完成
+
+16卡继续增长，无空卡或重复writer；四个暂停分片恢复及VMA19原生pt替代均已通过调度的目标/身份
+校验并完成，资源已续派。整体数据集仍未提完，不将局部恢复完成写成全任务完成。
+node2 04:09:43–04:10:09去重覆盖：VMA train635,907/test0；TS train1,236,212/test0。
+条件完成窗口仍为今天12:00–18:00。回执`infra/direct-check-20260921-0410.json`。
+
+### 04:00 简查
+
+16卡均有增长，无空卡、重复writer或停滞；node2 GPU6已自动接VMA47并产出。
+恢复队列状态稳定，无新增故障，未全量重扫或派agent。
+
+### 03:50 简查
+
+16卡全部增长，无空卡或重复writer；VMA28恢复已完成，释放资源已自动接上新分片。
+VMA30恢复仍正常运行，其余已核恢复和原生pt替代均完成。无新增故障，不另发通知。
+
+### 03:40 简查与覆盖更新
+
+16卡均有增长，无空卡或重复writer。node2 03:39:13–03:39:35去重覆盖：VMA train603,879/test0；
+TS train1,150,535/test0。条件完成时间仍在今天12:00–18:00，无新增故障。
+回执`infra/direct-check-20260921-0339.json`；未重扫V2内容或中断提取。
+
+### 03:31 简查
+
+VMA19原生pt替代分片已完成，调度alias已更新，早期np试跑仍保留作历史。分片集中结束期间依次
+观察到正常交接：TS079/080、VMA42/43均已新产出；其他run持续增长，无重复writer。
+node2 GPU3随后也进入新一轮接力，未因交接瞬时无compute进程而重启正常任务。
+
+### 03:21 简查
+
+初次采样碰到node3 GPU2分片交接，随后复核已自动接TS078，480个NPZ已落盘，恢复16卡全有writer。
+其他任务继续增长、无重复writer；这是正常交接，未手动重启任务或派agent。
+
+### 03:11 简查与覆盖更新
+
+16卡继续增长，无空卡或重复writer；VMA29恢复已完成并由调度接续其他分片，其余恢复正常。
+node2 03:10:18–03:11:12文件位置去重：VMA train576,219/test0；TS train1,066,872/test0。
+条件完成窗口仍为今天12:00–18:00，无新增故障。回执`infra/direct-check-20260921-0311.json`。
+
+### 03:00 简查
+
+16卡均有增长，无空卡、重复writer或停滞；node3 GPU2已接TS074并产出3688个NPZ。
+调度状态持续更新，未全量重扫或派agent，无需额外通知。
+
+### 02:50 简查
+
+16卡均持续产出，无空卡、重复writer或零增长。TS070/071/072/073已自动接上完成分片释放的卡，
+且均有新特征文件。未全量重扫、未派agent、无新增故障。
+
+### 02:40 简查与覆盖更新
+
+16卡全部持续增长，无空卡或重复writer。node2 02:39:43–02:40:03去重覆盖：VMA train541,516/test0，
+剩余622,670；TS train1,004,222/test0，剩余1,326,336。相对02:10条件估计仍在今天12:00–18:00范围。
+回执`infra/direct-check-20260921-0240.json`；覆盖不替代最终统一表征及内容验收，无新增故障。
+
+### 02:29 简查
+
+16卡继续产出，无空卡、重复writer或零增长。VMA28修正后的恢复已在node3 GPU7实际启动，
+已有4696个NPZ；TS069已接上GPU2并产出。至此四个暂停分片的恢复均已进入执行或完成状态，
+未提前宣称尚在运行的恢复已完成。无新增故障，不另发通知。
+
+### 02:20 简查
+
+16卡全部有writer且全部持续增长，无空卡、重复writer或零增长任务。v22状态更新至02:19:42，
+恢复队列状态正常；未重扫全量、未派agent、未中断任务，无需额外通知。
+
+### 02:10 直接简查与半小时覆盖更新
+
+16卡均有真实writer且当前run全部增长，无空卡或重复writer。node2 02:09:47–02:10:09去重覆盖：
+VMA train504,823/test0；TS train954,446/test0。两者仍含待最终身份验收的保留历史源，不能以文件
+覆盖替代统一表征完成。相对01:34窗口条件估计仍在今天12:00–18:00范围，无新增故障。
+回执：`infra/direct-check-20260921-0210.json`。本轮无源码修改、无新agent、无GPU任务中断。
+
+### 02:01 简查
+
+直接检查仍为16卡、无重复writer；同一run的14路都有增长，另两路已接TS067/068并有产出。
+关闭VMA28上次Bash预启动失败遗留的非终结claim（日志与目录保留、未产生目标数据），已实际验证
+该条恢复重新具备领取资格，不会永久停在queued；正常提取未中断。
+
+### 01:54 直接简查
+
+两台各8卡均有本项目extractor，未见同卡重复writer；当前16条run都有已有产物。VMA19 native-pt
+和VMA29恢复继续增长，VMA30恢复已接上node2 GPU5；VMA28等待自然空卡。后续直接检查复用轻量
+`direct_shared_watch_root.py`：读取实时GPU/进程，仅在node2本地统计当前live run并比较上次增长，
+不做全量重扫、不派agent。正常无变化不另发通知。
+
+### 01:49 恢复修正的实际产出回执
+
+TS053已完成14967并发布调度alias。VMA29 pt-r02已产出4186个NPZ，encoder fingerprint与原partial
+完全一致；VMA19 native-pt已有326个新NPZ，其representation与生产pt配置一致。VMA28/30仍排队，
+未提前记完成。回执：`infra/recovery-nativept-verified-root-20260921-0149.json`。
+
+## 2026-09-21 01:40 恢复入口兼容性与完成判定修正
+
+直接复核发现服务器旧Bash在nounset模式下把空PROCESSOR_ARGS数组视为未绑定，VMA28的r02启动
+因此在GPU前退出；已改为只向非空视频参数数组追加TS所需参数，VMA不加该参数。失败保留，未动已有
+正常writer。同时修正恢复条目未继承顶层protocol/training-contract SHA导致TS053虽完整却无法通过
+调度验收的问题：实际14967条TS053目标已在新校验器下通过，不绕过SHA检查。
+v22已运行于node2 PID120158，SHA`2227913ae25c7013eb3324eb713012a2434cbe3d63db762305f0bd0eea4e7dd6`；
+新增退出日志优先于残留claim、僵尸PID不当作运行进程的处理。行为回归、实际TS053契约校验、编译通过。
+控制器切换只影响派工，不停止正常提取；新的VMA恢复和019原生pt替代继续按空卡调度，尚未提前记完成。
+
+## 2026-09-21 01:34 简查与一致性补齐
+
+v21状态更新至01:32:18，TS053恢复继续运行，VMA28/29/30修正后的pt恢复排队等待自然空卡。
+01:33:38–01:34:13文件位置去重覆盖：VMA train465,016/test0；TS train891,212/test0。
+该覆盖数尚不等于全量身份验收完成，物理重复与失败目录仍保留、不重复计数。
+
+小范围resolved核验确认早期A100 VMA019试跑使用np表征，而原有VMA25与新共享VMA32均使用默认pt，
+representation fingerprint不同。未将两者强行视为等价，也未改写旧fingerprint：已将019加入独立
+native-pt完整重提队列（14,955 clips，旧试跑保留），在自然空卡上执行。最终VMA数据验收必须使用
+该统一配置的替代源，不能仅凭旧文件覆盖宣布完成。其他正常分片继续，未重扫V2、未派agent。
+
+## 2026-09-21 01:21–01:30 直接修复恢复配置，正常分片继续
+
+发现VMA28/29/30恢复任务failed_exit且0条产出：旧partial为原生默认pt预处理，恢复脚本强加np，
+严格encoder fingerprint校验正确拒绝复用。失败目标和旧partial均保留，未改写任何指纹。
+先将3条失败恢复从活动预约隔离，释放卡自动接上普通VMA37/38/39；其余任务继续。
+主控部署v21（node2 PID93097，SHA`ed556f27466db5b583d9b5c4150e628b812f5b474662bf557ad196ac685d9f67`）：
+VMA恢复不再注入processor参数，沿旧默认pt；TS保持np。三个恢复进入新的独立pt-r02目标，继续严格
+验证source SHA/契约，等待自然空卡。并修正failed结果被未改名claim遮蔽造成的预约占用，启动时接续
+已运行的TS053恢复，控制器切换没有停止extractor。相关失败预约回归及compileall通过。
+这三条恢复修正尚待实际执行通过，不能提前记为完成；16卡按普通与恢复分片继续续派。
+
+## 2026-09-21 01:10 简查：自动接力已实际发生
+
+主控直接核对v20 PID48090状态更新至01:08:15：TS056正常完成14,994 clips，node3 GPU4已自动
+领取TS053独立恢复run，01:07:40启动且producer_seen=true。其余15条已核run相对01:03均继续增长，
+没有重复派agent或全量重扫。VMA三条partial保持恢复队列，正常提取与后继按统一调度继续。
+
+## 2026-09-21 01:03 实测：16/16 GPU 已提取并持续产出
+
+主控直接安装并启动v20共享调度，node2 PID48090，源码SHA
+`6e4ae835c5978a8662c243252da9608b75645d0fef30cd1730505f2aad8d0ae4`。
+按用户最新授权共享空余显存，不停止其他项目；逐卡排除本项目已有writer/等待器，避免重复堆任务。
+
+| 节点 | VideoMAE | TimeSformer | 本项目工作卡数 |
+|---|---|---|---:|
+| node2 / V100 | GPU2、4、6、7 | GPU0、1、3、5 | 8 |
+| node3 / A100 | GPU0、1、2、5、6 | GPU3、4、7 | 8 |
+
+node2统一计数窗口01:01:59–01:03:01，16个对应run全部有正向NPZ增长，实测约61.90秒；
+合计VMA约16.93 clips/s、TS约50.60 clips/s。这是共享生产短窗，不是论文正式计时或稳定吞吐保证。
+01:03:01–01:03:28全量去重：VMA train437,525/test0，剩余726,661；TS train822,145/test0，
+剩余1,508,413。按短窗粗推VMA约12小时、TS约8.3小时，整体仍按今天12:00–18:00条件窗口规划。
+V2已完成覆盖与内容审计。服务器每30秒检查续派，分片完成后立即领取下一片，直到train/test齐备。
+
+共享普通launcher使用4096MiB空闲门槛和受限CUDA fraction（V1000.12、A1000.2）；现有正常任务
+保持原配置。四个v18启动失败claim已保留并补终结后缀，恢复队列不会被它们永久挡住。
+v19恢复行为窄测试及本地`compileall -q src tests`通过；已核实际16卡GPU进程和两次产物增长。
+完整独立回执：`infra/shared16-verified-root-20260921-0103.json`。
+当前没有另派执行agent，后续主控直接简查；自动head禁用，明早08:00研究安排不改变提取优先级。
+
+## 2026-09-21 最新授权：16 GPU 共享提取
+
+用户在了解其他项目占用后再次明确“直接16张卡开始提取”。当前允许node2/node3全卡共享空余显存，
+不停止其他项目，已有正常writer保留。00:40附近主控实测我方7卡均为VMA（node2 GPU1/4/5；
+node3 GPU0/1/2/6），TS暂无活跃writer，node3 GPU4空闲；其余卡由其他项目使用。
+因此旧的下午完成估计需按新部署后的实际吞吐重算。当前执行者只收尾恢复安全修复及16卡实际上线，
+后续主控直接简查、不例行再派agent。此条是用户最新范围，不代表16卡已全部启动成功。
+
+## 2026-09-21 00:37 最新巡检方式：主控直接简查
+
+用户要求不再每轮派agent、缩短prompt。唯一心跳已更新为简短提示，每10分钟由主控直接检查，
+明早08:00 idea保留。当前执行代理仅收尾已经开始的恢复安全修复，不再派新巡检。
+root直接读取调度状态00:35:24：PID33082仍在更新，V2 78/78完成；TS train52片done、
+VMA train22片done，其余按实际producer/覆盖核验，unknown不等于运行成功。
+最新完整clip计数仍为00:22：VMA407,669/1,164,186，TS800,871/2,330,558，两个test仍0。
+
+## 2026-09-21 00:31 巡检：恢复配置已接入，首次派工前修正验证缺口
+
+已读 `infra/takeover_infra_receipt_20260921T003148Z.json`：v18 PID33082加载四条显式恢复配置，
+当前4 queued/0 inflight，没有获准空卡。root独立审查发现恢复启动预约未纳入跨循环slot保留、
+失败固定等待24小时，以及launcher读取顶层契约字段/TS53空列分隔的问题，已要求唯一代理在首次
+恢复执行前修正并补慢启动、重复claim、失败回收及四条命令参数的行为验证。不能将“配置已加载”
+写成“恢复运行已成功”。既有正常提取保持，不新开其他代理。
+
+node2新focused计数窗口00:22:02–00:22:18：VMA train407,669/test0，剩余756,517；
+TS train800,871/test0，剩余1,529,687。相对23:43窗口速率约18.99/24.89 clips/s，
+条件剩余约11.1/17.1小时；新恢复任务尚未计作已完成，物理重复不计unique进度。
+
+## 2026-09-21 00:22 里程碑：V2 全量内容审计通过
+
+root独立读取node2审计日志的终结JSON：00:17:48 completed，78个FeatureStore、1,164,186条记录/
+bundle、2,328,372个数组成员全部检查，issues为空；train1,018,483/test145,703与已核覆盖一致。
+校验包含FeatureStore加载/完整性、shape/dtype/nbytes、数值有限及index行数一致性，耗时约35.3分钟。
+单独的`.final.json`文件未生成，但日志末行有完整终结JSON且进程已退出，不能继续等待不存在的输出。
+独立回执：`infra/v2-content-audit-final-root-verified-20260921.json`。这是特征完整性通过，不是检测
+质量结论，不启动新head。当前唯一代理继续完成VMA28/29/30与TS53的可执行恢复队列及VMA/TS新计数。
+
+## 2026-09-21 00:12 巡检：资源边界修复已核实
+
+已读 `infra/takeover_infra_receipt_20260921T000804Z.json`，错误node3调度实例残留的新任务是四个
+违规writer来源；仅停止本项目 VMA30/29/28 与 TS53 的确认launcher/child，原partial保留。
+root本轮独立NVIDIA查询已确认四个child PID13274/13404/13362/13561消失，外部任务及原VMA22/24
+仍在。node2现唯一v17 PID15306，SHA `2ed6ad52da24d16e32cc3e36389006b90d3111d2c2b57cd30795bb979726cbeb`，
+带ibnode2启动门禁，自动head入口已禁用。alias身份保持。下一轮需把四个partial纳入合法恢复队列，
+不得永久跳过；仅使用获准自然空卡，不在外部占用卡上重开。
+V2低优先级内容审计00:08:04已到790,000条，日志暂未见问题，最终结果尚未发布。
+
+## 2026-09-21 00:02 巡检：资源归属与调度范围修复进行中
+
+root 独立读取 node3 GPU 列表（该节点时钟为9/20 23:53:23，勿与本机时间混算）：在既有外部
+占用的GPU7/5上分别出现新增PID13274/13404，GPU3/4既有VMA及外部占用旁新增13362/13561。
+已要求唯一执行代理核实项目归属、启动先后和launcher来源，仅停止确认违规新派入的本项目进程，
+保留外部任务与先前正常producer。候选根因为此前误在node3启动的dispatcher残留子进程，尚待回执确证。
+root源码复核显示v16的free_gpus按所有compute UUID排除忙卡，不能未经核实改成仅按显存放行。
+同时发现v16仍含auto-head调用，与当前范围不符；下一最小版本须加入本机ibnode2启动硬门禁并禁用
+本阶段自动head派工。当前修复尚未验收，不能写成已经完成。
+另要求fresh读取V2内容审计，前两轮60000是23:44旧观测，不能当作持续进展。
+
+## 2026-09-20 23:50 巡检：VMA/TS 覆盖更新，V2 内容审计运行中
+
+规范回执 `infra/takeover_infra_receipt_20260920T154425Z.json`：node2 23:43:26–23:43:41计数，
+VMA train363,646/test0，总剩余800,540；TS train743,190/test0，总剩余1,587,368。
+物理重复文件分别2,218/61,532，均不计入unique完成量。相对22:54同机窗口吞吐约14.04/29.08
+clips/s，条件剩余约15.84/15.13小时（从23:43起算），没有把新卡短窗当长期保证。
+V2覆盖不再重扫；内容审计在node2以foundation解释器、单CPU、nice19/ionice3运行，PID121809，
+23:44:25已检查60,000条，验证SHA、shape/dtype/nbytes和finite，最终结果仍待完成。
+首次错误默认解释器在导入阶段即失败且未读数据，失败保留，已换既有正确解释器继续。
+本轮唯一代理正在核逐卡真实进程/空卡接力，含TS48完成后的后继；不新增head/idea或其他代理。
+
+## 2026-09-20 23:41 里程碑：V2 XD 提取写完，覆盖验收通过
+
+已核 `infra/takeover_infra_receipt_20260920T153748Z.json`：node2 本地23:37:31–23:37:48验收，
+train 3950/3950视频、1,018,483/1,018,483 clips；test 800/800视频、145,703/145,703 clips。
+物理NPZ与唯一clip数一致，缺失视频与非完成run列表为空；末片00 result/status completed，index
+与records均16,224、failures为空。该步骤尚未做全数组shape/finite深查，不能写成全部内容审计通过；
+后续先复用既有检查回执，确有缺口才安排低优先级内容审计，不重提、不影响主队列。
+
+node2唯一v16 dispatcher PID99341继续TS/VMA接力；错误残留node3 dispatcher PID24817已停止，
+正常extractor保留。VMA019与TS025均通过调度专属alias映射到真实完整run，row为done，原partial
+与成功数据不变，alias不是merge输入。后续巡检不再重复全扫已确认的V2覆盖。
+
+## 2026-09-20 23:31 巡检：V2 作业收尾，调度 alias 已隔离
+
+已读 `infra/takeover_infra_receipt_20260920T152911Z.json`：node2 v16 alias dispatcher PID99341，
+源码 SHA `2dfcfd4512f25d5e5ff5ed53302fe7144fbe40800850c0299f364d98d6dd71c3`，23:29:11 状态为
+V2 78/78 done、无running/unclaimed。正在做 V2 最终 unique/video 覆盖和末片契约一致性核验，
+尚不以调度状态替代最终数据验收。
+VMA19 的兼容标记已移出提取数据树，改为调度专用 `dispatcher-run-aliases.json`，绑定实际019的
+manifest/result/status/resolved/index/contract SHA，并明确不是 feature alias 或 merge 输入。
+正常writers未停止。下一步把同一机制用于已完整恢复的TS025，消除队列遗留partial状态，保留原partial。
+
+## 2026-09-20 23:21 巡检：新增 A100 接力与全量计数
+
+规范回执 `infra/takeover_infra_receipt_20260920T150000Z.json` 的 node2 本地计数窗口为
+22:53:39–22:54:39（该主机时间），按 video_id/clip_index 去重并包含 TS025 独立恢复 run：
+V2 train 1,014,057 + test 145,703，剩余 4,426；VMA train 322,319 + test 0，剩余 841,867；
+TS train 657,476 + test 0，剩余 1,673,082。该快照不是 23:21 的即时计数。
+后续 dispatcher 23:10:51 为 V2 77/78 done，仅 train0 在跑。新增 A100 VMA25/GPU0、
+TS48/GPU2、VMA26/GPU6 均已核实际 extractor 和产出；外部进程保持保护。
+
+发现 VMA019/19 零填充命名差异导致重复领取，已停止确认属于本项目的重复 producer，保留成功019
+及重复尝试证据，调度 row 已转 done。当前兼容 alias 位于19/status.json；下一轮正在核验它的
+调度专属身份及下游合并隔离，不能把无features的alias当独立成功提取结果。
+VMA 慢速存在 CPU/GPU 资源竞争线索，尚不能单凭外部进程存在确证因果。按上一小时混合资源吞吐
+条件外推 VMA/TS 尚需约16.5/18.6小时（从22:54起算）；新增卡的短窗速率另列，未混入该估计。
+
+## 2026-09-20 23:00 巡检：V2 收尾与吞吐复核
+
+上轮规范回执 `infra/takeover_infra_receipt_20260920T144301Z.json` 记录 dispatcher 74/78 done、
+4 个 V2 分片仍在跑、unclaimed=0；尾片局部计数剩余 12,875，不替代全量去重验收。
+VMA019 已核 completed、14,955 条，TS038 成功回执保留。VMA22/24 在同机 574 秒窗口仅约
+1.92/1.93 clips/s，低于先前 VMA019 约 5.4 的单片粗估；不能继续直接按旧速率线性外推。
+本轮唯一代理正在 node2 本地更新全量去重覆盖、核查 launcher/CPU/IO 差异，并依据剩余量和实际吞吐
+调整自然空卡接力。此前 9/21 12:00–18:00 仍是有条件规划窗口，待新资源配置下的总量/速率复核。
+
+## 2026-09-20 22:50 巡检：TS025 缺口已补齐
+
+已核对 `infra/takeover_infra_receipt_20260920T143327Z.json`：TS025 独立恢复 run 的 result/status
+均为 completed，index、NPZ 与目标均为 14,998；复用旧完整视频 2,649 clips，新解码 12,349 clips。
+原 partial 未覆盖，attempt01 与 canonical done 回执已发布。最终聚合需显式包含该恢复 run，按 clip
+去重旧 partial，不可因恢复目录名称不同而遗漏。VMA22/24 持续增长，未进入 pending，未见重复领取。
+唯一执行代理已开始下一轮低开销巡检及适时总覆盖更新。共享/独占卡状态须按当前 GPU 进程映射，
+不沿用旧资源描述；当前报告不等于三模型全量验收完成。
+
+## 2026-09-20 22:40 巡检：A100 两个接力已核实
+
+VMA22（node3 GPU4，extractor24797）与 VMA24（GPU3，extractor27499）真实提取已启动，
+上轮回执分别记录 2233/2007 NPZ；root 本轮独立 NVIDIA 查询仍见两进程各占 3120MiB。
+此前 `producer_seen=false` 属 canonical/compat 跨节点观察差异，不能据此杀掉正常 producer。
+TS025 独立恢复 run 的 attempt01 上轮为 9451/14998；本轮原 extractor 已退出，正在核验最终成功/失败
+回执，尚不标完成。原 partial、失败 attempt00 均保留。VMA019 也正在核验结束状态。
+唯一执行代理已复用开展本轮检查，没有新增并行代理。规范回执目录为 `outputs/icassp2027/control/codex-takeover-20260920/infra/`。
+
+## 最新巡检补充：同一执行 agent 每 10 分钟核查接力
+
+用户要求确保无缝接力。已将唯一心跳 `icassp` 改为每小时 00/10/20/30/40/50 分唤醒，复用
+`takeover_infra_dispatch`，不新建并行代理。主控已立即唤醒一轮：核查 node3 VMA22/GPU4、VMA24/GPU3
+在 dispatcher 中 `producer_seen=false` 的实际状态，以及 TS025 resume；claim 不算启动成功。
+刚读到 dispatcher 状态更新时间 22:25:56、PID45240；V2 72/78 done、6 running、unclaimed=0，
+node2 有新分片续派记录。上述为状态回执，A100 两个后继仍待实际进程/增长核实。
+明早 08:00 idea 保留，与巡检顺序安排，提取故障优先。
+
+## 2026-09-20 22:26 用户补充：明早开始有界 idea 探索
+
+今晚仍集中提取，9/21 08:00（香港时间）起按当前计划第 10 节启动 idea 探索；默认只用一名执行代理。
+唯一心跳 `icassp` 已调整为整点/半点检查，08:00 首次到时开始，应用不可运行时在恢复后补执行。
+复用已有证据，单方向长时间无进展则查原始论文与官方实现的可证实局限；目标为真实加速和质量保持，
+必要时加入同预算基线，正式 test 不用于挑方法。第 10 节规定阶段止损与中午结论，不承诺必有正结果。
+这条新授权覆盖下文较早的“提取完成后等待研究指令”，其他暂停的打包/写作任务保持暂停。
+
+## 2026-09-20 22:05 当前范围：仅特征提取
+
+22:12 ETA 更新：实际 A100 VMA 为 shard-019（此前 018 启动因已有 claim 被拒绝），单片首末文件跨度粗算约 5.4 clips/s；TS038 约 8.7 clips/s。按 V2 今晚收尾、约 7 张获准 A100 及时接力且 V100/CPU/存储保持有效吞吐，三模型 XD train+test 暂估 9/21 12:00–18:00 写完，校验另留 1–3 小时。此为有条件规划，非完成回执；精确采集/时钟边界见 `infra/eta-planning-20260920-2213.json`。
+
+用户要求收拢并按新文档执行。唯一入口：
+[`FEATURE_EXTRACTION_PLAN_20260920.md`](FEATURE_EXTRACTION_PLAN_20260920.md)。
+只保留一个提取调度代理，其他辅助任务已中断；node2/node3 正常提取继续，node1 不参与。
+VMA 新 claim 正常继续。新 head/idea/打包不再自动启动；既有 TS 特征合并可自然结束。
+
+上一轮约 21:57 收到的 unique clip 快照（精确采集时刻待 infra 回执补齐，非本次重新扫描）：
+V2 train 898,328 + test 145,703 = 1,044,031 / 1,164,186（89.7%）；
+VMA train 270,579 + test 0 = 270,579 / 1,164,186（23.2%）；
+TS train 566,671 + test 0 = 566,671 / 2,330,558（24.3%）。
+TS025 partial 仍须合法补齐；当前计数不替代最终身份、覆盖和文件完整性验收。
+本次仅编写执行文档、同步入口和进度，不修改提取源码，不重跑 Python 测试。
+
+以下内容均按其原始时间阅读，不得覆盖本节的最新范围。
+
+> ## 当前状态与回执导航（2026-09-20 18:14 现场快照；18:37 后续诊断待处理）
+>
+> 当前唯一执行计划：[`RESEARCH_PLAN_V3.md`](RESEARCH_PLAN_V3.md)。
+> [`RESEARCH_PLAN_V2.md`](RESEARCH_PLAN_V2.md) 已标记 superseded，正文和历史回执保留；本文件
+> 下方旧段落也全部按各自采集时点阅读，不能覆盖 V3 的当前范围。
+>
+> 现场事实来源：root 18:06–18:14 本地 SSH 工具汇总回执
+> [`live-audit-1814.json`](../../outputs/icassp2027/control/codex-takeover-20260920/audit/live-audit-1814.json)
+> / [`live-audit-1814.md`](../../outputs/icassp2027/control/codex-takeover-20260920/audit/live-audit-1814.md)。
+> 桌面 `KimiCode_交接Codex_状态报告_20260920.md`、`KimiCode_提取核查与后续执行安排_20260920.md`
+> 和 `04-投稿冲刺执行计划-20260920.md` 仅作为较早历史来源；18:14 快照不是持续运行承诺。
+> 新状态以 root/infra 后续 receipt、PID/owner/argv/startticks 和两次有效产物增长复核为准。
+>
+> ### 当前执行范围
+>
+> - 三个 dense encoder 固定为 VideoMAEv2、VideoMAE、TimeSformer；UCF/XD 各自完成 dense
+>   提取和匹配 UR-DMU head，任一 encoder/dataset ready 即独立进入下一步，不设全体完成屏障。
+> - V-JEPA 2 已退出检测实验；权重、缓存、观察和失败/退出证据保留，不删除、不作为完成条件。
+> - 当前主适配要求为 VideoMAEv2 + 一个核实过 backbone/backend 的 CLIP，训练侧探索是论文主
+>   方法线。三条候选路线均为 ViT-B/16，共享 visual 不能写成三个 encoder；主路线暂定
+>   VadCLIP（两数据集权重已就绪，仍须兼容性核验），DSANet 可选，AnomalyCLIP 新增成绩暂停。
+>   CLIP 原生 10-crop 与 OpenAI center 输入先做训练侧对齐，不能写成已通过；可选第二 CLIP
+>   才是补充。双数据集训练侧探索由 Astra 专职，常规执行由 Luna 最高强度完成，root 负责规划、
+>   判断和验证。
+> - 旧 pairselect 预登记属于历史；V2 四主臂与 V2 1b fixed-member/random-member/reverse
+>   继续用于范数/成员偏好机制审计。V2 1b 只隔离 pair 内成员偏好，不证明 pair 间排序。VMA
+>   pair/TS random 已真实 SIGTERM 停止且无复发，VMA random/TS uniform/pair 自然完成的原身份保留；
+>   已有 partial/结果/负例全部保留。
+>
+> ### 当前快照（20:04–20:16 本机时间；独立于 18:14 历史表）
+>
+> - XD 本轮接受训练集合为 `accepted_train=3950/3954`，excluded=4；quarantine 视图不可变，用户已要求停止搜索、下载、补 4 和等待新的 3954 契约。三 encoder 的 XD head/质量链不再被四文件阻塞；旧修复失败和排除历史继续保留。
+> - UCF V2/VMA formal `official-fulltrain-final` 头均已完成 1610 videos、3000 steps、3000 nonzero-gradient steps，training QA passed、exact reload parity 通过。当前只进入 QA/评分链准备，尚未产生新的 formal test 分数。
+> - TS fit/confirm/authoritative old select union 已核到 1610，未重提 149；旧 select 权威路径为 `/users/fotile/icassp2027-runs/code-2d9d1a0/outputs/icassp2027/control/development-baseline-20260918-a01/jobs/timesformer-select/extractions/dense/features/train`。较早 full merge PID8255 因未传 role_lock SHA 在 publish 前失败；当前 retry01 PID29202 正在 `/merged-full/timesformer/dense-full-view` 发布，TS formal head 尚未启动。当前 heads 回执在 `work/codex-takeover-20260920/heads/heads_receipt-v3.json`。
+> - merge/training path/fulltrain-choice 修复后受影响回归 **101 passed**，compileall 通过；这是工程验证，不是模型质量结论。
+> - node2 TS/VMA 继续生产，TS 已从 shard026 接力到 030 共 5 路并有真实产物增长；VMA 暂缓领取新分片，已有片自然完成。node3 V2 v11 回执为 48 done、8 running、22 unclaimed；A100 空卡接力逻辑仅在 fake 场景通过，实际未来接力尚未触发。v11 源身份以 `outputs/icassp2027/control/codex-takeover-20260920/infra/v11_runtime_receipt.json` 的 dispatcher source SHA `877bb434722b82b908b0955730959436ac78e037b75fb634ff44b309b9cc4e64` 为准，不沿用旧 v8 摘要。
+> - node1 状态为 `user_deferred_admin_recovery`：20:17–18 Tailscale gateway ping 11ms、node2 SSH 成功，只有 node1 经 Tailscale banner 超时；20:31 关闭 Tailscale 后校园网 node1 SSH 成功。node1 CUDA Driver API 已枚举 8 卡，但 NVML/nvidia-smi 仍超时；SSH/CUDA 枚举不等于 GPU 可生产。有效资源是 node2 健康卡和 node3，不能承诺 24 GPU 全部运行。receipt：`work/codex-takeover-20260920/network/tailscale-ssh-check-20260920.md`。
+> - VMA diagnosis receipt 未发现 invalidating implementation bug，但 pooled temporal lag-1 `0.9994–0.99998` 可复现，保留质量风险；token-axis `0.827` 不能反驳 pooled 风险。QA 通过不等于质量通过，不能据旧 test `0.8106` 断定非 bug。已有 VMA 分片自然完成，暂缓新分片领取，不取消三 encoder 目标。
+> - 旧 VMA pair/TS random 已按 `user_scope_change` 真实 SIGTERM 停止且无复发；VMA random/TS uniform/pair 自然完成的原身份保留；V2 有效消融保留。停止回执：`work/codex-takeover-20260920/retire/retire_receipt_20260920.json`。
+> - CLIP float32 engineering smoke 已验证 `197→99`，但原生 VadCLIP 10-crop 与 OpenAI center 表征未对齐，质量入口 A/B 未冻结；不写 quality claim。F06-S1 的 V2+CLIP 16-window 已完成，未支持稳定主信号，停止扩量但不停止 idea。F07 CPU 100视频×7臂 norm audit 进行中；F08 仅 ToFu/MLERP 既有尺度对照、未派 GPU；F09 reference-preserving v1 已由 root 派 CPU/config/identity 准备，未授权 GPU。
+> - heartbeat `icassp` 只在实质变化时通知，不新增 feeder；普通执行 Luna Max、idea Astra Medium。当前 head ready 先 QA/准备评分链，正式 test 评分等 idea 收敛及方法/矩阵冻结后统一进行。
+
+> ### 20:38 fresh progress 与 9/20–9/23 关键路径
+>
+> - fresh 去重：V2 `849950/1164186 = 73.0%`，VMA `238412/1164186 = 20.5%`，TS `466999/2330558 = 20.0%`。从 20:38 起算的旧 ETA（V2 约2h、VMA 约41.5h、TS 约38.6h）已经过期，等待 infra fresh snapshot；不能用 V2 速率替代 VMA/TS。
+> - dispatcher v15 实际 SHA `176f014f56e2a2083ed7b50f88c5e3bf95e7e029c8122be3bf07c3f47b8b6ec3`、PID `45240`，receipt 在 `outputs/icassp2027/control/codex-takeover-20260920/infra/takeover_dispatch_receipt.json`。node2/node3 继续，node1 不进入生产资源计划。
+> - node3 A100 GPU0 与 V2 共享 TS038 的真实短试验为 347s、TS 约8.8 clips/s；不是正式计时，不外推所有 A100 或 VMA。释放 A100 后立即 relay，但下一 encoder 必须有自己的真实 successor receipt。
+> - VMA diagnosis receipt `outputs/icassp2027/control/codex-takeover-20260920/infra/videomae_quality_resume_receipt.json`：未发现 invalidating implementation bug，pooled temporal lag-1 `0.9994–0.99998` 可复现但不足以否定 readout；token-axis `0.827` 不能反驳 pooled 风险。新 claim 已恢复，质量风险保留。
+> - F06-S1 的 V2+CLIP 16-window 已完成；未支持稳定主信号，停止 F06 扩量但不停止 idea。F07 CPU 100×36,470×7 已完整审完，结果目录 `outputs/icassp2027/idea/f07`；但 pair_fixed/random_member/reverse pooled 逐值完全相同，`causal_member_preference_status=blocked_cache_identity`，不能写成员范数偏好正面，N 阶段不批准；Astra 查参数/控制且不重跑100。F08 仅 ToFu/MLERP 既有尺度对照、未派 GPU；F09 reference-preserving v1 继续 T/U/R CPU/config，未冻结、未启动 GPU。
+> - 9/21 08:00 做严格方法 Go/NoGo；9/21 白天若 Go 才冻结 V2+CLIP 方法/层/预算/矩阵，9/22 做 formal test/CI/独占效率，9/23 内部冻结。CFP 页面显示 9/23，CMS 页面显示 HKT 9/24 20:00，旧 PaperKit 显示 9/16；内部截止不放宽。
+> - 论文格式 scaffold 在 `projects/icassp2027/manuscript-20260920/`，目标 4 技术页，第 5 页按规则放 references/资助/ethics；single-anonymous、ORCID、作者核查和 AI 禁止生成重要/大部分/完整 section 的约束保留。
+
+> ### 18:14 现场事实
+>
+> | 线 | 当前快照 | 处理 |
+> |---|---|---|
+> | node1 | 无本轮提取；GPU 空；GPU7 有历史 Xid48/63 隔离 | 修复健康槽位并以两次有效增长验收，GPU7 继续隔离 |
+> | node2 | 7 路 VMA；TS 为 0 extract；guard `125984` 等待 GPU7 formal-timing 独占并撞 VMA | 不抢 VMA；确认冗余后按 receipt 停/暂停，正式计时另排独占窗口 |
+> | node3 | 8 路 V2 XD、4 路 UCF batch；fullformal CPU drivers `26801/26807` 约 20 GB RSS，未完成 | 核实真实增长，不把 driver 存活写成 head 完成 |
+> | XD V2 | `496474/1164186 = 42.65%`；test800 已齐 | 可先准备 V2 训练视图和测试审计，不等其他 encoder |
+> | XD VMA | `199145/1164186 = 17.11%`；test 未开始 | 继续训练片段，ready 后自动进入 test |
+> | XD TS | `325387/2330558 = 13.96%`；两分钟无增长 | 先恢复 launcher/guard/队列；物理 `384270` 含 `58883` 重复，不能作进度 |
+> | UCF V2/VMA | merged-full 1610 回执显示 completed，records 字段 `790271` | 仍须成员覆盖、身份和 consumer QA |
+> | UCF TS | merged fit1288 完成；train 路径立即失败 | 修路径后单独补 full1610，不能升级为完成 |
+> | 阶段性 test 诊断 | V2 `0.8509978553`、VMA `0.8106398037`，generic、dev1288 head | Arson011 截断字段阻塞 v13 official audit；已看 test 必须披露，不能再据 test 调方法 |
+> | batch1/1b | 18:14 逐臂：V2 dense/uniform/random/pairselect 100，pairfixed55；VMA dense/uniform100、random51、pairselect0；TS dense100、uniform71、pairselect71、random0 | 计数不等于继续派工；V2 pairfixed/1b 只隔离 pair 内成员偏好，不证明 pair 间排序；保留身份和反例，按 V3 收窄范围 |
+>
+> XD 本轮使用 accepted_train=3950/3954 的不可变 quarantine 视图，excluded=4 诚实披露；不再搜索、下载或补 4。XD raw→canonical
+> 时间轴审计仍在关键路径；作者梯形 AP 与 `average_precision` 分列。
+>
+> F06 当前入口为 [`F06-update-ratio-actionability.md`](findings/codex-idea-20260920/F06-update-ratio-actionability.md)：
+> F01 的 V2 block5 relative-attention update 是否预测后缀压缩敏感性。当前身份是
+> `engineering_probe_authorized_not_property_confirmed`；2×2 coverage 只作诊断/强对照，不冻结为新 selector。
+
+> ### 约 18:37 后续诊断（待处理）
+>
+> node1 逐卡 NVML 查询出现超时，当前只能标记为疑似驱动阻塞，不能写成 node1 已修复。node2
+> 只剩一条 VMA 路径、其他卡空闲；精确状态以 infra 新 receipt 为准，TS 恢复优先在 node2
+> 处理，不等待 node1。该诊断不改变 18:14 事实，也不代表计划已恢复。
+>
+> ### 自动接力与安全边界
+>
+> A100/V100 当前片段完成并通过增量审计后立即领取下一 encoder/dataset 片段；一个视图 ready
+> 立即训练对应 head，head ready 先 QA/准备评分链；正式 test 评分等 idea 收敛及方法/矩阵冻结，不等其他组。巡检只读取结构化进度、PID/owner/argv、
+> claim、最新 receipt 和增量产物，不全 NAS 重复 hash、不用 `ls` 数量代替成功、不用跨节点时钟
+> 相减算耗时。只暂停确认为本轮冗余且无有效后继的 guard/controller，并记录停止理由、替代任务
+> 和回执；不杀其他项目、不删旧缓存/失败证据、不重装环境、不改旧协议 JSON/SHA、不 commit/push。
+>
+> 质量差值定义为 `Δ=method-dense`；95% 视频级配对 bootstrap CI 下界 `>= -0.005` 才能称
+> 非劣。训练内 100 视频不是泛化证据。正式效率必须短独占并包含插件自身开销，多进程日志不入
+> 速度表。当前计划完整说明见 V3；本段事实更新后再在此处追加 receipt，不重写历史段落。
 
 更新日期：2026-09-19。当前状态：**完整研究 goal 进行中；仅有 VideoMAEv2 特定性质的独立确认，尚无跨四 encoder 的通用规律或插件有效性结论。**
 
@@ -1314,3 +2027,13 @@ GPU 验证未运行；服务器盘点时八张 GPU 均有作业，本轮未抢�
 随后扩展正常—异常分布与独立确认；在取得可操作性质前继续保留 identity。
 其他三模型的真实几何/只读等价回执、正式 GPU 验证和质量容忍度仍需在相应阶段落实。
 正式结果和论文数字仍为空。
+
+
+
+
+## 2026-09-22 08:30 当前六格压缩评测状态
+
+六格 dense UR-DMU `official_frame` prediction 已全部完成：UCF/XD × VideoMAEv2/VideoMAE/TimeSformer 均有 `result.json`、`predictions.jsonl` 和 query-chunk receipt，且 `official_frame_scores_read=false`。node3 上 18 个正式压缩 extraction 仍在写入 shard，覆盖三 encoder × 两数据集 × `pair_select/group_uniform/group_random@0.60`；当前尚无压缩 `result.json` 或 `extraction-contract.json`，因此质量 scheduler 尚未启动压缩 prediction 或 export。node2 另有 8 个独立补充 extraction（六格 `pair_select` 加 V2-UCF 两个同预算对照）持续产出，输出根与 node3 隔离。当前未读取正式 test 分数做方法选择；下一门仍是压缩 extraction 合同完成后自动评分并导出 UCF ROC-AUC、XD 梯形 AP/step AP 和 paired bootstrap CI。
+## 2026-09-22 08:30 当前六格压缩评测状态
+
+六格 dense UR-DMU `official_frame` prediction 已全部完成：UCF/XD × VideoMAEv2/VideoMAE/TimeSformer 均有 `result.json`、`predictions.jsonl` 和 query-chunk receipt，且 `official_frame_scores_read=false`。node3 上 18 个正式压缩 extraction 仍在写入 shard，覆盖三 encoder × 两数据集 × `pair_select/group_uniform/group_random@0.60`；当前尚无压缩 `result.json` 或 `extraction-contract.json`，因此质量 scheduler 尚未启动压缩 prediction 或 export。node2 另有 8 个独立补充 extraction（六格 `pair_select` 加 V2-UCF 两个同预算对照）持续产出，输出根与 node3 隔离。当前未读取正式 test 分数做方法选择；下一门仍是压缩 extraction 合同完成后自动评分并导出 UCF ROC-AUC、XD 梯形 AP/step AP 和 paired bootstrap CI。
