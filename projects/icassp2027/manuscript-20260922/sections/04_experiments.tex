@@ -1,5 +1,21 @@
 \section{Experiments}
 \label{sec:experiments}
+\begin{table}[t]
+\centering\small
+\caption{Same-quota references at nominal 40\% deletion: changes from dense in percentage points. Only PairSelect is proposed.}
+\label{tab:references}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Encoder & PairSelect & Prefix & Random\\
+\midrule
+\tableinput{tables/reference_rows}
+\bottomrule
+\end{tabular}
+\end{table}
+% Queue the efficiency table for page 4 after numbering the reference table.
+\input{figures/efficiency_table}
+
 
 
 \subsection{Setup and evaluation}
@@ -14,31 +30,17 @@ Table~\ref{tab:quality} reports the completed middle-budget results. On UCF, \me
 
 The alternate XD metric matters. Non-interpolated AP changes from 70.33 to 71.30 for VideoMAEv2, 64.86 to 64.51 for VideoMAE, and 70.86 to 72.04 for TimeSformer. In particular, VideoMAE improves under trapezoidal PR-AUC but decreases under AP. We retain both definitions rather than interpret every positive primary-metric change as an unqualified detection gain.
 
-\begin{table}[t]
-\centering\small
-\caption{Same-budget references at nominal 40\% deletion; entries are $\Delta$ from dense in percentage points. Prefix and random use the same group quotas, not additional proposed methods.}
-\label{tab:references}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Encoder & PairSelect & Prefix & Random\\
-\midrule
-\tableinput{tables/reference_rows}
-\bottomrule
-\end{tabular}
-\end{table}
-% Queue the efficiency table for page 4 after numbering the reference table.
-\input{figures/efficiency_table}
+
 
 \subsection{Budget behavior and reference selections}
-The 20\%, 40\%, and 60\% deletion settings test progressively tighter budgets while preserving the same insertion depth. For joint attention, the highest deletion setting begins dropping entire pair representatives. This provides a testable explanation for a possible quality change, not a pre-established breakpoint. For TimeSformer, the actual highest deletion is 64.24\%; conclusions must use the executed budget rather than treat its rounding as a measured causal explanation.
+The 20\%, 40\%, and 60\% deletion settings retain the same insertion depth. For joint attention, the highest setting drops entire pair representatives: a possible explanation for quality changes, not an established breakpoint. TimeSformer's actual highest deletion is 64.24\%; rounding must be reported but is not an isolated causal explanation.
 
 Table~\ref{tab:references} places the current method alongside fixed-prefix and fixed-seed random selection within each group. Neither is a global uniform sampler, and random masks are reused across videos. Rankings vary: random is higher on all three UCF configurations, whereas \method{} is higher on two XD configurations. Thus these references do not establish universal superiority of the norm signal. Their static native-position gathering also differs from the dynamic anchor-slot assignment, so this is a matched-budget reference rather than an isolated norm-only ablation.
 
 \subsection{FLOPs and hardware efficiency}
 
-Table~\ref{tab:efficiency} separates analytical savings from the hardware measurements still required. At the middle budget, principal-block FLOPs decrease by 23.04\% for joint attention and 21.75\% for divided attention. At the highest deletion setting, the corresponding analytical reductions are 33.05\% and 32.43\%. Because the first six blocks remain dense, these savings are smaller than the token-removal percentages.
+Table~\ref{tab:efficiency} separates analytical and unmeasured hardware quantities. Principal-block FLOPs decrease by 23.04\% (joint attention) and 21.75\% (divided attention) at the middle budget, and 33.05\% and 32.43\% at the highest deletion. Savings are smaller than token deletion because the first six blocks remain dense.
 
-The measurement protocol fixes the GPU, input shape, batch size, numerical precision, and attention backend across dense and reduced runs. Full-encoder timing includes embedding, all blocks, the selector, index gathering, and readout. Pure diagnostic CPU exports are disabled consistently, but actual selection work is not removed. The planned measurements use 20 warm-up passes, synchronized CUDA-event timing, and three independent process repeats on the same representative non-test clips. Throughput counts completed clips at the stated batch; single-clip latency is reported at batch one. Peak allocated and reserved memory are recorded after synchronized reset of peak counters. Hardware and software identifiers must accompany the completed table.
+Measurements will fix GPU, input shape, batch size, precision, and attention backend. Full-encoder timing includes embedding, all blocks, selection, gathering, and readout; only diagnostic CPU exports are disabled. The protocol uses 20 warm-up passes, synchronized CUDA events, and three independent process repeats on identical representative non-test clips. Report throughput at the stated batch, batch-one latency, and peak allocated/reserved memory after synchronized counter resets, together with hardware and software identifiers.
 
-A separate synchronized wall-clock measurement is required for decoding, host--device transfer, feature writing, and temporal-head inference. Since the encoders use different clip schedules, clips/s is not an end-to-end cross-encoder speed ranking. Nor does suffix token reduction ensure lower whole-encoder peak memory: the dense prefix can retain the peak, and selector temporaries can add overhead. No measured speedup or memory reduction is claimed from the present analytical table.
+Decoding, host--device transfer, feature writing, and head inference require separate synchronized wall-clock timing. Different clip schedules preclude an end-to-end cross-encoder ranking by clips/s. The dense prefix or selector temporaries may determine peak memory; analytical savings establish neither measured speedup nor memory reduction.

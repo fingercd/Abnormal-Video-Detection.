@@ -1,0 +1,194 @@
+--- a/main.tex
++++ b/main.tex
+@@ -12,6 +12,9 @@
+  pdfsubject={Author working draft; unmeasured experiments remain pending},
+  pdfkeywords={WSVAD, PairSelect, training-free, token selection, ICASSP 2027}}
+ \setlength{\emergencystretch}{2em}
++% Moderate positive float-to-text spacing; preserve template margins and body leading.
++\setlength{\dbltextfloatsep}{12pt plus 2pt minus 2pt}
++\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
+ \newcommand{\method}{PairSelect}
+ \newcommand{\tableinput}[1]{\csname @@input\endcsname{#1}}
+ \newcommand{\pending}{\textemdash}
+@@ -31,6 +34,7 @@
+ \end{keywords}
+ \draftnote{unmeasured results are marked with dashes; author revision and verification are required before submission.}
+ \input{sections/01_introduction}
++\input{figures/framework}
+ \input{sections/02_related_work}
+ \input{sections/03_method}
+ \input{sections/04_experiments}
+--- a/figures/framework.tex
++++ b/figures/framework.tex
+@@ -0,0 +1,8 @@
++% Full-width framework figure. Queue on page 1 so it is placed at the top of page 2.
++% The supplied PNG is preserved without cropping or resampling.
++\begin{figure*}[!t]
++\centering
++\includegraphics[width=\textwidth]{figures/pairselect_framework.png}
++\caption{Overview of \method{}. Six dense blocks contextualize all tokens before local, magnitude-guided selection reduces the input to blocks 7--12. Group quotas control pair-member selection; divided attention retains complete spatial trajectories. Clip coverage and the dense-trained detection head remain unchanged.}
++\label{fig:overview}
++\end{figure*}
+--- a/figures/quality_table.tex
++++ b/figures/quality_table.tex
+@@ -1,6 +1,6 @@
+ \begin{table*}[t]
+ \centering\small
+-\caption{PairSelect quality at nominal token-deletion budgets. Metrics use a 0--100 scale; $\Delta_{40}$ and its paired 95\% confidence interval (CI) are percentage-point changes from the corresponding dense run. Dashes mark the two unmeasured budgets, not zero change. Actual token counts are in Table~\ref{tab:budgets}.}
++\caption{PairSelect at nominal deletion budgets (metrics: 0--100). $\Delta_{40}$ and its paired 95\% confidence interval (CI) are changes from dense in percentage points. Dashes denote unmeasured budgets; actual token counts are in Table~\ref{tab:budgets}.}
+ \label{tab:quality}
+ \setlength{\tabcolsep}{7pt}
+ \begin{tabular}{@{}lrrrrrc@{}}
+--- a/figures/efficiency_table.tex
++++ b/figures/efficiency_table.tex
+@@ -1,6 +1,6 @@
+ \begin{table*}[t]
+ \centering\small
+-\caption{Efficiency ledger for the same dense and PairSelect configurations. $F_{\rm blocks}$ is an analytical principal-block GFLOPs/clip estimate, not a measurement. $F_{\rm full}$, latency, throughput, and peak allocated/reserved memory require hardware exports and are intentionally unfilled. One MAC is counted as two FLOPs.}
++\caption{Efficiency of dense and PairSelect configurations. $F_{\rm blocks}$ is an analytical principal-block estimate (1 MAC = 2 FLOPs). Full-encoder FLOPs, latency, throughput, and peak allocated/reserved memory remain unmeasured.}
+ \label{tab:efficiency}
+ \setlength{\tabcolsep}{5.5pt}
+ \begin{tabular}{@{}llrrrrrr@{}}
+--- a/sections/01_introduction.tex
++++ b/sections/01_introduction.tex
+@@ -4,6 +4,6 @@
+ 
+ \emph{The rarity of anomalous events does not imply that every internal token carries unique information.} VideoMAE demonstrates the usefulness of video redundancy for masked pretraining~\cite{tong2022videomae}; token sampling and merging also exploit redundant representations in pretrained transformers~\cite{fayyaz2022ats,bolya2023tome}. These findings motivate a different allocation of inference effort: allow every token to participate in the first half of the encoder, then continue processing only a structured subset. Pretraining redundancy alone does not establish that a frozen anomaly detector tolerates this intervention. The resulting representations must still work with its existing detection head.
+ 
+-We introduce \method{}, a local, non-mixing selection operator for this setting. It combines three choices: spatially adjacent candidate units, fixed group budgets, and an activation-magnitude preference within those units. For joint-attention encoders, a first selection round gives each pair a representative whenever the budget permits; remaining slots retain additional members of stronger pairs. For divided space--time attention, entire spatial trajectories are selected together. The selected vectors are gathered without averaging at the insertion point. No selector is trained, no compression-specific labels are required, and neither the encoder nor the dense-trained head is fine-tuned after insertion.
++We introduce \method{}, a local, non-mixing selection operator for this setting (Fig.~\ref{fig:overview}). It combines three choices: spatially adjacent candidate units, fixed group budgets, and an activation-magnitude preference within those units. For joint-attention encoders, a first selection round gives each pair a representative whenever the budget permits; remaining slots retain additional members of stronger pairs. For divided space--time attention, entire spatial trajectories are selected together. The selected vectors are gathered without averaging at the insertion point. No selector is trained, no compression-specific labels are required, and neither the encoder nor the dense-trained head is fine-tuned after insertion.
+ 
+ Our contributions are a training-free, structure-aware selection rule for frozen WSVAD pipelines; explicit budget and computational-cost accounting for joint and divided attention; and a direct-insertion evaluation on three encoders and two datasets. At the completed middle budget, the largest observed primary-metric decrease is 0.16 percentage points, while approximately 40--43\% of tokens are removed from the remaining encoder blocks. The budget ladder separates local duplicate removal from more aggressive loss of local representatives, providing a concrete basis for studying quality--cost trade-offs rather than assuming a preferred compression ratio.
+--- a/sections/02_related_work.tex
++++ b/sections/02_related_work.tex
+@@ -4,4 +4,4 @@
+ Multiple-instance ranking~\cite{sultani2018real}, robust temporal feature magnitudes~\cite{tian2021rtfm}, and uncertainty-regulated dual memories~\cite{zhou2023urdmu} address video-level supervision. VadCLIP adapts frozen vision--language representations through a task-specific detection architecture~\cite{wu2024vadclip}. Efficient anomaly detectors also include learned autoencoder designs~\cite{ristea2024aedae}. We use UR-DMU as a fixed downstream head within each encoder--dataset configuration, and reduce visual encoding cost rather than introduce another detector. Our setup is visual-only even on the audiovisual XD-Violence benchmark~\cite{wu2020xd}.
+ 
+ \textbf{Efficient transformers.}
+-VideoMAE and VideoMAEv2 use masked video pretraining~\cite{tong2022videomae,wang2023videomaev2}; TimeSformer separates temporal and spatial attention~\cite{bertasius2021timesformer}. DynamicViT learns token-importance predictors~\cite{rao2021dynamicvit}, and EViT reorganizes attentive and inattentive tokens~\cite{liang2022evit}. EVAD studies task-aware token dropout for action detection~\cite{chen2023evad}. ATS provides parameter-free sampling, and ToMe supports merging without additional training~\cite{fayyaz2022ats,bolya2023tome}. Thus, training-free reduction itself is not new. \method{} studies a local non-mixing rule at a fixed intermediate depth with an unchanged anomaly head and unchanged clip coverage. Recent ESOM and LAVIDA also incorporate token compression within multimodal language-model pipelines~\cite{liu2026esom,dai2026lavida}; that setting differs from internal visual-encoder reduction in a frozen MIL pipeline.
++VideoMAE and VideoMAEv2 use masked video pretraining~\cite{tong2022videomae,wang2023videomaev2}; TimeSformer separates temporal and spatial attention~\cite{bertasius2021timesformer}. DynamicViT learns token-importance predictors~\cite{rao2021dynamicvit}, and EViT reorganizes attentive and inattentive tokens~\cite{liang2022evit}. EVAD studies task-aware token dropout for action detection~\cite{chen2023evad}. ATS provides parameter-free sampling, and ToMe supports merging without additional training~\cite{fayyaz2022ats,bolya2023tome}. Thus, training-free reduction itself is not new. \method{} studies a local non-mixing rule at a fixed intermediate depth with an unchanged anomaly head and unchanged clip coverage. ESOM and LAVIDA instead compress tokens in multimodal language-model pipelines~\cite{liu2026esom,dai2026lavida}, unlike our frozen visual-encoder/MIL setting.
+--- a/sections/03_method.tex
++++ b/sections/03_method.tex
+@@ -1,15 +1,10 @@
+ \section{PairSelect}
+ \label{sec:method}
+-\begin{figure}[t]
+-\centering
+-\includegraphics[width=\columnwidth]{figures/pairselect_framework}
+-\caption{Overall framework of PairSelect. We insert a training-free token selection module after the middle layer of a pre-trained video Transformer encoder. Tokens are grouped into spatially adjacent pairs, and the token with the larger $L_2$ norm is kept in each pair, followed by a group-wise quota to achieve the desired compression ratio. The selected tokens are fed to the remaining encoder blocks and the frozen detection head to predict video-level anomaly scores.}
+-\label{fig:overview}
+-\end{figure}
+ 
+-\begin{table}[t]
++
++\begin{table}[!b]
+ \centering\small
+-\caption{Actual token budgets and analytical reduction of the principal twelve-block computation. Deletion is nominal unless marked actual.}
++\caption{Token budgets and analytical twelve-block FLOPs reduction. Deletion is nominal unless marked actual.}
+ \label{tab:budgets}
+ \setlength{\tabcolsep}{3pt}
+ \begin{tabular}{@{}rrrrr@{}}
+@@ -20,6 +15,9 @@
+ \bottomrule
+ \end{tabular}
+ \end{table}
++% Queue the double-column results early; do not allow them past the technical boundary.
++\input{figures/quality_table}
++
+ \subsection{Frozen pipeline and design rationale}
+ Let $E_{1:b}$ and $E_{b+1:L}$ denote the prefix and suffix of a pretrained encoder, $R$ its clip readout, and $H$ the temporal detection head. For scheduled clips $\{v_t\}_{t=1}^{M}$, inference is
+ \begin{equation}
+@@ -29,7 +27,7 @@
+ \end{equation}
+ Only $S_r$, the selection operator at retention budget $r$, is inserted. We set $L=12$ and $b=6$ for all three encoders. The clip count $M$, output dimension, and head weights remain unchanged. Training-free refers to compression: the original detection head is trained once on dense features for each configuration.
+ 
+-Local redundancy motivates comparing nearby candidates rather than globally ranking all tokens. To avoid an additional mixing operation before an unchanged head, $S_r$ gathers existing vectors. ATS motivates activation magnitude as an inexpensive signal~\cite{fayyaz2022ats}, but our block-output L2 norm is not its attention-weighted value norm. Nor is a high norm an anomaly probability: high-norm transformer tokens can also occur in background regions~\cite{darcet2024registers}. We therefore combine magnitude preference with local quotas instead of treating magnitude as a global anomaly oracle.
++Local redundancy motivates nearby comparisons; gathering existing vectors avoids additional mixing before the unchanged head. ATS motivates inexpensive magnitude-based scoring~\cite{fayyaz2022ats}, but our block-output L2 norm differs from its attention-weighted value norm. High norm is not an anomaly probability and may occur in background regions~\cite{darcet2024registers}; local quotas therefore constrain magnitude preference rather than treating it as a global anomaly oracle.
+ % AUTHOR_TODO F04: recover the original finding card, cohort definition, layer,
+ % effect sizes and uncertainty before claiming an experimentally established
+ % normal-versus-anomalous redundancy difference. The present text does not
+@@ -56,8 +54,6 @@
+ \end{equation}
+ We take the first $q_g$ entries, then restore the selected indices to native order before gathering. At $r=0.8$ or $0.6$, every pair in a full group retains a representative; at $r=0.4$, only four of its five representatives survive. This is a coverage property of the rule, not a guarantee about anomaly preservation. No averaging or rescaling is applied to a selected vector.
+ 
+-% Queue the quality table early so it appears on page 3, not after the technical boundary.
+-\input{figures/quality_table}
+ \subsection{Divided attention and actual budgets}
+ TimeSformer requires a different unit: all $T$ tokens at a spatial location form a trajectory, scored by the maximum member norm. Each group of ten trajectories retains its top $q_g$ trajectories. The current bridge requires the retained spatial count to be a multiple of the native patch width $W$; we round the total downward and remove excess quota from tail groups. With $P=196$, $T=8$, and $W=14$,
+ \begin{equation}
+--- a/sections/04_experiments.tex
++++ b/sections/04_experiments.tex
+@@ -1,5 +1,21 @@
+ \section{Experiments}
+ \label{sec:experiments}
++\begin{table}[t]
++\centering\small
++\caption{Same-quota references at nominal 40\% deletion: changes from dense in percentage points. Only PairSelect is proposed.}
++\label{tab:references}
++\setlength{\tabcolsep}{4pt}
++\begin{tabular}{@{}lrrr@{}}
++\toprule
++Encoder & PairSelect & Prefix & Random\\
++\midrule
++\tableinput{tables/reference_rows}
++\bottomrule
++\end{tabular}
++\end{table}
++% Queue the efficiency table for page 4 after numbering the reference table.
++\input{figures/efficiency_table}
++
+ 
+ 
+ \subsection{Setup and evaluation}
+@@ -14,31 +30,17 @@
+ 
+ The alternate XD metric matters. Non-interpolated AP changes from 70.33 to 71.30 for VideoMAEv2, 64.86 to 64.51 for VideoMAE, and 70.86 to 72.04 for TimeSformer. In particular, VideoMAE improves under trapezoidal PR-AUC but decreases under AP. We retain both definitions rather than interpret every positive primary-metric change as an unqualified detection gain.
+ 
+-\begin{table}[t]
+-\centering\small
+-\caption{Same-budget references at nominal 40\% deletion; entries are $\Delta$ from dense in percentage points. Prefix and random use the same group quotas, not additional proposed methods.}
+-\label{tab:references}
+-\setlength{\tabcolsep}{4pt}
+-\begin{tabular}{@{}lrrr@{}}
+-\toprule
+-Encoder & PairSelect & Prefix & Random\\
+-\midrule
+-\tableinput{tables/reference_rows}
+-\bottomrule
+-\end{tabular}
+-\end{table}
+-% Queue the efficiency table for page 4 after numbering the reference table.
+-\input{figures/efficiency_table}
++
+ 
+ \subsection{Budget behavior and reference selections}
+-The 20\%, 40\%, and 60\% deletion settings test progressively tighter budgets while preserving the same insertion depth. For joint attention, the highest deletion setting begins dropping entire pair representatives. This provides a testable explanation for a possible quality change, not a pre-established breakpoint. For TimeSformer, the actual highest deletion is 64.24\%; conclusions must use the executed budget rather than treat its rounding as a measured causal explanation.
++The 20\%, 40\%, and 60\% deletion settings retain the same insertion depth. For joint attention, the highest setting drops entire pair representatives: a possible explanation for quality changes, not an established breakpoint. TimeSformer's actual highest deletion is 64.24\%; rounding must be reported but is not an isolated causal explanation.
+ 
+ Table~\ref{tab:references} places the current method alongside fixed-prefix and fixed-seed random selection within each group. Neither is a global uniform sampler, and random masks are reused across videos. Rankings vary: random is higher on all three UCF configurations, whereas \method{} is higher on two XD configurations. Thus these references do not establish universal superiority of the norm signal. Their static native-position gathering also differs from the dynamic anchor-slot assignment, so this is a matched-budget reference rather than an isolated norm-only ablation.
+ 
+ \subsection{FLOPs and hardware efficiency}
+ 
+-Table~\ref{tab:efficiency} separates analytical savings from the hardware measurements still required. At the middle budget, principal-block FLOPs decrease by 23.04\% for joint attention and 21.75\% for divided attention. At the highest deletion setting, the corresponding analytical reductions are 33.05\% and 32.43\%. Because the first six blocks remain dense, these savings are smaller than the token-removal percentages.
++Table~\ref{tab:efficiency} separates analytical and unmeasured hardware quantities. Principal-block FLOPs decrease by 23.04\% (joint attention) and 21.75\% (divided attention) at the middle budget, and 33.05\% and 32.43\% at the highest deletion. Savings are smaller than token deletion because the first six blocks remain dense.
+ 
+-The measurement protocol fixes the GPU, input shape, batch size, numerical precision, and attention backend across dense and reduced runs. Full-encoder timing includes embedding, all blocks, the selector, index gathering, and readout. Pure diagnostic CPU exports are disabled consistently, but actual selection work is not removed. The planned measurements use 20 warm-up passes, synchronized CUDA-event timing, and three independent process repeats on the same representative non-test clips. Throughput counts completed clips at the stated batch; single-clip latency is reported at batch one. Peak allocated and reserved memory are recorded after synchronized reset of peak counters. Hardware and software identifiers must accompany the completed table.
++Measurements will fix GPU, input shape, batch size, precision, and attention backend. Full-encoder timing includes embedding, all blocks, selection, gathering, and readout; only diagnostic CPU exports are disabled. The protocol uses 20 warm-up passes, synchronized CUDA events, and three independent process repeats on identical representative non-test clips. Report throughput at the stated batch, batch-one latency, and peak allocated/reserved memory after synchronized counter resets, together with hardware and software identifiers.
+ 
+-A separate synchronized wall-clock measurement is required for decoding, host--device transfer, feature writing, and temporal-head inference. Since the encoders use different clip schedules, clips/s is not an end-to-end cross-encoder speed ranking. Nor does suffix token reduction ensure lower whole-encoder peak memory: the dense prefix can retain the peak, and selector temporaries can add overhead. No measured speedup or memory reduction is claimed from the present analytical table.
++Decoding, host--device transfer, feature writing, and head inference require separate synchronized wall-clock timing. Different clip schedules preclude an end-to-end cross-encoder ranking by clips/s. The dense prefix or selector temporaries may determine peak memory; analytical savings establish neither measured speedup nor memory reduction.--- a/sections/05_limitations.tex
++++ b/sections/05_limitations.tex
+@@ -1,5 +1,5 @@
+ \section{Scope and Discussion}
+ \label{sec:limitations}
+-The evidence covers three backbones from two principal attention families and one downstream detector family. A shared selection rule does not imply identical behavior across architectures, datasets, or metrics. Mid-depth insertion and the group size are fixed design choices, not proven optima. The current controls do not substitute for a direct comparison with a standard external reducer such as ATS or ToMe. Earlier engineering diagnostics accessed UCF test data; the study is therefore not presented as wholly test-blind development. Additional budgets must be reported together rather than selected post hoc to imply an independently validated optimum.
++Evaluation covers three backbones, two attention families, and one detector family; behavior may vary across architectures, datasets, and metrics. Insertion depth and group size are fixed, not optimized. Standard external reducers such as ATS or ToMe remain to be compared. Earlier diagnostics accessed UCF test data, so development was not wholly test-blind. All additional budgets must be reported, without post-hoc selection implying an independently validated optimum.
+ 
+-The local-coverage rule constrains where token removal occurs, but it does not identify abnormal locations or guarantee preservation of short events. Dynamic anchor positions are an implementation approximation. The method reduces internal activation processing, not model weights, output feature dimension, or the number of detector inputs. Its deployment benefit ultimately depends on measured arithmetic cost, execution overhead, and hardware behavior together.
++Local coverage neither identifies anomalies nor guarantees short-event preservation; anchor positions remain approximate. Reduction affects internal activations, not model weights, output dimension, or detector input count. Deployment benefits depend jointly on measured computation, execution overhead, and hardware behavior.--- a/sections/06_conclusion.tex
++++ b/sections/06_conclusion.tex
+@@ -1,3 +1,3 @@
+ \section{Conclusion}
+ \label{sec:conclusion}
+-\method{} reduces internal video-token computation without reducing the existing clip schedule or retraining the anomaly detection pipeline. Local quotas, magnitude-guided representatives, and non-mixing gathers provide a configurable selection rule for joint and divided attention. The completed middle-budget results show small primary-metric point-estimate changes across three encoders and two datasets, alongside a 21.75--23.04\% analytical reduction in principal-block operations. Completing the budget ladder and hardware measurements will determine which operating points offer a useful quality--efficiency trade-off in practice.
++\method{} combines local quotas, magnitude-guided representatives, and non-mixing gathers for joint and divided attention, without changing clip coverage or retraining the pipeline. Completed middle-budget results show small primary-metric changes across three encoders and two datasets, with 21.75--23.04\% fewer analytical principal-block operations. The remaining budget and hardware measurements will determine practical quality--efficiency operating points.

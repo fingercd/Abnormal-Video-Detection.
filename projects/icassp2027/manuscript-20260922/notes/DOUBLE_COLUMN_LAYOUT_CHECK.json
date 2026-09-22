@@ -4,7 +4,7 @@
   "pdf": "main.pdf",
   "page_count": 5,
   "last_technical_text_page": 4,
-  "pdf_size_bytes": 1376538,
+  "pdf_size_bytes": 1376536,
   "encrypted": false,
   "abstract_whitespace_word_count": 135,
   "font_embedded_and_subset_no_type3": true,
@@ -88,5 +88,34 @@
   ],
   "latex_warnings": [],
   "failures": [],
-  "expected_pending": "Two quality budgets, all hardware measurements, author declarations, F04 raw observation evidence, substantive author writing."
+  "expected_pending": "Two quality budgets, all hardware measurements, author declarations, F04 raw observation evidence, substantive author writing.",
+  "figure_layout": {
+    "page": 2,
+    "placement": "top; spans both columns",
+    "bbox_pdf_points": [
+      54.42499923706055,
+      72.00006103515625,
+      558.985595703125,
+      352.8590087890625
+    ],
+    "width_mm": 177.9977659755283,
+    "original_width_mm": 85.99424094094171,
+    "linear_scale_relative_to_original": 2.0698800760131353,
+    "source_image_unchanged": true,
+    "source_pixels": [
+      1536,
+      855
+    ],
+    "image_text_font_sizes": "Not certified: the figure is the original raster PNG."
+  },
+  "preserved_checks": {
+    "authors": true,
+    "template": true,
+    "data": true,
+    "table_values": true,
+    "equations": true,
+    "references": true,
+    "declarations": true,
+    "abstract": true
+  }
 }

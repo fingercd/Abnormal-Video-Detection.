@@ -1,15 +1,10 @@
 \section{PairSelect}
 \label{sec:method}
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/pairselect_framework}
-\caption{Overall framework of PairSelect. We insert a training-free token selection module after the middle layer of a pre-trained video Transformer encoder. Tokens are grouped into spatially adjacent pairs, and the token with the larger $L_2$ norm is kept in each pair, followed by a group-wise quota to achieve the desired compression ratio. The selected tokens are fed to the remaining encoder blocks and the frozen detection head to predict video-level anomaly scores.}
-\label{fig:overview}
-\end{figure}
 
-\begin{table}[t]
+
+\begin{table}[!b]
 \centering\small
-\caption{Actual token budgets and analytical reduction of the principal twelve-block computation. Deletion is nominal unless marked actual.}
+\caption{Token budgets and analytical twelve-block FLOPs reduction. Deletion is nominal unless marked actual.}
 \label{tab:budgets}
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}rrrrr@{}}
@@ -20,6 +15,9 @@ Delete & $K$ & Actual delete & $N/K$ & Block FLOPs $\downarrow$\\
 \bottomrule
 \end{tabular}
 \end{table}
+% Queue the double-column results early; do not allow them past the technical boundary.
+\input{figures/quality_table}
+
 \subsection{Frozen pipeline and design rationale}
 Let $E_{1:b}$ and $E_{b+1:L}$ denote the prefix and suffix of a pretrained encoder, $R$ its clip readout, and $H$ the temporal detection head. For scheduled clips $\{v_t\}_{t=1}^{M}$, inference is
 \begin{equation}
@@ -29,7 +27,7 @@ Let $E_{1:b}$ and $E_{b+1:L}$ denote the prefix and suffix of a pretrained encod
 \end{equation}
 Only $S_r$, the selection operator at retention budget $r$, is inserted. We set $L=12$ and $b=6$ for all three encoders. The clip count $M$, output dimension, and head weights remain unchanged. Training-free refers to compression: the original detection head is trained once on dense features for each configuration.
 
-Local redundancy motivates comparing nearby candidates rather than globally ranking all tokens. To avoid an additional mixing operation before an unchanged head, $S_r$ gathers existing vectors. ATS motivates activation magnitude as an inexpensive signal~\cite{fayyaz2022ats}, but our block-output L2 norm is not its attention-weighted value norm. Nor is a high norm an anomaly probability: high-norm transformer tokens can also occur in background regions~\cite{darcet2024registers}. We therefore combine magnitude preference with local quotas instead of treating magnitude as a global anomaly oracle.
+Local redundancy motivates nearby comparisons; gathering existing vectors avoids additional mixing before the unchanged head. ATS motivates inexpensive magnitude-based scoring~\cite{fayyaz2022ats}, but our block-output L2 norm differs from its attention-weighted value norm. High norm is not an anomaly probability and may occur in background regions~\cite{darcet2024registers}; local quotas therefore constrain magnitude preference rather than treating it as a global anomaly oracle.
 % AUTHOR_TODO F04: recover the original finding card, cohort definition, layer,
 % effect sizes and uncertainty before claiming an experimentally established
 % normal-versus-anomalous redundancy difference. The present text does not
@@ -56,8 +54,6 @@ Ties retain native order. Let $w_j=x_{j,a_j}$ and $\ell_j=x_{j,1-a_j}$. If $\pi$
 \end{equation}
 We take the first $q_g$ entries, then restore the selected indices to native order before gathering. At $r=0.8$ or $0.6$, every pair in a full group retains a representative; at $r=0.4$, only four of its five representatives survive. This is a coverage property of the rule, not a guarantee about anomaly preservation. No averaging or rescaling is applied to a selected vector.
 
-% Queue the quality table early so it appears on page 3, not after the technical boundary.
-\input{figures/quality_table}
 \subsection{Divided attention and actual budgets}
 TimeSformer requires a different unit: all $T$ tokens at a spatial location form a trajectory, scored by the maximum member norm. Each group of ten trajectories retains its top $q_g$ trajectories. The current bridge requires the retained spatial count to be a multiple of the native patch width $W$; we round the total downward and remove excess quota from tail groups. With $P=196$, $T=8$, and $W=14$,
 \begin{equation}

@@ -12,6 +12,9 @@
  pdfsubject={Author working draft; unmeasured experiments remain pending},
  pdfkeywords={WSVAD, PairSelect, training-free, token selection, ICASSP 2027}}
 \setlength{\emergencystretch}{2em}
+% Moderate positive float-to-text spacing; preserve template margins and body leading.
+\setlength{\dbltextfloatsep}{12pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
 \newcommand{\method}{PairSelect}
 \newcommand{\tableinput}[1]{\csname @@input\endcsname{#1}}
 \newcommand{\pending}{\textemdash}
@@ -31,6 +34,7 @@ video anomaly detection, weak supervision, token selection, training-free compre
 \end{keywords}
 \draftnote{unmeasured results are marked with dashes; author revision and verification are required before submission.}
 \input{sections/01_introduction}
+\input{figures/framework}
 \input{sections/02_related_work}
 \input{sections/03_method}
 \input{sections/04_experiments}
