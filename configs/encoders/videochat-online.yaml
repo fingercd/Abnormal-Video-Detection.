@@ -1,0 +1,51 @@
+schema_version: 1
+name: videochat-online
+adapter: videochat_online
+family: streaming_vlm
+constructor:
+  model_name: MCG-NJU/VideoChatOnline-4B
+  checkout_path: external-v2/videochat-online
+  model_path: weights/videochat-online
+  runtime: in_process
+  device: cpu
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: visual_memory
+  cache_mode: identity
+  streaming: true
+  chunk_frames: 4
+  strict_assets: true
+  preprocess_profile: videochat-online-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: MCG-NJU/VideoChatOnline-4B
+  revision: 7373f325b9265527b9363f231b168a14523ac875
+  license: unknown
+  local_path: weights/videochat-online
+input_profile:
+  clip_frames: 4
+  frame_stride: 2
+  image_size: 448
+  sampling: streaming_uniform
+output:
+  feature_stage: visual_memory
+  sequence_source: pyramid_memory_bank
+  implementation_source: native_upstream
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: true
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: visual_memory
+  compression: disabled
+  owner: vision_memory_bank
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/videochat_online/upstream.lock.yaml

@@ -1,0 +1,59 @@
+{
+  "schema": "icassp2027.six-cell-method-freeze/v2",
+  "status": "active_frozen_before_official_model_scores",
+  "frozen_at": "2026-09-22",
+  "scope_contract": {
+    "path": "projects/icassp2027/decisions/six-cell-scope-contract-v1.json",
+    "sha256": "eac12d9248b4970e1d3528af30efc14a3a9d90ee7c7558965215b1cd9d6d7e25"
+  },
+  "scope": {
+    "encoders": ["videomaev2", "videomae", "timesformer"],
+    "datasets": ["ucf_crime", "xd_violence"],
+    "xd_train_identity": {"accepted": 3950, "declared": 3954, "excluded": 4}
+  },
+  "selection_evidence": {
+    "role": "training_side_only",
+    "selection_receipt": "projects/icassp2027/decisions/six-cell-method-selection-receipt-v2.json",
+    "selection_receipt_sha256": "260c9d26a80d5d796ab6cea2149b284c8f4f0bc1f224927135e69537e015f442",
+    "screen_manifest": "outputs/icassp2027/control/codex-takeover-20260920/idea/v2-adgs-screen-20260921/screen_manifest.json",
+    "screen_manifest_sha256": "f6f36fd6e35079721700366c537fc3e07bec7430c9eee15245c19fb2458c7ced",
+    "screen_scope": "UCF 32 normal + 32 anomalous; XD 32 normal + 32 anomalous; no official test scores",
+    "parameter_choice": "middle verified native block; keep_ratio 0.60; max-member-L2 pair/trajectory selector",
+    "cross_encoder_note": "The frozen rule is evaluated on all three encoders; transfer is an empirical claim to be tested, not assumed."
+  },
+  "methods": {
+    "dense": {"reducer": "identity", "keep_ratio": 1.0},
+    "same_budget_uniform": {"reducer": "group_uniform", "keep_ratio": 0.60},
+    "same_budget_random": {"reducer": "group_random", "keep_ratio": 0.60, "seed": 0},
+    "frozen_candidate": {
+      "reducer": "pair_select",
+      "keep_ratio": 0.60,
+      "signal": "member_l2_norm_max",
+      "selection_unit": {"videomaev2": "adjacent_native_pair_member", "videomae": "adjacent_native_pair_member", "timesformer": "complete_spatial_trajectory"},
+      "position": "approximate_anchor_position_from_frozen_skeleton",
+      "deployment_inputs": "current_model_state_and_static_rule_only"
+    },
+    "rejected": [{"reducer": "pair_mean", "reason": "training_side_distribution_shift_negative_evidence"}]
+  },
+  "insertion": {
+    "rule": "ceil(0.5 * verified_native_block_count) - 1",
+    "layer_is_frozen_before_test": true,
+    "no_future_layer_state": true
+  },
+  "head_modes": {
+    "primary": "direct_insert",
+    "optional_supplement": "refit_head_budget_matched",
+    "refit_budget": "same full-train videos, steps and seeds as dense head"
+  },
+  "test_gate": {
+    "method_selection_after_test": false,
+    "ucf_raw_audit_required": true,
+    "xd_raw_coordinate_seal_required": true,
+    "same_input_coverage_required": true,
+    "metrics": {"ucf": "frame_roc_auc", "xd_primary": "auc(recall,precision)_trapezoids", "xd_secondary": "average_precision_separately"},
+    "delta": "method_minus_dense",
+    "paired_bootstrap": {"draws": 10000, "stratified_by": "video_weak_label"},
+    "noninferiority_ci_lower_bound": -0.005
+  },
+  "provenance_required": ["manifest_sha256", "feature_view_contract_sha256", "head_checkpoint_sha256", "code_sha256", "environment_receipt_sha256", "calibration_receipt_sha256_or_null"]
+}

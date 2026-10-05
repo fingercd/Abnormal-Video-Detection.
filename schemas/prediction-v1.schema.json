@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fingercd.github.io/Abnormal-Video-Detection/schemas/prediction-v1.schema.json",
+  "title": "VADBench clip prediction record v1",
+  "description": "One temporal prediction row in a run's predictions.jsonl artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "video_id",
+    "clip_id",
+    "clip_index",
+    "start_s",
+    "end_s",
+    "frame_start",
+    "frame_end",
+    "anomaly_score",
+    "predicted_label",
+    "ground_truth",
+    "encoder_fingerprint",
+    "metadata",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "vadbench.prediction.v1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "video_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "clip_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "clip_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "start_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "end_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "frame_start": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "frame_end": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "anomaly_score": {
+      "type": "number"
+    },
+    "predicted_label": {
+      "$ref": "#/$defs/nullableLabel"
+    },
+    "ground_truth": {
+      "$ref": "#/$defs/nullableLabel"
+    },
+    "encoder_fingerprint": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "nullableLabel": {
+      "type": ["integer", "string", "boolean", "null"]
+    }
+  }
+}

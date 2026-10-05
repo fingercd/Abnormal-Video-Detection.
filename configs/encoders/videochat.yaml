@@ -1,0 +1,49 @@
+schema_version: 1
+name: videochat
+adapter: videochat
+family: video_vlm
+constructor:
+  model_name: OpenGVLab/VideoChat-7B
+  checkout_path: external-v2/videochat
+  model_path: weights-v2/videochat
+  runtime: external_python
+  device: cuda
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: projected_visual
+  cache_mode: false
+  strict_assets: true
+  upstream_entrypoint: video_chat/models/videollama.py:load_model
+  preprocess_profile: videochat-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: OpenGVLab/VideoChat-7B
+  revision: 4dd8210b030374bb0c510a57dfbe916f70d3ef71
+  license: mit
+  local_path: weights-v2/videochat
+input_profile:
+  clip_frames: 32
+  frame_stride: 2
+  image_size: 336
+  sampling: uniform
+output:
+  feature_stage: projected_visual
+  sequence_source: upstream_projected_visual
+  implementation_source: external_worker_facade
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: vision_tokens
+  compression: disabled
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/videochat/upstream.lock.yaml

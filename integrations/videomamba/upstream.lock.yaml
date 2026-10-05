@@ -1,0 +1,34 @@
+schema_version: 1
+integration: videomamba
+
+source:
+  repository: https://github.com/OpenGVLab/VideoMamba
+  branch: main
+  default_branch: main
+  commit: 37355c26d0ae99ca2459f6d4044a5f509031a79f
+  commit_url: https://github.com/OpenGVLab/VideoMamba/commit/37355c26d0ae99ca2459f6d4044a5f509031a79f
+  verified_with: github-atom
+  verified_on: "2026-08-31"
+
+license:
+  spdx: Apache-2.0
+  file: LICENSE
+  url: https://github.com/OpenGVLab/VideoMamba/blob/37355c26d0ae99ca2459f6d4044a5f509031a79f/LICENSE
+
+entrypoints:
+  backbone: videomamba/video_sm/models/videomamba.py
+  classification: videomamba/video_sm/run_class_finetuning.py
+
+weights:
+  provider: official
+  model_id: VideoMamba-S
+  revision: planned
+  license: Apache-2.0
+  local_dir: weights/videomamba
+  sha256: {}
+  size_bytes: null
+
+integration_notes:
+  - 固定 clip 适配；SSM 内部状态不等于可复用的 VADBench streaming state。
+  - 运行时需要与官方 mamba-ssm/causal-conv1d 版本隔离，不能由 adapter 自动安装。
+  - 缺失本地 checkpoint 或 checkout 时明确返回 missing-asset 错误，不尝试联网。

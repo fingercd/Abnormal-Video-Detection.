@@ -1,0 +1,35 @@
+schema_version: 1
+integration: videochat_flash
+
+source:
+  repository: https://github.com/OpenGVLab/VideoChat-Flash
+  branch: main
+  default_branch: main
+  commit: 3d521087215c9024199b0512370a29dee1c0fee6
+  commit_url: https://github.com/OpenGVLab/VideoChat-Flash/commit/3d521087215c9024199b0512370a29dee1c0fee6
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/OpenGVLab/VideoChat-Flash/blob/3d521087215c9024199b0512370a29dee1c0fee6/LICENSE
+
+entrypoints:
+  loader: llava-train_videochat/llava/model/builder.py:load_pretrained_model
+  visual_tokens: llava-train_videochat/llava/model/llava_arch.py:encode_images
+  inference: lmms-eval_videochat
+
+weights:
+  provider: huggingface
+  model_id: OpenGVLab/VideoChat-Flash-Qwen2_5-2B_res448
+  revision: 878b4d86ab382a83b9353c33db89210aa459a735
+  local_dir: weights/videochat-flash
+  sha256:
+    model.safetensors: 8d7599e40867eaac136fffa154b070c71aa22bc73b3c1ceece1dcb094f70b475
+  size_bytes: 4143085560
+  status: verified
+
+integration_notes:
+  - VideoChat-Flash 同时包含 clip/long-context 与多种 Qwen/InternVideo variant；本 lock 选择最小公开 2B 方向作为接入入口。
+  - 只导出 projected_visual，不启用 progressive visual dropout 或其他压缩消融。

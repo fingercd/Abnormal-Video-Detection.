@@ -1,0 +1,84 @@
+{
+  "schema": "icassp2027.method-freeze-contract/v1",
+  "status": "active",
+  "frozen_at": "2026-09-20",
+  "frozen_by": "user-approval-2026-09-20",
+  "markdown_contract": {
+    "path": "projects/icassp2027/decisions/method-freeze-20260920.md",
+    "sha256": "4be75b1800393d2271082c159f6a7519fe29593c810be0c21eae5c49ac664a67"
+  },
+  "method_scope": {
+    "encoders": ["videomaev2", "videomae", "timesformer"],
+    "excluded_encoders": [
+      {
+        "runtime_id": "vjepa2",
+        "reason": "throughput-gate-exit-20260919-user-final"
+      }
+    ],
+    "encoder_finetuning": "frozen-backbone-no-finetuning",
+    "backend": {
+      "name": "UR-DMU",
+      "upstream_commit": "40cfdf5f8bebbc3b59373935f9d6ca00e2f32bbc",
+      "head": "dense",
+      "steps": 3000,
+      "bags_per_class": 64,
+      "seed_policy": "fixed",
+      "checkpoint_selection": "fixed_final_step_no_test_selection"
+    },
+    "operator_families": [
+      {
+        "kind": "selection",
+        "mechanism": "adjacent-token pair-select (inner-norm), representation-preserving",
+        "training_free": true,
+        "budgets": [0.5, 0.75, 0.25]
+      }
+    ],
+    "rejected_operator_families": [
+      {
+        "kind": "merge",
+        "mechanism": "pair-mean",
+        "reason": "evidence-rejected-distribution-shift"
+      }
+    ],
+    "controls": ["uniform_budget_matched", "random_budget_matched"],
+    "optional_columns": ["refit_head_budget_matched"],
+    "trainable_variants": {
+      "policy": "tf-lora same-mechanism same-family not performed this round",
+      "requirement": "separate supplementary contract with budget-matched controls if performed"
+    }
+  },
+  "property_evidence": [
+    {
+      "id": "F04-four-encoder-observation",
+      "role": "fit128, 10000x video-level bootstrap, motion-brightness matched; early-layer local spatial redundancy higher in anomaly windows (4/4 encoders consistent direction)",
+      "path": "outputs/icassp2027/control/f04-scientific-review-20260919/review.md",
+      "sha256": "9458d3d4f5ac9d2d49bf8848fcf775a48b5ccc3e14ef7a545470ce3162cb51c6"
+    },
+    {
+      "id": "S7-pairselect-videomaev2",
+      "role": "exploratory v0 diagnostic; pair-select reached preregistered threshold (0.833 vs random 0.750 at 50% budget, dense 0.903)",
+      "path": "work/s7-idea-a01/card-three-way-videomaev2.md",
+      "sha256": "195b69d05bfce23e9fb326577bef40c4b044fb577889d582134cc3da1d763a15"
+    },
+    {
+      "id": "S7-merge-negative-result",
+      "role": "exploratory v0 diagnostic; pair-mean held-out AUC 0.583 < random 0.750 (videomaev2, 50% budget) — merge operators rejected",
+      "path": "work/s7-idea-a01/card-P1-local-redundancy.md",
+      "sha256": "d3d90bff239c48dfc1e1125abdf6d471025412619d9684ac82037bbc13328d81"
+    },
+    {
+      "id": "S7-cross-encoder-nonreplication",
+      "role": "exploratory 12-video caliber did not replicate across encoders; formal comparison must be re-tested at select161/test290 scale and reported as-is",
+      "path": "work/s7-idea-a01/results-cross-timesformer-score-12.json",
+      "sha256": "89786a28e822b15de97b8e56edd0221c18039098f6582ae28e1b6b0b7133572e"
+    }
+  ],
+  "evaluation_protocol": {
+    "ucf_crime": "frame_roc_auc_primary",
+    "xd_violence": "frame_ap_primary_pending_separate_protocol",
+    "video_level": "auxiliary_only",
+    "f1_threshold": "fixed on permitted validation data only",
+    "test_usage": "evaluation-only; no method/layer/budget/checkpoint selection on test"
+  },
+  "notes": "Machine-readable companion of method-freeze-20260920.md. official_frame code gate validates this file (SHA-bound), the markdown binding, and every property-evidence receipt before any official test source is read. Post-freeze method additions require a new contract version with disclosed influence on method selection. Sealed-test test290 extraction predating this contract remains legal; zero-access principle held until this contract took effect."
+}

@@ -1,60 +1,26 @@
-# models — 模型定义目录
+# `lab_anomaly/models`
 
-> 定义 Vit 当前主线的模型结构：VideoMAE v2 编码器 + MIL 分类头 + 排序损失。
+本目录实现保留原型的固定 clip 编码与视频级 MIL 头。
 
----
+## `vit_video_encoder.py`
 
-## 核心文件
+此文件只为旧训练/推理代码重导出类；唯一实现位于 `vadbench.integrations.videomaev2_encoder`。`VideoMAEv2Encoder` 从 Hugging Face 以 `trust_remote_code=True` 加载 `OpenGVLab/VideoMAEv2-Base`（或配置的同类模型）。输入可以是处理后的 `(B,C,T,H,W)` tensor，或 RGB `uint8` HWC 帧嵌套列表；后者经模型 image processor 后在必要时转成 `(B,C,T,H,W)`。输出为 float32 `(B,D)` embedding，`D` 来自模型 config，Base 常见为 768。
 
-### `vit_video_encoder.py` — 视频编码器
+`pooling=auto` 优先 `pooler_output`；否则取 `last_hidden_state` 的第一个 token。该选择依赖上游 remote-code 返回结构，当前目录没有锁定上游 revision 或对不同 Transformers 版本的端到端测试。其 meta-tensor 修复也会重建位置编码/CLS token；这是一条兼容性补丁，不能视为上游原生权重等价性保证。
 
-把一段视频 clip 编码成特征向量。
+`freeze_backbone()` 冻结所有 backbone 参数；`unfreeze_last_n_blocks()` 通过若干可能的模块路径或启发式寻找 Transformer block，仅解冻末尾 N 个。它不实现跨 clip state 或缓存复用。
 
-- **输入**：`(B, C, T, H, W)` 或 `list[list[np.ndarray]]`（RGB uint8 帧列表）
-- **默认配置**：`image_size=224`，`num_frames=16`
-- **输出**：`(B, D)` embedding，`D=768`（Base 模型 hidden_size）
-- **编码器**：`OpenGVLab/VideoMAEv2-Base` 预训练权重
-- **Pooling 策略**：`auto` / `cls` / `mean` / `pooler`，默认优先取 `pooler_output`
+## `mil_head.py`
 
-**防御性代码**：
-- transformers 5.x 兼容性修复
-- meta tensor 自动修复：递归扫描并重建正弦位置编码和 cls_token
-- 支持冻结 / 按层解冻（`freeze_backbone`、`unfreeze_last_n_blocks`）
+`MILClassifier` 输入 `(B,N,D)` 和可选有效位 mask，输出视频级 `(B,C)` logits。两种聚合：
 
-### `mil_head.py` — MIL 分类头
+- `attn`：attention pooling 后线性分类；
+- `topk`：先得到每 clip logits，再按训练标签（训练）或最大 logit（推理）选 top-k 平均。
 
-把多个 clip 的特征聚合起来，输出视频级分类结果。
+可选 `anomaly_scorer` 为每个 clip 产生 `(B,N)` 的 sigmoid 分数。它只是排序损失的学习支路；不会自动转为帧级得分，也没有与时间标注对齐的校准。
 
-- **输入**：多个 clip 的 embedding `(B, N, D)`
-- **输出**：视频级 logits `(B, C)`，当前为二分类（normal / anomaly）
+`masked_softmax()` 假定每行至少一个有效 clip；全 false 行会对全 `-inf` 做 softmax，产生 NaN。训练代码通过只选择 `num_clips > 0` 的视频来避免该情形。
 
-**两种聚合方式**：
-1. **Attention Pooling**：`tanh(Wx)` → `w^T` → softmax → 加权求和
-2. **Top-K**：按 clip 分类分数选 top-k 再平均 logits
+## `ranking_loss.py`
 
-**异常分数分支**（可选）：`D → 512 → 32 → 1 + Sigmoid`，输出每 clip 异常分数 `(B, N)`
-
-### `ranking_loss.py` — MIL 排序损失
-
-帮助模型更好地区分正常和异常片段。
-
-三项损失组合：
-1. **排序项**：`max(0, 1 - max(scores_pos) + max(scores_neg))`
-2. **稀疏约束**：`λ_sparse * sum(scores_pos)`（默认 `8e-5`）
-3. **时间平滑约束**：`λ_smooth * sum((scores[i] - scores[i+1])^2)`（默认 `8e-5`）
-
-> 参考：CVPR 2018 "Real-world Anomaly Detection in Surveillance Videos"
-
----
-
-## 模型整体理解
-
-```
-视频 clip（多帧）
-    ↓
-[编码器] 把视频"看懂" → 768 维向量
-    ↓
-[分类头] 把多个片段"总结成结论" → normal / anomaly
-```
-
-如果你只是使用模型，不一定先看这里。但如果你要解释"ViT 到底是什么结构"，这个目录一定要看。
+`mil_ranking_loss()` 使用异常 bag 最大分数应高于正常 bag 最大分数的 hinge 项，加上异常 bag 的稀疏与相邻 clip 平滑项。正/负 bag 数不一致时循环配对；任一类为空则返回不参与反传的零值。它针对视频级弱监督，而非官方 UCF-Crime 帧级 GT。

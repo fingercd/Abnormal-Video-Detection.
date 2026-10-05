@@ -1,0 +1,126 @@
+{
+  "schema": "icassp2027.handoff-v2.unseal-receipt/v1",
+  "status": "unsealed",
+  "unsealed_at": "2026-09-22",
+  "executor": "值守 agent（Claude Code），经负责人授权「全程自主，做完一次性汇报」",
+  "matrix": {
+    "schema": "icassp2027.urdmu-six-cell-matrix/v1",
+    "matrix_id": "urdmu-six-cell-matrix-v1.json",
+    "matrix_path": "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-six-cell-matrix-v1.json",
+    "assembled": true,
+    "assembly_status": "completed",
+    "cells_expected": 6,
+    "cells_actual": 6,
+    "compressed_reports_expected": 18,
+    "compressed_reports_actual": 18,
+    "dense_baselines_expected": 6,
+    "dense_baselines_actual": 6,
+    "assembly_command": "python3 scripts/icassp2027/assemble_urdmu_matrix.py --base /data2/localdisk/fotile-icassp2027-kimi-20260919-a01 --quality-root <base>/urdmu-quality-exports-r08 --method-contract <snapshot>/projects/icassp2027/decisions/method-freeze-contract-v2.json --freeze <snapshot>/projects/icassp2027/decisions/six-cell-method-freeze-v2.json --output <base>/urdmu-six-cell-matrix-v1.json",
+    "assembler_sha256_prefix": "f38384c4ea5175bb",
+    "assembler_local_remote_identical": true
+  },
+  "gate_results": {
+    "A1_extraction_contract_closure": {
+      "result": "PASS 18/18",
+      "method": "逐视频比对 coverage.per_video 与 dense video_provenance：视频 ID 集合精确一致、无重复/缺失/额外；每视频 intervals == dense record_count；gap_frames==0；coverage_ratio==1.0；covered_frames<=num_frames；clips 总数 == dense 记录总数；status==ready 且 test_only==true"
+    },
+    "A2_prediction_completion": {
+      "result": "PASS 18/18",
+      "method": "result.json status==completed 且 official_frame_scores_read==false；唯一 video_id 数 == 290/800（schema 实测为一 clip 一行，未按行数判定）；query-chunk-receipts 覆盖同数视频；(video_id, clip_id) 无重复；所有 XD 评分日志 direct_insert 报错数 == 0"
+    },
+    "A3_reports_and_assembly": {
+      "result": "PASS",
+      "method": "18/18 quality export metric.status==available 且 n_videos==290/800；三个方法的 dense_value 极差 <= 1e-12；dense merge-contract status==ready、complete==true、videos 正确；token_execution.clips == extraction-contract.clips；全部 provenance SHA 在位（缺失 0）",
+      "bootstrap_preserved": "10000 次视频级 paired bootstrap 未减少、未改统计定义"
+    },
+    "A4_output_isolation": {
+      "result": "PASS",
+      "method": "代码级取证：装配器全脚本唯一 print 只输出 status/cells/output 三字段；断言异常消息只含 dataset/encoder/path 与 pass/fail；分数只写入输出 matrix 文件"
+    },
+    "code_level_verification": {
+      "checkpoint_selection_fixed_final_step": "PASS — 上游 xd_main.py 的按测试 AP 存最佳逻辑从未被加载；训练循环单趟，唯一存盘点为 checkpoints/final.pt 且 step==3000；下游加载侧强制拒绝非固定 step",
+      "official_frame_no_silent_truncation": "PASS — 帧覆盖恰为 [0,num_frames)，未覆盖帧直接报错，无插值/padding/截断旁路",
+      "exemption_scope_code_digest_only": "PASS — 放行表仅作用于 code_digest，且仅在 direct_insert 路径；其余七个字段仍严格相等；refit_head 不放行"
+    }
+  },
+  "effective_rule_versions": {
+    "method_freeze_contract": {
+      "path": "projects/icassp2027/decisions/method-freeze-contract-v2.json",
+      "sha256": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+      "role": "装配器 --method-contract（与每个预测 run 的 --method-freeze-contract-path 一致）"
+    },
+    "six_cell_method_freeze": {
+      "path": "projects/icassp2027/decisions/six-cell-method-freeze-v2.json",
+      "sha256": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+      "role": "装配器 --freeze（与每个预测 run 的 --freeze-path 一致）"
+    },
+    "six_cell_selection_receipt": {
+      "path": "projects/icassp2027/decisions/six-cell-method-selection-receipt-v2.json",
+      "sha256": "260c9d26a80d5d796ab6cea2149b284c8f4f0bc1f224927135e69537e015f442",
+      "role": "方法在测试分之前选定的证据；本收据另作记录，未作为装配器入参"
+    },
+    "official_detector_protocol": {
+      "path": "projects/icassp2027/decisions/official-detector-protocol-v3.json"
+    }
+  },
+  "gate_readings": {
+    "memory_evidence_is_hard_unseal_gate": false,
+    "gate_reading_basis": "reducer-evaluation-freeze-v1.json 的 claims_not_established 明确列出 peak_memory_reduction 为未建立主张；access_gates 四项与 official-detector-protocol-v3 的 execution_gates 七项均不含显存要求。",
+    "gate_reading_confirmed_by": "owner",
+    "gate_reading_confirmed_at": "2026-09-22",
+    "revision_recorded": false,
+    "revision_note": "因读法为「非硬门槛」，未产生硬验收规则变更，故无需另记修订记录。原规则与事实保持原样。"
+  },
+  "early_score_exposure": [
+    {
+      "event": "early_score_read",
+      "occurred_at": "2026-09-22T08:1x:xxZ",
+      "executor": "值守 agent（Claude Code），非负责人",
+      "how": "为核对 quality export 的 JSON schema 以确认装配器所需字段，用调试打印输出了 UCF × VideoMAEv2 × pair_select 的 metric.dense_value",
+      "scope": {
+        "dataset": "ucf_crime",
+        "encoder": "videomaev2",
+        "method": "pair_select",
+        "field": "metric.dense_value",
+        "metric_name": "frame_roc_auc",
+        "values_read_count": 1,
+        "is_dense_baseline": true,
+        "compressed_method_values_read": 0,
+        "other_cells_read": 0,
+        "xd_metrics_read": 0
+      },
+      "impact_assessment": "该值为 dense 基线，三个压缩方法共用同一基线；它本身不指示任何压缩方法的优劣，因此未影响方法选择。但它在装配与审计通过前被读取，构成一次提前读分，如实记录。",
+      "mitigation": [
+        "不再打印任何指标值；后续只打印结构字段（status/n_videos/键名）",
+        "本事件写入 receipts，不通过重跑改写为「从未读分」",
+        "方法选择待到矩阵装配与审计通过后、由负责人在完整表格上作出"
+      ],
+      "disclosed_to_owner": true
+    }
+  ],
+  "authorized_post_unseal_actions": [
+    "一次性生成六格完整效果表与明细 CSV",
+    "生成方法间直接比较（paired bootstrap，同一视频抽样索引）",
+    "回答方法建议的五个问题并给出建议（不代替负责人选择）"
+  ],
+  "red_lines_maintained": {
+    "failed_directories_preserved": true,
+    "no_fabricated_digests": true,
+    "strict_fields_outside_exemption_unchanged": true,
+    "node2_not_used": true,
+    "bootstrap_draws_unchanged": true
+  },
+  "known_data_quality_findings": [
+    {
+      "finding": "TimeSformer 实际 token 保留比为 0.5717，低于名义 keep_ratio 0.60；VideoMAEv2/VideoMAE 为 0.6001",
+      "cause": "TS 的选择单元是完整空间轨迹，轨迹粒度取整使实际保留比偏离名义值",
+      "comparability": "同一编码器内三个方法的保留比完全一致（TS 0.5717 ×3，V2/VMA 0.6001 ×3），跨方法预算匹配成立",
+      "action": "在论文中如实报告实际保留比，不把 0.60 当作 TS 的实际值"
+    },
+    {
+      "finding": "FeatureStore 的 plugin_overhead_ms 不可用作效率证据",
+      "evidence": "该字段是随 chunk 重算的滑动平均（同一 chunk 内恒定、跨 chunk 单调收敛 3335345→1895034→18998），早期值被初始化污染；且 pair_select 记 transform_ms、两个对照记 gather_ms，走不同代码路径",
+      "action": "论文效率表一律采用阶段 D 的干净测量；本字段不作为任何效率主张的依据"
+    }
+  ]
+}

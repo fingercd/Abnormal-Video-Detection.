@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "date": "2026-08-31",
+  "host": "local-windows-cpu",
+  "adapter": "videomaev2",
+  "checkpoint_id": "videomaev2-base-hf",
+  "checkpoint_revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+  "checkpoint_sha256": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d",
+  "input": {
+    "path": "data/smoke/surveillance-smoke.mp4",
+    "generated_by": "scripts/create_smoke_video.py",
+    "num_frames": 64,
+    "fps": 1.0,
+    "width": 320,
+    "height": 240
+  },
+  "output": {
+    "features_shape": [1, 1568, 768],
+    "features_dtype": "torch.float32",
+    "pooled_shape": [1, 768],
+    "sequence_source": "observed_backbone",
+    "timeline_policy": "uniform_token_to_frame_approximation"
+  },
+  "elapsed_seconds": 4.183591999997589,
+  "peak_gpu_memory_bytes": null,
+  "command": ".venv/Scripts/python.exe -m vadbench smoke -c configs/experiments/ucf_videomaev2_weak.yaml --video data/smoke/surveillance-smoke.mp4 --chunks 1 --output outputs/local-smoke/videomaev2.json",
+  "limitations": [
+    "This verifies real checkpoint loading and inference, not UCF-Crime accuracy.",
+    "The input is a deterministic generated smoke clip, not a benchmark sample.",
+    "The observed backbone token sequence is a private-hook path; the stable fallback is pooled [B,1,D]."
+  ]
+}

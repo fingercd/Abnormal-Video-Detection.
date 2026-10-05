@@ -1,0 +1,35 @@
+schema_version: 1
+
+benchmark:
+  name: videomaev2-local-cpu
+  warmup: 1
+  repeat: 3
+  synchronize_cuda: true
+  device: cpu
+  output: outputs/benchmarks/videomaev2-local-cpu/performance.json
+
+input:
+  task: encoder_performance_only
+  sampling_protocol: shared-ordered-frame-smoke-v1
+  video: data/smoke/mlvu-surveil-8.mp4
+  sample_fps: 2.0
+  sampled_frames: 16
+  frames_per_unit: 16
+  frame_stride: 1
+  spatial_preprocess: adapter_owned
+
+cases:
+  - name: videomaev2-fixed
+    track: fixed_clip_no_cache
+    mode: fixed
+    experiment: configs/experiments/ucf_videomaev2_weak.yaml
+    encoder:
+      adapter: videomaev2
+      definition: configs/encoders/videomaev2-base.yaml
+      device: cpu
+      params: {}
+    grouping:
+      units: 1
+      frames_per_unit: 16
+    compression: null
+

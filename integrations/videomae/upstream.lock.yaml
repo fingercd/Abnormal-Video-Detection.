@@ -1,0 +1,37 @@
+schema_version: 1
+integration: videomae
+
+source:
+  repository: https://github.com/MCG-NJU/VideoMAE
+  branch: main
+  default_branch: main
+  commit: 14ef8d856287c94ef1f985fe30f958eb4ec2c55d
+  commit_url: https://github.com/MCG-NJU/VideoMAE/commit/14ef8d856287c94ef1f985fe30f958eb4ec2c55d
+  verified_with: git-ls-remote
+  verified_on: "2026-08-31"
+
+license:
+  spdx: CC-BY-NC-4.0
+  file: LICENSE
+  url: https://github.com/MCG-NJU/VideoMAE/blob/14ef8d856287c94ef1f985fe30f958eb4ec2c55d/LICENSE
+
+entrypoints:
+  transformers_model: transformers.models.videomae.modeling_videomae:VideoMAEModel
+  processor: transformers.AutoImageProcessor
+
+weights:
+  provider: huggingface
+  model_id: MCG-NJU/videomae-base
+  revision: dc740ceda42fce44faed2ea03c6d447db72f6af9
+  license: cc-by-nc-4.0
+  local_dir: weights/videomae-base
+  filename: model.safetensors
+  size_bytes: 376873760
+  sha256:
+    model.safetensors: bc053ca2840a038b1068269a4eec06ca569689e9a1ed9376a5b2b8a111be5290
+  status: planned
+
+integration_notes:
+  - 固定 16 帧 clip；VADBench 只导出 last_hidden_state/mean pooled 表征。
+  - 适配器只接受本地 checkpoint，并强制 local_files_only=True。
+  - VideoMAE 的 patch tokens 不等同于可复用 decoder KV cache。

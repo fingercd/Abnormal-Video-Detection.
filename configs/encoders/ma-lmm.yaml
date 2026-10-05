@@ -1,0 +1,52 @@
+schema_version: 1
+name: ma-lmm
+adapter: ma_lmm
+family: streaming_vlm
+constructor:
+  model_name: boheumd/MA-LMM
+  checkout_path: external-v2/ma-lmm
+  model_path: weights-v2/ma-lmm
+  runtime: external_python
+  device: cuda
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: visual_memory
+  cache_mode: identity
+  streaming: true
+  chunk_frames: 4
+  strict_assets: true
+  upstream_entrypoint: lavis/models/blip2_models/blip2.py:load_model
+  preprocess_profile: ma-lmm-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: local_upstream
+  model_id: boheumd/MA-LMM
+  revision: ffe9fa9e89757e4433012029f19286c3c280ab1d
+  license: mit
+  local_path: weights-v2/ma-lmm
+input_profile:
+  clip_frames: 4
+  frame_stride: 2
+  image_size: 224
+  sampling: streaming_uniform
+output:
+  feature_stage: visual_memory
+  sequence_source: q_former_memory_bank
+  implementation_source: external_worker_facade
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: true
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: visual_memory
+  compression: disabled
+  owner: q_former_cross_attention
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/ma_lmm/upstream.lock.yaml

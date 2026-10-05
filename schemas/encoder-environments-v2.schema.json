@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VADBench encoder environments v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "environment_root",
+    "overlay_root",
+    "cache_root",
+    "new_weight_root",
+    "new_external_root",
+    "minimum_free_bytes",
+    "protected_roots",
+    "groups",
+    "overlays"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "groups": {
+      "type": "object",
+      "minProperties": 4,
+      "maxProperties": 4
+    },
+    "protected_roots": {
+      "type": "array",
+      "minItems": 4
+    }
+  }
+}

@@ -1,0 +1,23 @@
+schema_version: 1
+name: video-swin-3d-t
+adapter: video_swin
+family: fixed_clip
+
+constructor:
+  variant: swin3d_t
+  checkpoint_path: weights/video_swin/model.pth
+  clip_frames: 32
+  frame_stride: 2
+  image_size: 224
+  feature_stage: backbone_tokens
+  strict_checkpoint: false
+
+checkpoint:
+  constructor_key: checkpoint_path
+  source: torchvision
+  model_id: torchvision.models.video.swin3d_t
+  revision: v0.20.1
+  license: BSD-3-Clause
+  local_path: weights/video_swin/model.pth
+
+upstream_lock: integrations/video_swin/upstream.lock.yaml

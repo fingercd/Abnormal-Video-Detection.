@@ -1,0 +1,52 @@
+schema_version: 1
+name: mukv
+adapter: mukv
+family: streaming_vlm
+constructor:
+  model_name: IMBALDY/MuKV
+  checkout_path: external/mukv
+  model_path: weights/mukv
+  runtime: external_python
+  device: cuda
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: decoder_contextual
+  cache_mode: identity
+  streaming: true
+  chunk_frames: 4
+  strict_assets: true
+  upstream_entrypoint: mukv/model.py:load_model
+  preprocess_profile: mukv-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: local_upstream
+  model_id: IMBALDY/MuKV
+  revision: 2127b875ea1c2d91e4349324edbd779168a3da9e
+  license: unknown
+  local_path: weights/mukv
+input_profile:
+  clip_frames: 4
+  frame_stride: 2
+  image_size: 336
+  sampling: streaming_uniform
+output:
+  feature_stage: decoder_contextual
+  sequence_source: decoder_hidden_state
+  implementation_source: external_worker_facade
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: true
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: decoder_kv
+  compression: disabled
+  owner: language_model_decoder
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/mukv/upstream.lock.yaml

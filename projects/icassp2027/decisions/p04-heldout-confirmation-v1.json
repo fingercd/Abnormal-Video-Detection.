@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "decision": "p04_heldout_confirmation",
+  "date": "2026-09-18",
+  "status": "preregistered_not_executed",
+  "scope": {
+    "encoder_id": "videomaev2",
+    "dataset": "ucf_crime",
+    "official_split": "train",
+    "partition": "confirm",
+    "role": "confirm",
+    "label_policy": "video_weak_only",
+    "official_test_access": false,
+    "method_frozen": false
+  },
+  "exploration_evidence": {
+    "analysis_directory": "outputs/icassp2027/analysis/explore-gpu-v1-20260917T204307Z",
+    "review": "candidate_review.md",
+    "signature": "embedding.output/P04/redundancy_fraction",
+    "hedges_g": 0.5299011817901311,
+    "hedges_g_ci95": [0.21580637281147239, 0.8670880400613777],
+    "matched_difference": 0.056734455934636316,
+    "matched_ci95": [0.025130420926172892, 0.09070749368388152],
+    "category_counterexamples": ["Explosion", "Robbery"],
+    "previous_status": "not_promoted"
+  },
+  "previous_confirm_p04": {
+    "was_read": false,
+    "old_confirm_cohort": "outputs/icassp2027/assets/confirm64-plan-20260917T205233Z/cohort.jsonl",
+    "old_cohort_sha256": "bf6d30676b63488648c3fbd5f71b941a58d2d80b660fc722e0b1f0db66b18c14",
+    "old_id_set_sha256": "5367dcc5e33d33c45bba5dd1a6bbda8a78daac28482e441d00e777d242cefdc5",
+    "reason": "the completed confirm exports contain only the frozen P16/P07 candidate statistics"
+  },
+  "primary_signature": {
+    "site": "embedding.output",
+    "probe_id": "P04",
+    "statistic_name": "redundancy_fraction",
+    "redundancy_similarity": 0.9,
+    "max_sampled_tokens": 256,
+    "clip_aggregation": "equal_mean_of_8_uniform_center_windows",
+    "contrast": "weak_positive_minus_normal",
+    "expected_direction": "positive"
+  },
+  "supporting_diagnostic_not_a_second_candidate": {
+    "probe_id": "P04",
+    "statistic_name": "same_frame_local_cosine_mean",
+    "selection_or_pass_rule": false
+  },
+  "source_lock": {
+    "path": "outputs/icassp2027/assets/frozen192-verified-20260917T200000Z/frozen-partition-lock.json",
+    "sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59",
+    "remaining_after_old_confirm64": {"normal": 48, "positive": 49}
+  },
+  "selection": {
+    "algorithm": "per_label_take_first_32_sorted_by_sha256_utf8_prefix_plus_video_id",
+    "sha256_input_prefix": "p04-heldout-confirmation-v1:20260918:",
+    "canonical_selection_sha256": "3596e2ad7ce60fdd03fe6ac308482d2fe564fce7e3f64310d7da3900d6d3ad60",
+    "normal": ["Normal_Videos011_x264", "Normal_Videos039_x264", "Normal_Videos052_x264", "Normal_Videos089_x264", "Normal_Videos092_x264", "Normal_Videos093_x264", "Normal_Videos094_x264", "Normal_Videos102_x264", "Normal_Videos108_x264", "Normal_Videos221_x264", "Normal_Videos227_x264", "Normal_Videos254_x264", "Normal_Videos328_x264", "Normal_Videos347_x264", "Normal_Videos389_x264", "Normal_Videos395_x264", "Normal_Videos425_x264", "Normal_Videos482_x264", "Normal_Videos506_x264", "Normal_Videos528_x264", "Normal_Videos551_x264", "Normal_Videos565_x264", "Normal_Videos578_x264", "Normal_Videos607_x264", "Normal_Videos628_x264", "Normal_Videos635_x264", "Normal_Videos639_x264", "Normal_Videos664_x264", "Normal_Videos699_x264", "Normal_Videos713_x264", "Normal_Videos757_x264", "Normal_Videos792_x264"],
+    "positive": ["Abuse001_x264", "Abuse016_x264", "Abuse020_x264", "Abuse022_x264", "Abuse035_x264", "Arrest003_x264", "Arrest029_x264", "Assault015_x264", "Assault018_x264", "Assault052_x264", "Burglary058_x264", "Burglary078_x264", "Burglary084_x264", "Burglary091_x264", "Fighting002_x264", "Fighting011_x264", "Fighting013_x264", "Fighting026_x264", "RoadAccidents007_x264", "RoadAccidents088_x264", "RoadAccidents142_x264", "Robbery002_x264", "Robbery004_x264", "Robbery011_x264", "Robbery082_x264", "Robbery107_x264", "Shooting030_x264", "Stealing018_x264", "Stealing022_x264", "Stealing024_x264", "Stealing100_x264", "Vandalism025_x264"]
+  },
+  "sampling": {"kind": "uniform_segment_centers_full_clip", "windows_per_video": 8, "frame_stride": 2, "position": "center"},
+  "controls": {
+    "matching": ["motion_bin", "brightness_bin"],
+    "calibration": "outputs/icassp2027/control/control-calibration-cross-encoder-v2-20260917T213000Z/control_calibration_cross_encoder_v2.json",
+    "fitted_on": "fit_normal_only",
+    "scene_group": "unknown"
+  },
+  "statistics": {
+    "independent_unit": "video",
+    "bootstrap_replicates": 10000,
+    "seed": 20260918,
+    "ci": "two_sided_percentile_95",
+    "matched_weight": "fixed_min_label_count_per_complete_motion_x_brightness_bin",
+    "minimum_retained_videos_per_label": 16
+  },
+  "pass_rule": "raw and matched positive differences both have 95% CIs excluding zero; otherwise rejected_or_inconclusive",
+  "failure_rule": "do_not_change_signature_threshold_layer_or_sample; do_not_start_p04_intervention",
+  "cross_encoder_status": "future_structural_replication_only_not_precommitted"
+}

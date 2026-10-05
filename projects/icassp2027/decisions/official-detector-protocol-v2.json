@@ -1,0 +1,99 @@
+{
+  "schema": "icassp2027.official-detector-protocol/v2",
+  "decision_date": "2026-09-18",
+  "status": "implementation_in_progress_no_official_model_scores_accessed",
+  "author_backend": {
+    "name": "UR-DMU",
+    "repository": "https://github.com/henrryzh1/UR-DMU",
+    "commit": "40cfdf5f8bebbc3b59373935f9d6ca00e2f32bbc",
+    "architecture": "complete_WSAD_with_temporal_embedding_GL_MHSA_dual_memory_uncertainty_and_classifier",
+    "memory_units_normal": 60,
+    "memory_units_anomaly": 60,
+    "optimizer": "Adam",
+    "learning_rate": 0.0001,
+    "betas": [0.9, 0.999],
+    "weight_decay": 0.00005,
+    "optimizer_steps": 3000,
+    "temporal_training_segments": 200,
+    "normal_bags_per_step": 64,
+    "anomaly_bags_per_step": 64,
+    "checkpoint_selection": "fixed_final_step_no_test_selection",
+    "loss": "unchanged_official_AD_Loss",
+    "initialization": "official_random_initialization_per_seed_for_each_new_representation",
+    "seeds": [0, 1, 2]
+  },
+  "primary_comparison": "direct_insert",
+  "secondary_comparison": "refit_head",
+  "direct_insert_contract": "same_encoder_same_seed_dense_checkpoint_bytes_frozen_for_all_reducers",
+  "quality_tolerance": 0.005,
+  "quality_uncertainty": "paired_video_bootstrap_10000_replicates_stratified_by_video_label",
+  "datasets": {
+    "ucf_crime": {
+      "official_train_videos": 1610,
+      "official_train_normal": 800,
+      "official_train_anomalous": 810,
+      "official_test_videos": 290,
+      "encoders": ["videomaev2", "timesformer", "vjepa2", "videomae"],
+      "metric": "frame_roc_auc",
+      "evaluation_coordinates": "existing_audited_raw_decoded_frame_protocol",
+      "author_reproduction_coordinates": "separate_original_I3D_feature_and_author_GT_contract"
+    },
+    "xd_violence": {
+      "official_train_videos": 3954,
+      "official_train_normal": 2049,
+      "official_train_anomalous": 1905,
+      "official_test_videos": 800,
+      "encoders": ["videomaev2", "timesformer"],
+      "metric": "frame_pr_auc_trapezoid",
+      "evaluation_coordinates": "predeclared_author_prefix_16Ti_requires_full800_raw_alignment_seal",
+      "name_group_isolated_1598": "supplementary_robustness_only"
+    }
+  },
+  "training_view": {
+    "name": "official-fulltrain-final",
+    "construction": "new_view_union_of_original_fit_confirm_select_preserving_original_role_metadata",
+    "require_complete_official_identity_set": true,
+    "missing_or_corrupt_records": "block_complete_training_claim_and_repair_before_execution",
+    "old_role_locks_and_runs": "immutable_historical_development_evidence",
+    "new_encoder_features": "full_native_dense_sequence_then_author_equal_bin_mean_200",
+    "new_encoder_crops": 1,
+    "new_encoder_crop_policy": "existing_frozen_native_preprocessing_identical_across_compared_methods",
+    "short_sequence_bins": "author_empty_bin_rule_select_corresponding_existing_clip",
+    "bin_index_dtype": "int64",
+    "original_32_clip_features": "engineering_only_not_upsampled_to_claim_dense_coverage"
+  },
+  "methods": {
+    "reference": "identity",
+    "control": "global_uniform",
+    "training_free_candidate": "paired_random",
+    "learned_candidate": "pair_linear",
+    "plugin_policy_source": "reducer-evaluation-freeze-v1.json",
+    "plugin_weights": "existing_UCF_fit_only_frozen_calibration_reused_without_XD_recalibration",
+    "no_new_test_based_selection": true,
+    "novelty_status": "not_established_requires_strong_compression_comparisons_and_evidence_review"
+  },
+  "author_reproduction": {
+    "scope": "public_I3D_features_and_released_checkpoints_separate_reference_run",
+    "ucf_checkpoint_sha256": "2a64562df08a4142b19067fe46f07c6fdaf9923de36ded1b827489d6196429cd",
+    "xd_checkpoint_sha256": "f30e9fa84d9eb680b7b13d0c5d7406b11e53dcdf37f3827fcc8899d2448f3d9b",
+    "original_crops": {"ucf_crime": 10, "xd_violence": 5},
+    "new_encoder_checkpoint_transfer": false,
+    "original_feature_assets_ready": false,
+    "paper_score_reproduced": false
+  },
+  "resources": {
+    "primary_gpu": "node3_A100_all_eight_authorized",
+    "ordinary_quality": "explicit_sharing_with_per_run_lease_and_memory_budget",
+    "formal_timing": "exclusive_gpu_with_foreign_process_and_noise_checks",
+    "existing_V100_clip_results": "reference_only"
+  },
+  "execution_gates": [
+    "strict_upstream_model_and_loss_acceptance",
+    "complete_authoritative_official_training_view",
+    "native_dense_feature_sampling_and_content_identity",
+    "finite_nonzero_training_gradients_parameter_updates_and_exact_checkpoint_reload",
+    "fixed_dense_checkpoint_same_seed_for_direct_insert",
+    "dataset_audit_and_coordinate_seal_before_test_scoring",
+    "same_input_preprocessing_precision_sampling_and_readout_across_methods"
+  ]
+}

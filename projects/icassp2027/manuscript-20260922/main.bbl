@@ -1,0 +1,110 @@
+\begin{thebibliography}{10}
+
+\bibitem{sultani2018real}
+Waqas Sultani, Chen Chen, and Mubarak Shah,
+\newblock ``Real-world anomaly detection in surveillance videos,''
+\newblock in {\em Proc. IEEE/CVF CVPR}, 2018, pp. 6479--6488.
+
+\bibitem{tian2021rtfm}
+Yu~Tian, Guansong Pang, Yuanhong Chen, Rajvinder Singh, Johan~W. Verjans, and
+  Gustavo Carneiro,
+\newblock ``Weakly-supervised video anomaly detection with robust temporal
+  feature magnitude learning,''
+\newblock in {\em Proc. IEEE/CVF ICCV}, 2021, pp. 4955--4966.
+
+\bibitem{zhou2023urdmu}
+Hang Zhou, Junqing Yu, and Wei Yang,
+\newblock ``Dual memory units with uncertainty regulation for weakly supervised
+  video anomaly detection,''
+\newblock in {\em Proc. AAAI}, 2023, vol.~37, pp. 3769--3777.
+
+\bibitem{wu2024vadclip}
+Peng Wu, Xuerong Zhou, Guansong Pang, Lingru Zhou, Qingsen Yan, Peng Wang, and
+  Yanning Zhang,
+\newblock ``{VadCLIP}: Adapting vision-language models for weakly supervised
+  video anomaly detection,''
+\newblock in {\em Proc. AAAI}, 2024.
+
+\bibitem{yin2026learning}
+Wenti Yin, Huaxin Zhang, Xiang Wang, Yuqing Lu, Yicheng Zhang, Bingquan Gong,
+  Jialong Zuo, Li~Yu, Changxin Gao, and Nong Sang,
+\newblock ``Learning to tell apart: Weakly supervised video anomaly detection
+  via disentangled semantic alignment,''
+\newblock in {\em Proceedings of the AAAI Conference on Artificial
+  Intelligence}, 2026, vol.~40, pp. 12027--12035.
+
+\bibitem{tong2022videomae}
+Zhan Tong, Yibing Song, Jue Wang, and Limin Wang,
+\newblock ``{VideoMAE}: Masked autoencoders are data-efficient learners for
+  self-supervised video pre-training,''
+\newblock in {\em Advances in Neural Information Processing Systems}, 2022,
+  vol.~35.
+
+\bibitem{wang2023videomaev2}
+Limin Wang, Bingkun Huang, Zhiyu Zhao, Zhan Tong, Yinan He, Yi~Wang, Yali Wang,
+  and Yu~Qiao,
+\newblock ``{VideoMAE V2}: Scaling video masked autoencoders with dual
+  masking,''
+\newblock in {\em Proc. IEEE/CVF CVPR}, 2023, pp. 14549--14560.
+
+\bibitem{fayyaz2022ats}
+Mohsen Fayyaz, Soroush {Abbasi Kouhpayegani}, Farnoush {Rezaei Jafari}, Eric
+  Sommerlade, Hamid~Reza {Vaezi Joze}, Hamed Pirsiavash, and Juergen Gall,
+\newblock ``Adaptive token sampling for efficient vision transformers,''
+\newblock in {\em Proc. ECCV}, 2022.
+
+\bibitem{bolya2023tome}
+Daniel Bolya, Cheng-Yang Fu, Xiaoliang Dai, Peizhao Zhang, Christoph
+  Feichtenhofer, and Judy Hoffman,
+\newblock ``Token merging: Your {ViT} but faster,''
+\newblock in {\em Proc. ICLR}, 2023.
+
+\bibitem{wu2020xd}
+Peng Wu, Jing Liu, Yujia Shi, Yujia Sun, Fangtao Shao, Zhaoyang Wu, and Zhiwei
+  Yang,
+\newblock ``Not only look, but also listen: Learning multimodal violence
+  detection under weak supervision,''
+\newblock in {\em Proc. ECCV}, 2020, pp. 322--339.
+
+\bibitem{bertasius2021timesformer}
+Gedas Bertasius, Heng Wang, and Lorenzo Torresani,
+\newblock ``Is space-time attention all you need for video understanding?,''
+\newblock in {\em Proc. ICML}, 2021, vol. 139 of {\em PMLR}, pp. 813--824.
+
+\bibitem{rao2021dynamicvit}
+Yongming Rao, Wenliang Zhao, Benlin Liu, Jiwen Lu, Jie Zhou, and Cho-Jui Hsieh,
+\newblock ``{DynamicViT}: Efficient vision transformers with dynamic token
+  sparsification,''
+\newblock in {\em Advances in Neural Information Processing Systems}, 2021,
+  vol.~34.
+
+\bibitem{liang2022evit}
+Youwei Liang, Chongjian Ge, Zhan Tong, Yibing Song, Jue Wang, and Pengtao Xie,
+\newblock ``Not all patches are what you need: Expediting vision transformers
+  via token reorganizations,''
+\newblock in {\em Proc. ICLR}, 2022.
+
+\bibitem{chen2023evad}
+Lei Chen, Zhan Tong, Yibing Song, Gangshan Wu, and Limin Wang,
+\newblock ``Efficient video action detection with token dropout and context
+  refinement,''
+\newblock in {\em Proc. IEEE/CVF ICCV}, 2023.
+
+\bibitem{liu2026esom}
+Zihao Liu, Xiaoyu Wu, Wenna Li, Jianqin Wu, and Linlin Yang,
+\newblock ``{ESOM}: Efficiently understanding streaming video anomalies with
+  open-world dynamic definitions,''
+\newblock {\em arXiv preprint arXiv:2604.07772}, 2026.
+
+\bibitem{dai2026lavida}
+Zunkai Dai, Ke~Li, Jiajia Liu, Jie Yang, and Yuanyuan Qiao,
+\newblock ``No need for real anomaly: {MLLM} empowered zero-shot video anomaly
+  detection,''
+\newblock in {\em Proc. IEEE/CVF CVPR}, 2026.
+
+\bibitem{darcet2024registers}
+Timoth{\'e}e Darcet, Maxime Oquab, Julien Mairal, and Piotr Bojanowski,
+\newblock ``Vision transformers need registers,''
+\newblock in {\em Proc. ICLR}, 2024.
+
+\end{thebibliography}

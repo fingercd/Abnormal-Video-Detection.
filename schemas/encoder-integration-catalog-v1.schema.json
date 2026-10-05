@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fingercd.github.io/Abnormal-Video-Detection/schemas/encoder-integration-catalog-v1.schema.json",
+  "title": "VADBench encoder integration catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "integrations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "integrations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/integration"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+    },
+    "relative_yaml_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9._/-]+\\.ya?ml$"
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime",
+        "profile"
+      ],
+      "properties": {
+        "runtime": {
+          "enum": [
+            "in_process",
+            "external_python"
+          ]
+        },
+        "profile": {
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_id",
+        "status"
+      ],
+      "properties": {
+        "registry_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "status": {
+          "enum": [
+            "planned",
+            "registered",
+            "verified"
+          ]
+        }
+      }
+    },
+    "smoke_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "clip_frames",
+        "frame_stride",
+        "image_size",
+        "chunks"
+      ],
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "clip_frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frame_stride": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "image_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chunks": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supports_fixed_clip",
+        "supports_streaming",
+        "supports_kv_cache",
+        "supports_token_cache",
+        "supports_visual_memory_cache",
+        "supports_external_cache_policy",
+        "supports_training",
+        "fixed_num_frames",
+        "min_frames",
+        "max_frames"
+      ],
+      "properties": {
+        "supports_fixed_clip": {
+          "type": "boolean"
+        },
+        "supports_streaming": {
+          "type": "boolean"
+        },
+        "supports_kv_cache": {
+          "type": "boolean"
+        },
+        "supports_token_cache": {
+          "type": "boolean"
+        },
+        "supports_visual_memory_cache": {
+          "type": "boolean"
+        },
+        "supports_external_cache_policy": {
+          "type": "boolean"
+        },
+        "supports_training": {
+          "type": "boolean"
+        },
+        "fixed_num_frames": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "min_frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_frames": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "family",
+        "status",
+        "definition",
+        "adapter_target",
+        "backend",
+        "run_mode",
+        "feature_stage",
+        "environment",
+        "upstream_lock",
+        "checkpoint",
+        "smoke_profile",
+        "capabilities"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "$ref": "#/$defs/identifier"
+        },
+        "status": {
+          "enum": [
+            "planned",
+            "integrated",
+            "blocked"
+          ]
+        },
+        "definition": {
+          "$ref": "#/$defs/relative_yaml_path"
+        },
+        "adapter_target": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+        },
+        "backend": {
+          "$ref": "#/$defs/identifier"
+        },
+        "run_mode": {
+          "enum": [
+            "fixed",
+            "long",
+            "streaming"
+          ]
+        },
+        "feature_stage": {
+          "enum": [
+            "pooled",
+            "fc_features",
+            "backbone_tokens",
+            "last_hidden_state",
+            "observed_backbone",
+            "projected_visual",
+            "visual_memory",
+            "decoder_contextual"
+          ]
+        },
+        "environment": {
+          "$ref": "#/$defs/environment"
+        },
+        "upstream_lock": {
+          "$ref": "#/$defs/relative_yaml_path"
+        },
+        "checkpoint": {
+          "$ref": "#/$defs/checkpoint"
+        },
+        "smoke_profile": {
+          "$ref": "#/$defs/smoke_profile"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/capabilities"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "run_mode": {
+                "const": "streaming"
+              }
+            },
+            "required": [
+              "run_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "smoke_profile": {
+                "properties": {
+                  "chunks": {
+                    "minimum": 2
+                  }
+                },
+                "required": [
+                  "chunks"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+schema_version: 1
+integration: videochat_online
+
+source:
+  repository: https://github.com/MCG-NJU/VideoChat-Online
+  branch: main
+  default_branch: main
+  commit: 012712affb74681b88a317656a1effcf7b095933
+  commit_url: https://github.com/MCG-NJU/VideoChat-Online/commit/012712affb74681b88a317656a1effcf7b095933
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: NOASSERTION
+  file: null
+  url: https://github.com/MCG-NJU/VideoChat-Online
+
+entrypoints:
+  loader: internvl/model.py:load_model
+  visual_memory: internvl/model.py:extract_feature
+  streaming: lmms-eval-ovbench
+
+weights:
+  provider: huggingface
+  model_id: MCG-NJU/VideoChatOnline-4B
+  revision: 7373f325b9265527b9363f231b168a14523ac875
+  local_dir: weights/videochat-online
+  sha256:
+    model-00001-of-00002.safetensors: 90e6a81a96bbf548f4702b235662540bbe21db0a10549903440dc9c6e6c5b0aa
+    model-00002-of-00002.safetensors: ce16c31343c1bd7a4a2156bec2cd52ef49d7a5505cdca3ee7da51537437649ab
+  size_bytes: 8293711872
+  status: verified
+
+integration_notes:
+  - 当前公开实现的 Pyramid Memory Bank 以 ViT feature memory 为主；KV 版本尚未作为本 lock 的运行前提。
+  - adapter 将 memory bank 暴露为 visual_memory，并显式传递 StreamState。
+  - 仓库根目录未观察到明确许可证文件，代码/权重使用前必须完成许可审计。
+  - 官方 checkpoint 尚需按仓库说明准备，缺失时保留结构化 blocked/missing_asset 证据。

@@ -1,0 +1,34 @@
+schema_version: 1
+name: internvideo2
+adapter: internvideo2
+family: video_foundation
+constructor:
+  model_name: OpenGVLab/InternVideo2-Stage2_1B-224p-f4
+  model_path: weights-v2/internvideo2
+  checkout_path: external-v2/internvideo2
+  runtime: external_python
+  upstream_entrypoint: vadbench_upstream:load_model
+  num_frames: 16
+  image_size: 224
+  device: cuda
+  feature_stage: backbone_tokens
+  preprocess_profile: internvideo2-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: official
+  model_id: OpenGVLab/InternVideo2-Stage2_1B-224p-f4
+  revision: planned
+  license: apache-2.0
+  local_path: weights-v2/internvideo2
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: true
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+upstream_lock: integrations/internvideo2/upstream.lock.yaml

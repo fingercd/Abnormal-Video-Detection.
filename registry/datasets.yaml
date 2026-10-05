@@ -1,0 +1,36 @@
+schema_version: 1
+
+datasets:
+  ucf-crime:
+    source:
+      repository: https://github.com/WaqasSultani/AnomalyDetectionCVPR2018
+      commit: 8aa957cdaa7eac821e07115fe63920c3b07da59d
+      verified_on: "2026-08-31"
+    files:
+      train_split:
+        name: Anomaly_Train.txt
+        local_path: data/splits/ucf_crime/Anomaly_Train.txt
+        url: https://raw.githubusercontent.com/WaqasSultani/AnomalyDetectionCVPR2018/8aa957cdaa7eac821e07115fe63920c3b07da59d/Anomaly_Train.txt
+        sha256: ea91e03de7581bfa6b139e663ebb7511ab1651c33427f85741d3f497a2027744
+        lines: 1610
+      temporal_test_annotations:
+        name: Temporal_Anomaly_Annotation.txt
+        local_path: data/splits/ucf_crime/Temporal_Anomaly_Annotation.txt
+        url: https://raw.githubusercontent.com/WaqasSultani/AnomalyDetectionCVPR2018/8aa957cdaa7eac821e07115fe63920c3b07da59d/Temporal_Anomaly_Annotation.txt
+        sha256: 3b9542413f2ed9e94f73bf0488c151b3d7d595a8d2ad30f524e9243a2ae2a17c
+        lines: 290
+    expected_split:
+      train:
+        total: 1610
+        normal: 800
+        anomaly: 810
+      test:
+        total: 290
+        normal: 150
+        anomaly: 140
+    coordinates:
+      official: matlab_1_based_inclusive
+      internal: zero_based_half_open
+      conversion: "[raw_start - 1, raw_end)"
+    dataset_terms: >-
+      视频本体不随本仓库再分发；使用前需遵守 UCF 官方下载页面和原始视频来源的条款。

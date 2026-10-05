@@ -1,0 +1,52 @@
+schema_version: 1
+name: moviechat
+adapter: moviechat
+family: streaming_vlm
+constructor:
+  model_name: Enxin/MovieChat-vicuna
+  checkout_path: external-v2/moviechat
+  model_path: weights-v2/moviechat
+  runtime: external_python
+  device: cuda
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: visual_memory
+  cache_mode: identity
+  streaming: true
+  chunk_frames: 4
+  strict_assets: true
+  upstream_entrypoint: moviechat/models/moviechat.py:from_config
+  preprocess_profile: moviechat-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: Enxin/MovieChat-vicuna
+  revision: ba9bb802ea209c6d8e8b4333ec917ae3aee55b1d
+  license: bsd-3-clause
+  local_path: weights-v2/moviechat
+input_profile:
+  clip_frames: 4
+  frame_stride: 2
+  image_size: 224
+  sampling: streaming_uniform
+output:
+  feature_stage: visual_memory
+  sequence_source: short_long_memory
+  implementation_source: external_worker_facade
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: true
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: visual_memory
+  compression: disabled
+  owner: short_and_long_term_memory
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/moviechat/upstream.lock.yaml

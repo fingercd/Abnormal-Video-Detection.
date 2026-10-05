@@ -1,0 +1,45 @@
+schema_version: 1
+name: i3d
+adapter: i3d
+family: fixed_clip
+
+# The sampler owns temporal selection.  The adapter receives the resulting
+# BTHWC clip and records these values in its output provenance.
+sampler:
+  clip_frames: 8
+  frame_stride: 8
+
+constructor:
+  variant: i3d_r50
+  checkpoint_path: weights/i3d/model.pyth
+  clip_frames: 8
+  frame_stride: 8
+  image_size: 256
+  resize_size: 256
+  crop_size: 256
+  feature_stage: pooled
+  device: cuda
+  strict_checkpoint: false
+
+checkpoint:
+  constructor_key: checkpoint_path
+  source: pytorchvideo
+  model_id: pytorchvideo/I3D_8x8_R50
+  url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/I3D_8x8_R50.pyth
+  revision: pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  license: apache-2.0
+  local_path: weights/i3d/model.pyth
+
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: true
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+
+upstream_lock: integrations/i3d/upstream.lock.yaml

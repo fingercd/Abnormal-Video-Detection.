@@ -1,0 +1,51 @@
+schema_version: 1
+name: streaming-vlm
+adapter: streaming_vlm
+family: streaming_vlm
+constructor:
+  model_name: mit-han-lab/StreamingVLM
+  checkout_path: external-v2/streaming-vlm
+  model_path: weights/streaming-vlm
+  runtime: in_process
+  device: cpu
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: decoder_contextual
+  cache_mode: identity
+  streaming: true
+  chunk_frames: 1
+  strict_assets: true
+  preprocess_profile: streaming-vlm-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: mit-han-lab/StreamingVLM
+  revision: 7ac1cef46d20432053a9814838760318cb26b348
+  license: mit
+  local_path: weights/streaming-vlm
+input_profile:
+  clip_frames: 2
+  frame_stride: 2
+  image_size: 448
+  sampling: streaming_uniform
+output:
+  feature_stage: decoder_contextual
+  sequence_source: decoder_hidden_state
+  implementation_source: native_upstream
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: true
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: decoder_kv
+  compression: disabled
+  owner: language_model_decoder
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/streaming_vlm/upstream.lock.yaml

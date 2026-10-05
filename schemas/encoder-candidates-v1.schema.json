@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VADBench encoder candidate registry v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "target_count",
+    "runtime_target_count",
+    "candidates"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "target_count": {
+      "const": 25
+    },
+    "runtime_target_count": {
+      "const": 21
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "group",
+          "registration_state",
+          "asset_state",
+          "license_state",
+          "upstream_lock",
+          "checkpoint"
+        ]
+      }
+    }
+  }
+}

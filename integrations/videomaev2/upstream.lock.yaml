@@ -1,0 +1,33 @@
+schema_version: 1
+integration: videomaev2
+
+source:
+  repository: https://github.com/OpenGVLab/VideoMAEv2
+  branch: master
+  default_branch: master
+  commit: 29eab1e8a588d1b3ec0cdec7b03a86cca491b74b
+  commit_url: https://github.com/OpenGVLab/VideoMAEv2/commit/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b
+  verified_with: gh-api
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/OpenGVLab/VideoMAEv2/blob/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b/LICENSE
+
+entrypoints:
+  classification: run_class_finetuning.py
+  backbone: models/modeling_finetune.py
+
+weights:
+  provider: huggingface
+  model_id: OpenGVLab/VideoMAEv2-Base
+  revision: 78c337a418cc4adaf7f1ff6c7ba343418393966b
+  license: cc-by-nc-4.0
+  local_dir: weights/videomaev2-base-hf
+  sha256:
+    model.safetensors: ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d
+
+integration_notes:
+  - 固定帧 clip 编码，不声明 streaming、decoder KV cache 或 vision token cache。
+  - VADBench 复用仓库现有 lab_anomaly.models.vit_video_encoder.VideoMAEv2Encoder。

@@ -1,0 +1,42 @@
+schema_version: 1
+integration: c3d
+
+source:
+  repository: https://github.com/facebookarchive/C3D
+  branch: master
+  default_branch: master
+  commit: 71336a2202e7d605a138c239f56be7b8fcfaaf5b
+  commit_url: https://github.com/facebookarchive/C3D/commit/71336a2202e7d605a138c239f56be7b8fcfaaf5b
+  verified_with: github-api
+  verified_on: "2026-08-31"
+
+license:
+  spdx: CC-BY-NC-4.0
+  file: LICENSE
+  url: https://github.com/facebookarchive/C3D/blob/master/LICENSE
+
+entrypoints:
+  constructor: caffe.Net
+  adapter: vadbench.integrations.legacy:LegacyVideoAdapter
+
+weights:
+  provider: manual
+  model_id: C3D_Sports1M
+  url: null
+  revision: Sports1M
+  license: CC-BY-NC-4.0
+  local_dir: weights/c3d
+  filename: model.caffemodel
+  sha256: {}
+  size_bytes: null
+  status: planned
+
+runtime:
+  python: "2.7 or isolated compatibility environment"
+  dependency: caffe
+  network_policy: local_only
+
+integration_notes:
+  - C3D 是官方归档的 legacy Caffe 路线；adapter 不在主进程导入 caffe。
+  - 服务器必须显式准备 checkout、prototxt 和 Sports1M/corresponding checkpoint；缺失资产会结构化 fail-closed。
+  - 本锁文件不声称当前服务器已下载公开 Sports1M 权重，也不把 mock/随机权重计为 smoke PASS。

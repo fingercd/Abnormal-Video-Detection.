@@ -1,0 +1,11 @@
+# 25-route current-video smoke matrix. Heavy weights and raw videos stay outside Git.
+schema_version: 1
+video: data/smoke/mlvu-surveil-8.mp4
+output_root: outputs/encoder-integration/current-video
+encoder:
+  device: cpu
+streaming:
+  compression:
+    policy: identity
+matrix:
+  native_route_results: true

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "status": "algorithm_and_budget_frozen_before_official_model_scores",
+  "frozen_at_utc": "2026-09-18T01:07:09Z",
+  "implementation_commit": "5e95107480c16fd3ccdc6ac8cdde92e7904bc513",
+  "annotation_policy": "W",
+  "active_encoders": ["videomaev2", "timesformer", "vjepa2", "videomae"],
+  "primary_quality_tolerance": 0.005,
+  "primary_quality_mode": "refit_head",
+  "secondary_quality_mode": "direct_insert",
+  "methods": {
+    "dense": {"reducer": "identity"},
+    "same_budget_control": {"reducer": "global_uniform"},
+    "training_free": {
+      "reducer": "paired_random",
+      "seed": 0,
+      "mask_scope": "one_static_mask_per_native_geometry_shared_across_all_clips_and_batch_sizes",
+      "selection_unit": "horizontal_neighbor_pair; complete_trajectory_pair_for_timesformer",
+      "position": "selected_member_original_native_position",
+      "retained_mass": "unit_mass; discarded_tokens_not_reassigned"
+    },
+    "trainable": {
+      "reducer": "pair_linear",
+      "parameters": "one_bias_free_shared_vector_w_of_hidden_width_D_per_encoder",
+      "operation": "softmax_of_two_linear_scores_then_weighted_pair_mean",
+      "timesformer": "mean_logits_over_complete_time_trajectory_and_share_pair_weights",
+      "position": "first_member_original_native_anchor; explicit_approximation",
+      "training_inference_operation_identical": true,
+      "teacher_available_during_deployment": false,
+      "calibration": {
+        "videos": 128,
+        "clips": 256,
+        "role": "fit",
+        "manifest_sha256": "7dc3092e63294c65cc8896292cf4f1fea9d95cbaa3f7c5cb15153aa5435b64ac",
+        "cases_sha256": "18210e83bca96fab275cfa3c12e22d746cdc07eb0272b62d7dc54e750c6f2d5c",
+        "role_lock_sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59",
+        "epochs": 3,
+        "batch_size": 1,
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "weight_decay": 0.0,
+        "seed": 0,
+        "sample_order": "seeded_epoch_permutation",
+        "initialization": "zeros",
+        "loss": "per_clip_relative_actual_adapter_pooled_mse",
+        "checkpoint": "last_epoch_after_training_QA",
+        "primary_runtime": "same_encoder_runtime_as_server_quality_pipeline",
+        "local_runtime_runs": "separate_engineering_replication_not_additional_independent_videos"
+      }
+    }
+  },
+  "shared_reduction": {
+    "insertion": "after_block_at_ceil_0.5_times_native_block_count_minus_1",
+    "patch_keep_ratio": 0.5,
+    "real_cls": "preserve_if_native",
+    "online_inputs": "current_model_state_and_frozen_calibration_only",
+    "no_ground_truth_or_video_identity_in_reducer": true
+  },
+  "detection_head": {
+    "name": "TopKMIL",
+    "k": 3,
+    "dropout": 0.0,
+    "loss": "video_level_BCE_only",
+    "epochs": 20,
+    "batch_size": 16,
+    "optimizer": "AdamW",
+    "learning_rate": 0.001,
+    "weight_decay": 0.0,
+    "primary_seed": 0,
+    "key_configuration_seeds": [0, 1, 2],
+    "checkpoint": "last_epoch_after_training_QA"
+  },
+  "sampling": {
+    "native_clip_frames": {"videomaev2": 16, "timesformer": 8, "videomae": 16, "vjepa2": 64},
+    "frame_stride": 2,
+    "short_policy": "stride1_if_needed",
+    "head_fit_select_clips_per_video": 32,
+    "evaluation": "dense_complete_score_frame_coverage",
+    "evaluation_window_stride": {"videomaev2": 16, "timesformer": 8, "videomae": 16, "vjepa2": 64},
+    "precision": "float32",
+    "processor_tensor_type": {"timesformer": "np", "videomae": "np"}
+  },
+  "ucf_evaluation": {
+    "metric": "decoded_frame_micro_roc_auc",
+    "source_end_policy": "source_end_reconciled_decoded_v1",
+    "sealed_test_manifest_sha256": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+    "sealed_audit_sha256": "d7568104f4607059fa02b1303ea5461123c15eb4b4a78e0aafd00351ee2d9e4a"
+  },
+  "xd_evaluation": {
+    "metric": "canonical_feature_grid_precision_recall_trapezoid_area",
+    "coordinate_metadata_sha256": "a03cdc6860326d52d0a767d4784e73e7f7c72a9b38cd2017a9c23ed3263537ce",
+    "raw_coordinate_alignment": "still_blocked_pending_dataset_only_unique_mapping_audit",
+    "additional_calibration_on_xd": false
+  },
+  "access_gates": {
+    "official_model_scores_already_accessed": false,
+    "dataset_only_protocol_alignment_now_allowed": true,
+    "official_model_evaluation_requires": [
+      "completed_dataset_audit",
+      "completed_actual_native_deployment_checks",
+      "completed_required_calibration_and_head_training_QA",
+      "matched_input_sampling_preprocessing_readout_precision_and_runtime"
+    ],
+    "no_test_based_method_layer_budget_threshold_seed_or_checkpoint_selection": true
+  },
+  "claims_not_established": ["anomaly_specific_reducer", "quality_noninferiority", "net_speedup", "peak_memory_reduction"],
+  "negative_evidence_retained": ["joint_four_encoder_properties_not_confirmed", "score_ranking_worse_than_paired_random_in_fit26", "equal_pair_mean_worse_than_paired_random_in_fit26"]
+}

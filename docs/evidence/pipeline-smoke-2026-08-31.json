@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "date": "2026-08-31",
+  "protocol": "synthetic-feature-pipeline-smoke",
+  "fixture": "scripts/create_pipeline_smoke_fixture.py",
+  "training": {
+    "task": "weak_mil",
+    "feature_dim": 4,
+    "train_videos": 4,
+    "clips_per_video": 2,
+    "batch_size": 2,
+    "global_steps": 1,
+    "epochs_completed": 1,
+    "status": "max_steps_reached",
+    "checkpoint_size_bytes": 33645,
+    "checkpoint_sha256": "a60a6c3396e07bfaccbc0a0c564f265f4712015972c37e49551a4e02bec47767"
+  },
+  "evaluation": {
+    "test_videos": 2,
+    "frames": 8,
+    "positive_frames": 2,
+    "frame_auc": 1.0,
+    "frame_ap": 1.0
+  },
+  "server_replay": {
+    "host": "ibnode3",
+    "status": "passed",
+    "global_steps": 1,
+    "checkpoint_sha256": "d27ec99c2b745330579946136b39f1dafce6cac03fac0c26cda905df6073e8d0",
+    "checkpoint_size_bytes": 35722,
+    "frame_auc": 1.0,
+    "frame_ap": 1.0
+  },
+  "commands": [
+    "python scripts/create_pipeline_smoke_fixture.py outputs/pipeline-smoke-fixture",
+    "python -m vadbench train -c outputs/pipeline-smoke-fixture/config.yaml --features outputs/pipeline-smoke-fixture/features --max-steps 1",
+    "python -m vadbench evaluate -c outputs/pipeline-smoke-fixture/config.yaml --predictions outputs/pipeline-smoke-fixture/predictions.jsonl --output outputs/pipeline-smoke-fixture/evaluation/metrics.json"
+  ],
+  "limitations": [
+    "This proves CLI/data/feature/head/checkpoint/evaluator wiring only.",
+    "Synthetic features and predictions make the perfect AUC/AP non-comparable to UCF-Crime results.",
+    "No benchmark claim is made until the complete official dataset is present."
+  ]
+}

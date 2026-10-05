@@ -1,0 +1,13 @@
+\begin{table*}[!t]
+\centering\small
+\caption{A100 encoder efficiency using XD training inputs. Block GFLOPs cover principal blocks per input. B32 measures prepared GPU input to encoder output, including selection (clips/s for video encoders; images/s for CLIP). Speedups use matching dense baselines. Bold marks the optimum within each system (arrows give direction).}
+\label{tab:efficiency}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+System & Delete & Block GFLOPs$\downarrow$ & B32 ms$\downarrow$ & Inputs/s$\uparrow$ & Encoder $\times\uparrow$\\
+\midrule
+\tableinput{tables/efficiency_rows}
+\bottomrule
+\end{tabular}
+\end{table*}

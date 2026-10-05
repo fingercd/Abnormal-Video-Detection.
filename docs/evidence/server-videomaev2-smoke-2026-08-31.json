@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "date": "2026-08-31",
+  "host": "ibnode3",
+  "project_commit": "9b65682b5559b3bd4b777d8398b69f460ef1243c",
+  "runtime": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu124",
+    "transformers": "4.56.1",
+    "device": "cpu"
+  },
+  "adapter": "videomaev2",
+  "checkpoint_id": "videomaev2-base-hf",
+  "checkpoint_sha256": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d",
+  "input": {
+    "path": "data/smoke/surveillance-smoke.mp4",
+    "num_frames": 64,
+    "fps": 1.0,
+    "width": 320,
+    "height": 240
+  },
+  "output": {
+    "features_shape": [1, 1568, 768],
+    "features_dtype": "torch.float32",
+    "pooled_shape": [1, 768],
+    "timeline_tokens": 1568,
+    "sequence_source": "observed_backbone",
+    "timeline_policy": "uniform_token_to_frame_approximation"
+  },
+  "elapsed_seconds": 6.646298503503203,
+  "peak_gpu_memory_bytes": null,
+  "additional_real_surveillance_sample": {
+    "source": "https://github.com/aiha-lab/InfiniPot-V/blob/main/sample/video/6_anomaly_reco/surveil_8.mp4",
+    "sha256": "5c7dd43429c5e556de67489920a799af8fdb614a089ab52c04b1c3b044703963",
+    "path": "data/smoke/mlvu-surveil-8.mp4",
+    "num_frames": 6716,
+    "fps": 30.0,
+    "duration_seconds": 223.86666666666667,
+    "features_shape": [1, 1568, 768],
+    "pooled_shape": [1, 768],
+    "elapsed_seconds": 6.333140004426241
+  },
+  "limitations": [
+    "The server GPU pool was occupied, so this fixed-clip smoke used CPU.",
+    "This proves real checkpoint loading and server inference, not UCF-Crime accuracy.",
+    "The primary generated input is not a benchmark video; a second public surveillance-anomaly sample was also verified but is not UCF-Crime."
+  ]
+}

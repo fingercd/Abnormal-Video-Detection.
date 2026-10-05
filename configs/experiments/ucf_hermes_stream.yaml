@@ -1,0 +1,50 @@
+schema_version: 1
+
+dataset:
+  name: ucf_crime
+  root: data/raw/ucf_crime
+  train_manifest: data/manifests/ucf_crime/train.jsonl
+  test_manifest: data/manifests/ucf_crime/test.jsonl
+
+sampler:
+  # Same 32 sampled clips as VideoMAE; HERMES carries state between ordered clips.
+  kind: uniform_segments
+  segments_per_video: 32
+  clip_frames: 16
+  frame_stride: 2
+
+encoder:
+  adapter: hermes_llava_ov
+  checkpoint: hermes-llava-ov-0.5b
+  trainable: false
+  params:
+    feature_stage: decoder_contextual
+    native_compression_mode: "off"
+
+streaming:
+  enabled: true
+  chunk_frames: 16
+  compression:
+    cache_kind: decoder_kv
+    policy: identity
+
+task:
+  kind: weak_mil
+  supervision: video
+  pooling: attention
+  classification_weight: 1.0
+  ranking_weight: 0.0
+
+training:
+  feature_level: clip
+  batch_size: 2
+  epochs: 1
+  learning_rate: 0.001
+  weight_decay: 0.0
+  seed: 0
+  num_workers: 0
+  assume_unannotated_is_normal: false
+
+output:
+  root: outputs
+  run_name: ucf-hermes-stream

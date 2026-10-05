@@ -1,0 +1,57 @@
+\section{PairSelect}
+\label{sec:method}
+\begin{table}[!b]
+\centering\small
+\caption{Actual token counts entering blocks 7--12. Headers specify nominal deletion; CLS is included when present. Video encoders count tokens per clip; CLIP counts per image.}
+\label{tab:budgets}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Visual encoder + detector & Dense & 20\% & 40\% & 60\%\\
+\midrule
+\tableinput{tables/theory_rows}
+\bottomrule
+\end{tabular}
+\end{table}
+\input{figures/quality_table}
+
+\subsection{Direct insertion into frozen systems}
+Let $E_{1:b}$ and $E_{b+1:L}$ be the prefix and suffix of a pretrained visual encoder, $R$ its readout, and $H$ its temporal detection head. For scheduled visual inputs $\{v_t\}_{t=1}^{M}$,
+\begin{equation}
+ z_t^{(r)}=R\!\left(E_{b+1:L}\!\left(S_r(E_{1:b}(v_t))\right)\right),
+ \quad \hat{\boldsymbol y}^{(r)}=H(\{z_t^{(r)}\}_{t=1}^{M}).
+ \label{eq:pipeline}
+\end{equation}
+Only the selection operator $S_r$ is inserted, with retention ratio $r$. All four visual encoders use $L=12$, $b=6$. The original input schedule, feature dimension, temporal aggregation, and head weights are preserved. For the three video backbones, each UR-DMU head is trained once on the corresponding dense training features; DSANet uses the authors' released detector weights. \emph{Training-free} refers to inserting and changing the compression operator, not to training the original systems.
+
+Local redundancy motivates comparisons among neighboring patches, while selection avoids introducing additional vector mixtures at the insertion point. Activation magnitude provides an inexpensive preference, inspired by magnitude-aware sampling~\cite{fayyaz2022ats}. It is not an anomaly probability~\cite{darcet2024registers}; the local quota prevents an unconstrained global ranking from concentrating the entire budget in a few regions.
+
+\subsection{Local quotas and member priority}
+For VideoMAE, VideoMAEv2, and CLIP, spatially adjacent horizontal patches form pairs ordered by native coordinates. Each consecutive group contains at most ten patch tokens (five pairs). A group of $n_g$ tokens receives
+\begin{equation}
+ q_g(r)=\lfloor rn_g+\tfrac12\rfloor,
+ \qquad r\in\{0.8,0.6,0.4\}.
+ \label{eq:quota}
+\end{equation}
+For pair $j$ with members $(x_{j,0},x_{j,1})$, define
+\begin{equation}
+ a_j=\arg\max_{u\in\{0,1\}}\norm{x_{j,u}},\quad
+ s_j=\max_{u\in\{0,1\}}\norm{x_{j,u}}.
+ \label{eq:score}
+\end{equation}
+Let $w_j=x_{j,a_j}$ and $\ell_j=x_{j,1-a_j}$. If $\pi$ sorts the group's $m_g$ pairs by descending $s_j$, the priority sequence is
+\begin{equation}
+ \mathcal P_g=(w_{\pi_1},\ldots,w_{\pi_{m_g}},
+                 \ell_{\pi_1},\ldots,\ell_{\pi_{m_g}}).
+ \label{eq:priority}
+\end{equation}
+The first $q_g$ entries are retained and restored to native index order before gathering. Ties preserve native order. At 20\% and 40\% deletion, every pair in a full group retains a representative, with three or one additional members; 60\% deletion retains four of five representatives. Selected vectors are neither averaged nor rescaled. CLIP applies the rule independently per image and always retains CLS, yielding the counts in Table~\ref{tab:budgets}.
+
+\subsection{Structure-aware adaptation}
+For TimeSformer, the selection unit is a complete spatial trajectory of $T$ tokens, scored by its maximum member norm. Each group of ten trajectories retains its top $q_g$. The current bridge rounds the total spatial count down to a multiple of native width $W$, removing excess quota from tail groups:
+\begin{equation}
+ P'=W\left\lfloor\frac{\sum_g q_g(r)}{W}\right\rfloor,
+ \qquad K=TP'+1.
+ \label{eq:trajectory}
+\end{equation}
+With $P=196$, $T=8$, and $W=14$, the three budgets retain 154, 112, and 70 trajectories plus CLS. Actual token deletion is 21.41\%, 42.83\%, and 64.24\%; this alignment constraint is implementation-specific. Video-encoder bridges use a fixed quota-slot skeleton with approximate spatial anchors while retaining trajectory time indices. CLIP gathers the already position-embedded patch states in native order and preserves its CLS readout. These adaptations keep the detector interface unchanged.

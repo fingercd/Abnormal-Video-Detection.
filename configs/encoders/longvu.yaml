@@ -1,0 +1,48 @@
+schema_version: 1
+name: longvu
+adapter: longvu
+family: long_video_vlm
+constructor:
+  model_name: Vision-CAIR/LongVU_Qwen2_7B
+  checkout_path: external-v2/longvu
+  model_path: weights/longvu
+  runtime: in_process
+  device: cpu
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: projected_visual
+  cache_mode: false
+  strict_assets: true
+  preprocess_profile: longvu-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: Vision-CAIR/LongVU_Qwen2_7B
+  revision: 2b4ed544d651064e4c30d51cf84c5c3e65afa069
+  license: apache-2.0
+  local_path: weights/longvu
+input_profile:
+  clip_frames: 1
+  frame_stride: 1
+  image_size: 384
+  sampling: uniform
+output:
+  feature_stage: projected_visual
+  sequence_source: upstream_projected_visual
+  implementation_source: native_upstream
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: vision_tokens
+  compression: disabled
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/longvu/upstream.lock.yaml

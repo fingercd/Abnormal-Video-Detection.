@@ -1,0 +1,42 @@
+schema_version: 1
+name: c3d
+adapter: c3d
+family: fixed_clip
+sampler:
+  clip_frames: 16
+  frame_stride: 2
+constructor:
+  model_path: weights-v2/c3d/model.caffemodel
+  checkout_path: external-v2/C3D
+  checkpoint: weights-v2/c3d/model.caffemodel
+  checkpoint_path: weights-v2/c3d/model.caffemodel
+  prototxt_path: external-v2/C3D/examples/c3d_feature_extraction/prototxt/c3d_feature_extraction.prototxt
+  clip_frames: 16
+  frame_stride: 2
+  image_size: 112
+  feature_layer: fc6
+  data_blob: data
+  channel_order: BGR
+  feature_stage: fc_features
+  preprocess_profile: c3d-16x112-v1
+  device: cuda
+  strict_assets: true
+checkpoint:
+  constructor_key: checkpoint_path
+  source: github
+  model_id: facebookarchive/C3D
+  revision: master
+  license: cc-by-nc-4.0
+  local_path: weights-v2/c3d/model.caffemodel
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: true
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+upstream_lock: integrations/c3d/upstream.lock.yaml

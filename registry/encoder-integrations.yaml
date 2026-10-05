@@ -1,0 +1,505 @@
+schema_version: 1
+integrations:
+- id: r2plus1d_18
+  display_name: R(2+1)D-18
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/r2plus1d-18.yaml
+  adapter_target: vadbench.integrations.torchvision_video:TorchvisionVideoAdapter
+  backend: torchvision
+  run_mode: fixed
+  feature_stage: pooled
+  environment: &id002
+    runtime: in_process
+    profile: classic-video-v2
+  upstream_lock: integrations/r2plus1d_18/upstream.lock.yaml
+  checkpoint:
+    registry_id: r2plus1d_18-default
+    status: verified
+  smoke_profile:
+    profile: r2plus1d-16x112
+    clip_frames: 16
+    frame_stride: 2
+    image_size: 112
+    chunks: 1
+  capabilities: &id001
+    supports_fixed_clip: true
+    supports_streaming: false
+    supports_kv_cache: false
+    supports_token_cache: false
+    supports_visual_memory_cache: false
+    supports_external_cache_policy: false
+    supports_training: true
+    fixed_num_frames: null
+    min_frames: 1
+    max_frames: null
+- id: x3d
+  display_name: X3D
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/x3d.yaml
+  adapter_target: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
+  backend: pytorchvideo
+  run_mode: fixed
+  feature_stage: pooled
+  environment: &id003
+    runtime: in_process
+    profile: classic-video-v2
+  upstream_lock: integrations/x3d/upstream.lock.yaml
+  checkpoint:
+    registry_id: x3d-default
+    status: verified
+  smoke_profile:
+    profile: x3d-s-13x182
+    clip_frames: 13
+    frame_stride: 6
+    image_size: 182
+    chunks: 1
+  capabilities: *id001
+- id: mvitv2
+  display_name: MViTv2
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/mvitv2.yaml
+  adapter_target: vadbench.integrations.torchvision_video:TorchvisionVideoAdapter
+  backend: torchvision
+  run_mode: fixed
+  feature_stage: pooled
+  environment: *id002
+  upstream_lock: integrations/mvitv2/upstream.lock.yaml
+  checkpoint:
+    registry_id: mvitv2-default
+    status: verified
+  smoke_profile:
+    profile: mvitv2-16x224
+    clip_frames: 16
+    frame_stride: 2
+    image_size: 224
+    chunks: 1
+  capabilities: *id001
+- id: slowfast
+  display_name: SlowFast
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/slowfast.yaml
+  adapter_target: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
+  backend: pytorchvideo
+  run_mode: fixed
+  feature_stage: pooled
+  environment: *id003
+  upstream_lock: integrations/slowfast/upstream.lock.yaml
+  checkpoint:
+    registry_id: slowfast-default
+    status: verified
+  smoke_profile:
+    profile: slowfast-32x256
+    clip_frames: 32
+    frame_stride: 2
+    image_size: 256
+    chunks: 1
+  capabilities: *id001
+- id: c3d
+  display_name: C3D
+  family: fixed_clip
+  status: blocked
+  definition: configs/encoders/c3d.yaml
+  adapter_target: vadbench.integrations.legacy:LegacyVideoAdapter
+  backend: legacy
+  run_mode: fixed
+  feature_stage: fc_features
+  environment:
+    runtime: external_python
+    profile: classic-video-v2
+  upstream_lock: integrations/c3d/upstream.lock.yaml
+  checkpoint:
+    registry_id: c3d-default
+    status: planned
+  smoke_profile:
+    profile: c3d-16x112
+    clip_frames: 16
+    frame_stride: 2
+    image_size: 112
+    chunks: 1
+  capabilities: *id001
+- id: i3d
+  display_name: I3D
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/i3d.yaml
+  adapter_target: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
+  backend: pytorchvideo
+  run_mode: fixed
+  feature_stage: pooled
+  environment: *id003
+  upstream_lock: integrations/i3d/upstream.lock.yaml
+  checkpoint:
+    registry_id: i3d-default
+    status: verified
+  smoke_profile:
+    profile: i3d-8x256
+    clip_frames: 8
+    frame_stride: 8
+    image_size: 256
+    chunks: 1
+  capabilities: *id001
+- id: timesformer
+  display_name: TimeSformer
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/timesformer.yaml
+  adapter_target: vadbench.integrations.transformers_video:TransformersVideoAdapter
+  backend: transformers-video
+  run_mode: fixed
+  feature_stage: last_hidden_state
+  environment: &id004
+    runtime: in_process
+    profile: classic-video-v2
+  upstream_lock: integrations/timesformer/upstream.lock.yaml
+  checkpoint:
+    registry_id: timesformer-default
+    status: verified
+  smoke_profile:
+    profile: timesformer-8x224
+    clip_frames: 8
+    frame_stride: 2
+    image_size: 224
+    chunks: 1
+  capabilities: *id001
+- id: video_swin
+  display_name: Video Swin
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/video-swin.yaml
+  adapter_target: vadbench.integrations.torchvision_video:TorchvisionVideoAdapter
+  backend: torchvision
+  run_mode: fixed
+  feature_stage: backbone_tokens
+  environment: *id002
+  upstream_lock: integrations/video_swin/upstream.lock.yaml
+  checkpoint:
+    registry_id: video_swin-default
+    status: verified
+  smoke_profile:
+    profile: video-swin-32x224
+    clip_frames: 32
+    frame_stride: 2
+    image_size: 224
+    chunks: 1
+  capabilities: *id001
+- id: videomae
+  display_name: VideoMAE
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/videomae.yaml
+  adapter_target: vadbench.integrations.transformers_video:TransformersVideoAdapter
+  backend: transformers-video
+  run_mode: fixed
+  feature_stage: last_hidden_state
+  environment: *id004
+  upstream_lock: integrations/videomae/upstream.lock.yaml
+  checkpoint:
+    registry_id: videomae-default
+    status: verified
+  smoke_profile:
+    profile: videomae-16x224
+    clip_frames: 16
+    frame_stride: 2
+    image_size: 224
+    chunks: 1
+  capabilities: *id001
+- id: videomaev2
+  display_name: VideoMAE V2
+  family: fixed_clip
+  status: integrated
+  definition: configs/encoders/videomaev2-base.yaml
+  adapter_target: vadbench.integrations.videomaev2:VideoMAEv2Adapter
+  backend: videomaev2
+  run_mode: fixed
+  feature_stage: observed_backbone
+  environment:
+    runtime: in_process
+    profile: foundation-video-v2
+  upstream_lock: integrations/videomaev2/upstream.lock.yaml
+  checkpoint:
+    registry_id: videomaev2-base-hf
+    status: verified
+  smoke_profile: &id005
+    profile: fixed-16x224
+    clip_frames: 16
+    frame_stride: 2
+    image_size: 224
+    chunks: 1
+  capabilities:
+    supports_fixed_clip: true
+    supports_streaming: false
+    supports_kv_cache: false
+    supports_token_cache: false
+    supports_visual_memory_cache: false
+    supports_external_cache_policy: false
+    supports_training: true
+    fixed_num_frames: 16
+    min_frames: 16
+    max_frames: 16
+- id: internvideo2
+  display_name: InternVideo2
+  family: video_foundation
+  status: blocked
+  definition: configs/encoders/internvideo2.yaml
+  adapter_target: vadbench.integrations.foundation.internvideo2:InternVideo2Adapter
+  backend: internvideo2
+  run_mode: fixed
+  feature_stage: backbone_tokens
+  environment:
+    runtime: external_python
+    profile: foundation-video-v2
+  upstream_lock: integrations/internvideo2/upstream.lock.yaml
+  checkpoint:
+    registry_id: internvideo2-default
+    status: planned
+  smoke_profile: *id005
+  capabilities: *id001
+- id: videomamba
+  display_name: VideoMamba
+  family: video_foundation
+  status: integrated
+  definition: configs/encoders/videomamba.yaml
+  adapter_target: vadbench.integrations.foundation.videomamba:VideoMambaAdapter
+  backend: videomamba
+  run_mode: fixed
+  feature_stage: backbone_tokens
+  environment:
+    runtime: in_process
+    profile: foundation-video-v2
+  upstream_lock: integrations/videomamba/upstream.lock.yaml
+  checkpoint:
+    registry_id: videomamba-default
+    status: verified
+  smoke_profile: *id005
+  capabilities: *id001
+- id: vjepa2
+  display_name: V-JEPA 2
+  family: video_foundation
+  status: integrated
+  definition: configs/encoders/vjepa2.yaml
+  adapter_target: vadbench.integrations.foundation.vjepa2:VJEPA2Adapter
+  backend: vjepa2
+  run_mode: fixed
+  feature_stage: backbone_tokens
+  environment:
+    runtime: in_process
+    profile: foundation-video-v2
+  upstream_lock: integrations/vjepa2/upstream.lock.yaml
+  checkpoint:
+    registry_id: vjepa2-default
+    status: verified
+  smoke_profile:
+    profile: vjepa2-64x256
+    clip_frames: 64
+    frame_stride: 1
+    image_size: 256
+    chunks: 1
+  capabilities: *id001
+- id: longvu
+  display_name: LongVU
+  family: long_video_vlm
+  status: integrated
+  definition: configs/encoders/longvu.yaml
+  adapter_target: vadbench.integrations.long_video.longvu:LongVUAdapter
+  backend: longvu
+  run_mode: long
+  feature_stage: projected_visual
+  environment:
+    runtime: in_process
+    profile: visual-vlm-v2
+  upstream_lock: integrations/longvu/upstream.lock.yaml
+  checkpoint:
+    registry_id: longvu-default
+    status: verified
+  smoke_profile: &id006
+    profile: long-1x384
+    clip_frames: 1
+    frame_stride: 1
+    image_size: 384
+    chunks: 1
+  capabilities: &id007
+    supports_fixed_clip: true
+    supports_streaming: false
+    supports_kv_cache: false
+    supports_token_cache: false
+    supports_visual_memory_cache: false
+    supports_external_cache_policy: false
+    supports_training: false
+    fixed_num_frames: null
+    min_frames: 1
+    max_frames: null
+- id: videochat
+  display_name: VideoChat
+  family: video_vlm
+  status: blocked
+  definition: configs/encoders/videochat.yaml
+  adapter_target: vadbench.integrations.long_video.videochat:VideoChatAdapter
+  backend: videochat
+  run_mode: fixed
+  feature_stage: projected_visual
+  environment:
+    runtime: external_python
+    profile: visual-vlm-v2
+  upstream_lock: integrations/videochat/upstream.lock.yaml
+  checkpoint:
+    registry_id: videochat-default
+    status: planned
+  smoke_profile: *id006
+  capabilities: *id007
+- id: videochat_online
+  display_name: VideoChat-Online
+  family: streaming_vlm
+  status: blocked
+  definition: configs/encoders/videochat-online.yaml
+  adapter_target: vadbench.integrations.long_video.videochat_online:VideoChatOnlineAdapter
+  backend: videochat-online
+  run_mode: streaming
+  feature_stage: visual_memory
+  environment:
+    runtime: in_process
+    profile: visual-vlm-v2
+  upstream_lock: integrations/videochat_online/upstream.lock.yaml
+  checkpoint:
+    registry_id: videochat_online-default
+    status: verified
+  smoke_profile: &id008
+    profile: streaming-2x4x448
+    clip_frames: 4
+    frame_stride: 2
+    image_size: 448
+    chunks: 2
+  capabilities: &id009
+    supports_fixed_clip: false
+    supports_streaming: true
+    supports_kv_cache: false
+    supports_token_cache: false
+    supports_visual_memory_cache: true
+    supports_external_cache_policy: false
+    supports_training: false
+    fixed_num_frames: null
+    min_frames: 1
+    max_frames: null
+- id: videochat_flash
+  display_name: VideoChat-Flash
+  family: long_video_vlm
+  status: integrated
+  definition: configs/encoders/videochat-flash.yaml
+  adapter_target: vadbench.integrations.long_video.videochat_flash:VideoChatFlashAdapter
+  backend: videochat-flash
+  run_mode: long
+  feature_stage: projected_visual
+  environment:
+    runtime: in_process
+    profile: visual-vlm-v2
+  upstream_lock: integrations/videochat_flash/upstream.lock.yaml
+  checkpoint:
+    registry_id: videochat_flash-default
+    status: verified
+  smoke_profile:
+    profile: long-4x448
+    clip_frames: 4
+    frame_stride: 2
+    image_size: 448
+    chunks: 1
+  capabilities: *id007
+- id: ma_lmm
+  display_name: MA-LMM
+  family: streaming_vlm
+  status: blocked
+  definition: configs/encoders/ma-lmm.yaml
+  adapter_target: vadbench.integrations.long_video.ma_lmm:MALMMAdapter
+  backend: ma-lmm
+  run_mode: streaming
+  feature_stage: visual_memory
+  environment:
+    runtime: external_python
+    profile: visual-vlm-v2
+  upstream_lock: integrations/ma_lmm/upstream.lock.yaml
+  checkpoint:
+    registry_id: ma_lmm-default
+    status: planned
+  smoke_profile: *id008
+  capabilities: *id009
+- id: moviechat
+  display_name: MovieChat
+  family: streaming_vlm
+  status: blocked
+  definition: configs/encoders/moviechat.yaml
+  adapter_target: vadbench.integrations.long_video.moviechat:MovieChatAdapter
+  backend: moviechat
+  run_mode: streaming
+  feature_stage: visual_memory
+  environment:
+    runtime: external_python
+    profile: visual-vlm-v2
+  upstream_lock: integrations/moviechat/upstream.lock.yaml
+  checkpoint:
+    registry_id: moviechat-default
+    status: planned
+  smoke_profile: *id008
+  capabilities: *id009
+- id: streaming_vlm
+  display_name: StreamingVLM
+  family: streaming_vlm
+  status: blocked
+  definition: configs/encoders/streaming-vlm.yaml
+  adapter_target: vadbench.integrations.long_video.streaming_vlm:StreamingVLMAdapter
+  backend: streaming-vlm
+  run_mode: streaming
+  feature_stage: decoder_contextual
+  environment:
+    runtime: in_process
+    profile: stream-kv-v2
+  upstream_lock: integrations/streaming_vlm/upstream.lock.yaml
+  checkpoint:
+    registry_id: streaming_vlm-default
+    status: verified
+  smoke_profile:
+    profile: streaming-2x1x448
+    clip_frames: 2
+    frame_stride: 1
+    image_size: 448
+    chunks: 2
+  capabilities:
+    supports_fixed_clip: false
+    supports_streaming: true
+    supports_kv_cache: true
+    supports_token_cache: false
+    supports_visual_memory_cache: false
+    supports_external_cache_policy: false
+    supports_training: false
+    fixed_num_frames: null
+    min_frames: 1
+    max_frames: null
+- id: hermes_llava_ov
+  display_name: HERMES + LLaVA-OneVision
+  family: streaming_vlm
+  status: integrated
+  definition: configs/encoders/hermes-llava-ov-0.5b.yaml
+  adapter_target: vadbench.integrations.hermes:HermesLlavaOVAdapter
+  backend: hermes
+  run_mode: streaming
+  feature_stage: projected_visual
+  environment:
+    runtime: in_process
+    profile: stream-kv-v2
+  upstream_lock: integrations/hermes/upstream.lock.yaml
+  checkpoint:
+    registry_id: hermes-llava-ov-0.5b
+    status: verified
+  smoke_profile: *id008
+  capabilities:
+    supports_fixed_clip: false
+    supports_streaming: true
+    supports_kv_cache: true
+    supports_token_cache: false
+    supports_visual_memory_cache: false
+    supports_external_cache_policy: true
+    supports_training: false
+    fixed_num_frames: null
+    min_frames: 1
+    max_frames: null

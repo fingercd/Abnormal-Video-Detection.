@@ -1,116 +1,46 @@
-<div align="center">
+# WAVAD / ICASSP 2027
 
-# 视频异常检测 —— 研究空间
+**当前服务器代码入口是 `/users/fotile/VAD`，Python 包与命令仍叫 `vadbench`。** WAVAD 是项目名称；仓库同时保存通用视频异常检测框架，以及 ICASSP 2027 关于正常—异常性质、token 缩减和检测质量的研究。大型资产通过 `/users/fotile/VAD/assets` 浏览，实际根位于 node2 的 `/data2/localdisk/fotile-wavad/`，node3 经 `/data2` 共享挂载读取。具体路径与验收范围见[资产与路径说明](docs/operations/wavad-assets.md)。
 
-**探索三维视频编码器与机器学习方法，实现更精准的异常识别**
+## 当前状态（资产整理 2026-09-26，代码重构 2026-09-30）
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+- 通用框架保留 encoder catalog、manifest、FeatureStore、检测头和预测评测链。论文压缩代码在 `src/vadbench/token_reduction/`，项目配置、实验协议与冻结回执在 `projects/icassp2027/`。公共特征身份已移至 `data/feature_contracts.py`，预测许可位于 `engine/compatibility.py`；提取、恢复、合并、通用检测、质量和效率实现已移至 `workflows/`，UR-DMU 后端位于 `integrations/detectors/urdmu/`。旧 `paper` 路径保留同一实现的兼容导入，项目冻结和正式阶段规则继续留在 `paper/`。当前边界见[架构说明](docs/architecture/current-system.md)。
+- [DSANet 提取、评分、质量导出入口](src/vadbench/workflows/dsanet/README.md)已接入包内，增量测试 17 项通过；旧 Python 3.9 环境经 `scripts/icassp2027/dsanet_legacy.py` 运行提取和评分，新入口尚未重跑正式模型实验。
+- 经验证的本地源码已整合到服务器 `/users/fotile/VAD`：456 个文件新增或更新、216 个语义一致文件保留原字节、0 个冲突；未改 `.git` 历史，未 commit 或 push。远端原始代码和 dirty patch 备份位于 `assets/provenance/pre-integration-remote-*`。整合后的远端回归为 **191 passed、2 skipped**，两项跳过与当前 Transformers 未导出 `VideoMAEImageProcessorPil` 有关；`compileall`、encoder catalog 和 paper status 检查已通过。这些结果不等于所有旧运行已重新验证。
+- UCF-Crime 1,900 个视频（103,795,576,492 B）与 XD-Violence 4,750 个视频及 1 个辅助文件（85,869,780,149 B）已复制到新根，`rsync --checksum` 复核无差异。默认 `data/raw/ucf_crime`、`data/raw/xd_violence` 已指向新副本；原来源副本保存在 `/users/fotile/VAD/archive/datasets`，旧路径为兼容软链。
+- 六个旧资产根已完成物理收拢：四个 `/data2/localdisk/fotile-icassp2027-*` 根移入 `assets/storage/`，两个共享 `/users/fotile` 根归档到 `/users/fotile/VAD/archive/`；旧路径改为兼容软链。原有 314 个导航链接及两节点各 96 个身份锚点的迁移后检查均通过。正式 24 组特征 index 的完整 SHA 已通过，blob 只做每组首项抽样；具体范围见[资产说明](docs/operations/wavad-assets.md)。
 
-<p align="center">
-  <img src="lab_anomaly/configs/vad_banner.png" alt="VAD Banner" width="800">
-</p>
+## 先看哪里
 
-**更高准确率 · 更强泛化性 · 更清晰可解释性**
+| 任务 | 入口 |
+|---|---|
+| 论文当前代码、实验与边界 | [ICASSP 项目入口](projects/icassp2027/README.md)、[profile](projects/icassp2027/profile.yaml)、[protocol](projects/icassp2027/protocol.yaml) |
+| 数据、特征和实验具体位置 | [WAVAD 资产说明](docs/operations/wavad-assets.md) |
+| CLIP–DSANet提取、评分、质量导出 | [三阶段命令与既有环境兼容](src/vadbench/workflows/dsanet/README.md) |
+| 历史执行回执与研究决策 | [progress](projects/icassp2027/progress.md)、[V3 研究计划](projects/icassp2027/RESEARCH_PLAN_V3.md)、[论文交接](projects/icassp2027/handoff_v2/README_先读我.md) |
+| 框架用法与模型运行 | [操作流程](docs/operations/workflows.md)、[架构](docs/architecture/current-system.md)、[服务器手册](docs/operations/server.md) |
+| 论文文件 | [论文工作区](paper/icassp2027/README.md) |
 
-[English Version](README.md)
+[资产整理计划](projects/icassp2027/organization/README.md)保留设计依据，实际位置和完成项见[执行状态](projects/icassp2027/organization/EXECUTION_STATUS.md)与[资产说明](docs/operations/wavad-assets.md)。[2026-09-11 架构审查](docs/reviews/2026-09-11-architecture-review.md)保留为历史记录。
 
-</div>
+## 服务器只读检查
 
----
+沿用服务器已有的解释器与源码，不为查看配置安装新环境：
 
-## 我们在做什么
+```bash
+cd /users/fotile/VAD
+export PYTHONPATH=/users/fotile/VAD/src
+PY=/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python
+"$PY" -m vadbench encoders list
+"$PY" -m vadbench.paper status --project projects/icassp2027/profile.yaml
+```
 
-本项目是一个专注于**视频异常检测（Video Anomaly Detection, VAD）**的研究空间。我们系统性地探索现代 **3D 视频编码器** 与 **机器学习范式**，在公开基准数据集上不断突破异常识别的准确率上限。
+`encoders list` 显示完整模型 catalog；论文 active 范围由 profile 指定。`status` 检查配置与路径，不证明权重已加载、GPU 可用或正式实验通过。执行抽取、训练和评测时还需按照具体 run 的配置、环境和数据协议核对身份。
 
-与标准的动作识别不同，异常检测需要理解连续视频流中**空间语义与时序动态的联合演变**。异常事件稀少、种类多样、且高度依赖场景上下文——这使其成为计算机视觉中最具挑战性的开放问题之一。
+## 框架与历史资料
 
-我们的目标很简单：**构建一个灵活、可扩展的训练框架，让编码器可以随意更换，检测头可以即插即用，新想法能够快速得到验证。**
+VADBench 用统一的视频身份、时间轴、特征和评测契约组织固定 clip 编码器与长视频模型。VideoMAE V2 是独立 clip 前向，不存在跨 clip decoder KV cache；HERMES 的缓存语义属于语言模型 decoder。`lab_anomaly/` 保存旧版训练、评分和 RTSP 原型，见[旧版说明](lab_anomaly/README-CN.md)。
 
----
+2026-09-11 的框架统计、CPU smoke、安装说明和当时缺失数据的判断，保留在[原实施记录](docs/progress/2026-09-11-implementation.md)及[框架状态档案](docs/progress/current-status.md)。它们不能替代本轮已复制数据、已整合源码和正式实验回执。新开发环境的通用安装步骤见[服务器手册](docs/operations/server.md)，既有 node2/node3 环境无需重装。
 
-## 研究方向
-
-### 3D 视频编码器基准评测
-
-时空骨干网络的选择是 VAD 流程中最关键的决定。我们评估并对比以下方向：
-
-- **自监督 Transformer**（VideoMAE v2、Video Swin）—— 从大规模无标注视频预训练中获得丰富的可迁移特征。
-- **混合架构**（UniFormerV2）—— 结合局部归纳偏置与全局注意力，追求极限精度。
-- **经典基线**（I3D、SlowFast、R(2+1)D）—— 通过历史对比确保学术严谨性。
-- **下一代模型**（Video Mamba、状态空间模型）—— 以线性复杂度解决长视频建模难题。
-- **视觉-语言编码器**（UMT-L、InternVid、Video-LLaVA）—— 实现零样本与开放词汇的异常检测。
-
-### 弱监督学习
-
-大多数真实监控数据仅提供视频级标签（正常 vs. 异常），没有帧级标注。我们聚焦于：
-
-- **多示例学习（MIL）及其变体** —— 在未经修剪的视频中学习关注异常片段。
-- **排序与边界损失** —— 拉开正常与异常时序动态的差距。
-- **伪标签与自训练** —— 从粗糙的视频级监督中迭代精炼帧级预测。
-
-### 迁移与泛化
-
-- **跨数据集评估** —— 在 UCF-Crime 上训练，在 XD-Violence 或自定义监控流上测试。
-- **预训练策略** —— 利用 Kinetics、InternVid 和视频-文本对比学习，再进行领域自适应。
-- **渐进式微调** —— 分阶段逐步解冻骨干网络，实现从预训练权重到目标领域的稳定迁移。
-
-### 新兴范式
-
-- **多模态融合** —— 将音频线索（爆炸、尖叫）与视频结合，获得更丰富的异常特征。
-- **可解释 VAD** —— 利用视觉-语言模型为检测到的异常生成文本解释。
-- **长程时序建模** —— 超越 16 帧片段，捕捉缓慢展开的异常事件。
-
----
-
-## 关注的数据集
-
-我们主要在以下标准 VAD 数据集上进行基准评测：
-
-| 数据集 | 设定 | 关键特点 |
-|--------|------|----------|
-| **UCF-Crime** | 弱监督 | 1,900 段真实监控视频，13 类异常事件 |
-| **XD-Violence** | 弱监督 | 4,754 段视频，含音频，多场景暴力检测 |
-| **ShanghaiTech** | 帧级真值 | 437 段视频，覆盖 13 个校园场景 |
-| **CUHK Avenue** | 帧级真值 | 37 段视频，聚焦行人异常 |
-| **UBnormal** | 合成真值 | 虚拟生成的多样化异常，用于数据增强 |
-
----
-
-## 当前进展
-
-- **基线已建立**：VideoMAE v2 + MIL 注意力，配合三阶段渐进式微调。
-- **下一步**：接入 Video Swin Transformer、UniFormerV2 和 Video Mamba 骨干网络进行直接对比。
-
----
-
-## 路线图
-
-- [x] VideoMAE v2 + MIL 基线
-- [ ] Video Swin Transformer 接入
-- [ ] UniFormerV2 骨干网络基准评测
-- [ ] Video Mamba 长视频异常检测
-- [ ] UMT-L / InternVid 零样本评估
-- [ ] XD-Violence 音视频融合
-- [ ] 视觉-语言模型可解释 VAD
-
----
-
-## 致谢
-
-本项目深受视频异常检测研究社区的启发，包括 VideoMAE、RTFM、MGFN、VERA，以及 Awesome Video Anomaly Detection 综述仓库等优秀工作。
-
----
-
-## 许可证
-
-MIT 许可证。
-
----
-
-<div align="center">
-
-**⭐ 如果你对这个研究方向感兴趣，请给本仓库点一颗 Star！⭐**
-
-</div>
+原始视频、权重、特征 blob、第三方 checkout、环境和大型运行产物不进入 Git。本仓库代码使用 MIT License；第三方代码、权重和数据遵守各自的许可与来源约束。

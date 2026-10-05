@@ -1,0 +1,44 @@
+schema_version: 1
+name: slowfast
+adapter: slowfast
+family: fixed_clip
+
+sampler:
+  clip_frames: 32
+  frame_stride: 2
+
+constructor:
+  variant: slowfast_r50
+  checkpoint_path: weights/slowfast/model.pyth
+  clip_frames: 32
+  frame_stride: 2
+  image_size: 256
+  resize_size: 256
+  crop_size: 256
+  slow_fast_alpha: 4
+  feature_stage: pooled
+  device: cuda
+  strict_checkpoint: false
+
+checkpoint:
+  constructor_key: checkpoint_path
+  source: pytorchvideo
+  model_id: pytorchvideo/SLOWFAST_8x8_R50
+  url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/SLOWFAST_8x8_R50.pyth
+  revision: pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  license: apache-2.0
+  local_path: weights/slowfast/model.pyth
+
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: true
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+
+upstream_lock: integrations/slowfast/upstream.lock.yaml

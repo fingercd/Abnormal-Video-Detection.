@@ -1,93 +1,62 @@
-<div align="right">
+# `lab_anomaly`：保留的 VideoMAE v2 + MIL 原型
 
-[English Version](README.md)
+`lab_anomaly` 是仓库中保留的一条本地实验线：它把一个视频划为若干固定时长片段，逐片段独立调用 `OpenGVLab/VideoMAEv2-Base`，再用 MIL 头输出**视频级二分类**（`normal` / `anomaly`）。它不是当前 VADBench 的实验入口，也没有实现跨片段状态、KV cache、UCF-Crime 官方划分、帧级评测或 VADBench 的 manifest/provenance/产物契约。
 
-</div>
+当前基准实验请从仓库根目录的 [README-CN.md](../README-CN.md) 和 `src/vadbench/` 开始；UCF-Crime 的数据与评测规则以 `docs/research/ucf-crime-protocol.md` 为准。本目录的随机验证集只能用于本地原型检查，不能报告为 UCF-Crime 官方测试结果。
 
-# lab_anomaly —— 基于 VideoMAE v2 的异常检测训练
+## 实际组成
 
-> 本目录是 **VideoMAE v2 + MIL** 视频异常检测的核心训练空间，包含模型定义、训练循环和推理运行时，用于学习可区分的时空表征以实现异常识别。
-
----
-
-## 这里训练什么
-
-本模块的首要目标是**微调 VideoMAE v2 骨干网络**（在大规模无标注视频上预训练），使其适配**弱监督视频异常检测**这一下游任务。
-
-### 模型架构
-
-- **骨干网络**：`OpenGVLab/VideoMAEv2-Base` —— 一个 12 层的时空 Transformer，通过掩码自编码在数百万视频片段上完成预训练。
-- **检测头**：MIL（多示例学习）注意力池化 —— 将片段级特征聚合为视频级异常分数，无需帧级标注。
-- **损失函数**：交叉熵分类损失 + 时序排序损失 —— 联合优化包级分类与时序异常边界。
-
-### 训练策略
-
-采用渐进式三阶段微调，实现稳定的迁移学习：
-
-1. **仅训练头**（epochs 0–N）：冻结整个 VideoMAE v2 骨干，仅训练 MIL 检测头。
-2. **部分解冻**（epochs N–M）：逐步解冻顶层 Transformer 块。
-3. **完全解冻**（最终阶段）：以较低学习率端到端微调整个网络。
-
-这种分阶段策略避免了丰富的自监督预训练知识被灾难性遗忘，同时使模型适配异常特定模式。
-
----
-
-## 性能快照
-
-训练结束后，评估指标会自动序列化为 JSON。以下是当前最佳检查点的结果：
-
-**端到端分类器 —— 评估指标**
-
-```json
-{
-  "accuracy": 0.9266,
-  "precision_anomaly": 0.8897,
-  "recall_anomaly": 0.9365,
-  "f1_anomaly": 0.9125,
-  "auc_binary": 0.9805
-}
+```text
+data/index_build.py       扫描 raw_videos，写 video_labels.csv
+tool/precompute_clips.py  离线抽帧，写 NPZ 和 manifest.json
+train/train_end2end.py    读取 NPZ，训练 VideoMAE v2 + MIL 二分类器
+infer/rtsp_service.py     对本地视频或 RTSP 滑窗打分，写报警 JSONL/截图/可选 POST
+infer/known_event_runtime.py  供外部 Python 调用的异步多流运行时
 ```
 
-| 指标 | 数值 |
-|------|------|
-| **准确率** | **92.66%** |
-| **精确率（异常）** | 88.97% |
-| **召回率（异常）** | 93.65% |
-| **F1 分数（异常）** | 91.25% |
-| **AUC（二分类）** | **98.05%** |
+VideoMAE v2 在此处是无状态固定 clip 编码器。`max_clips_per_video` 只限制一个视频送入 MIL 的片段数，不能解释为长视频缓存或流式等价实现。
 
-各类别细分：
-- **正常**：734 / 798 正确（91.98%）
-- **偷窃**：377 / 401 正确（94.01%）
-- **暴力冲突**：139 / 150 正确（92.67%）
+## 可执行的原型流程
 
-> 📁 *原始指标保存在 `lab_dataset/derived/end2end_classifier/eval_report/eval_metrics.json`，训练曲线保存在 `history.json`。*
+在仓库根目录运行。依赖清单见 `lab_anomaly/requirements.txt`；首次构造编码器会通过 Hugging Face 的 `trust_remote_code=True` 加载模型，因此需事先准备可用的本地/HF 权重和网络策略。
 
----
+1. 数据按 `lab_dataset/raw_videos/<label>/<可选 camera_id>/...` 放置，`normal` 是正常类；运行：
 
-## 训练历史
+   ```powershell
+   .venv\Scripts\python.exe -m lab_anomaly.data.index_build
+   ```
 
-来自训练日志的关键验证节点：
+   它会重建已扫描文件的 `label` 和 `camera_id`，标签来自首级目录名，并保留扫描不到的既有 CSV 行。CSV 格式与时间字段见 [data/readme.txt](data/readme.txt)。
 
-| 轮次 | 阶段 | 验证准确率 | 验证 AUC（二分类） |
-|------|------|-----------|-------------------|
-| 0 | 解冻 2 层 | 87.41% | 95.28% |
-| 1 | 解冻 2 层 | 85.56% | 95.58% |
+2. 让预切参数与训练配置完全一致，再运行：
 
-模型在部分解冻阶段早期即收敛到较强的判别性能，表明 VideoMAE v2 特征对异常检测具有高度可迁移性。
+   ```powershell
+   .venv\Scripts\python.exe -m lab_anomaly.tool.precompute_clips
+   ```
 
----
+   当前提交没有 `configs/precompute_clips.yaml`，而工具默认是 16 帧；已提交的训练 YAML 是 12 帧。因此应先编辑 `tool/precompute_clips.py` 的 `CONFIG`，或自行创建其固定读取的本地 `lab_anomaly/configs/precompute_clips.yaml`，使 `frames_per_clip`、`interval_sec`、`max_clips_per_video`、数据路径、`exclude_unknown` 和 `normal_label` 与 `train_end2end.yaml` 相同。`manifest.json` 会严格校验这些字段，不一致时训练会失败。
 
-## 训练产出用途
+3. 检查 `configs/train_end2end.yaml` 中的路径与训练超参数，然后运行：
 
-训练完成后，检查点可用于：
+   ```powershell
+   .venv\Scripts\python.exe -m lab_anomaly.train.train_end2end
+   ```
 
-- **离线评估** —— 为预录视频打分并生成帧级异常曲线。
-- **实时推理** —— 滑动窗口片段打分，集成到流式处理管线中。
-- **编码器复用** —— 微调后的 VideoMAE v2 权重可作为其他 VAD 数据集或下游检测头的初始化。
+   该入口没有训练参数 CLI；它将内置 `CONFIG` 与固定的 `configs/train_end2end.yaml` 做顶层键合并。输出包括 `checkpoint_best.pt`、`checkpoint_last.pt`、`labels.json`、`history.json` 及可选 PNG 图，位置由 `out_dir` 决定。
 
----
+4. 仅在明确配置本地视频或 RTSP、checkpoint 和输出位置后使用独立服务：
 
-## 范围说明
+   ```powershell
+   .venv\Scripts\python.exe -m lab_anomaly.infer.rtsp_service --config lab_anomaly/configs/rtsp_service_example.yaml --video <视频文件> --known_checkpoint <checkpoint_best.pt>
+   ```
 
-本目录严格聚焦于**模型训练与推理执行**。数据摄入、片段预处理和数据集组织由上游模块负责。
+   这会打开源、可能持续写文件并在 `api_url` 非空时发送 HTTP POST；先用本地视频验证配置。具体字段和现有限制见 [infer/README.md](infer/README.md)。
+
+## 训练语义与限制
+
+- 标签被折叠为二类：标签经小写化后等于 `normal_label` 的视频为 0，其余标签全为 1。原异常类别不会作为多分类目标保存。
+- 每个视频按 `interval_sec` 等分，段内均匀抽 `frames_per_clip` 帧。`start_time` / `end_time` 若合法会限制处理范围；它们不是异常起止标注。
+- 验证集由视频行随机切分，未做分层、摄像头/来源去重或官方 train/test 隔离。训练的 AUC 仅在验证集中同时有两类且安装 scikit-learn 时计算。
+- MIL 的 ranking 支路针对视频级弱标签优化，实时服务每次只传入一个 clip embedding，因此其 ranking 分数不是帧级定位结果。
+
+目录级细节见 `configs/README.md`、`data/readme.txt`、`tool/README.md`、`train/README.md`、`models/README.md` 和 `infer/README.md`。

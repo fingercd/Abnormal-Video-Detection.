@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VADBench execution stage v1",
+  "type": "object",
+  "required": ["schema_version", "run_id", "stage", "status", "created_at", "config", "config_sha256", "inputs", "git", "runtime"],
+  "properties": {
+    "schema_version": {"const": "vadbench.stage.v1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "stage": {"enum": ["extract", "train", "predict", "evaluate", "benchmark"]},
+    "status": {"enum": ["running", "completed", "failed"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "config": {"type": "object"},
+    "config_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "inputs": {"type": "object"},
+    "git": {"type": "object"},
+    "runtime": {"type": "object"},
+    "outputs": {"type": "object"},
+    "error": {
+      "type": "object",
+      "required": ["type", "message"],
+      "properties": {"type": {"type": "string"}, "message": {"type": "string"}}
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "failed"}}}, "then": {"required": ["error", "finished_at"]}},
+    {"if": {"properties": {"status": {"const": "completed"}}}, "then": {"required": ["finished_at"]}}
+  ]
+}

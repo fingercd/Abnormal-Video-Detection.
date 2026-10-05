@@ -1,19 +1,8 @@
-# models — 模型技术细节
+模型事实：
+- VideoMAEv2Encoder：固定 clip 的无状态编码器，输出每个 clip 一个 embedding；旧文件只重导出 VADBench 内的唯一实现。
+- MILClassifier：把一个视频的多个 embedding 聚合为 normal/anomaly 二分类 logits。
+- ranking_loss：仅使用视频级正常/异常 bag 的弱监督排序损失。
 
-## vit_video_encoder.py
-
-"视频 ViT 特征提取器"。把一段 clip（多帧图像）变成一个向量 embedding。
-- 默认用 HuggingFace 的 `OpenGVLab/VideoMAEv2-Base`（代码中已从旧版 `MCG-NJU/videomae-base` 迁移）
-- 第一次运行会自动下载预训练权重
-
-## mil_head.py
-
-"把多个 clip 的 embedding 汇总成一个视频预测"的分类头（MIL）。
-
-两种汇总方式：
-- pooling=attn：注意力加权，把更重要的 clip 权重变大
-- pooling=topk：挑最像目标的 top-k 个 clip 取平均（更简单粗暴）
-
-## ranking_loss.py
-
-训练时用的排序损失。目标是让正常视频的 clip 分数整体偏低、异常视频的 clip 分数整体偏高，同时保持时间上的平滑性。
+它没有视觉/语言 KV cache、跨视频状态、帧级标签投影或 VADBench adapter 接口。
+模型加载使用 Hugging Face trust_remote_code=True，实际兼容性取决于本地 Transformers 与上游模型代码。
+详细说明见 README.md。

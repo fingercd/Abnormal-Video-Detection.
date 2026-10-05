@@ -1,0 +1,43 @@
+schema_version: 1
+name: x3d
+adapter: x3d
+family: fixed_clip
+
+sampler:
+  clip_frames: 13
+  frame_stride: 6
+
+constructor:
+  variant: x3d_s
+  checkpoint_path: weights/x3d/model.pyth
+  clip_frames: 13
+  frame_stride: 6
+  image_size: 182
+  resize_size: 182
+  crop_size: 182
+  feature_stage: pooled
+  device: cuda
+  strict_checkpoint: false
+
+checkpoint:
+  constructor_key: checkpoint_path
+  source: pytorchvideo
+  model_id: pytorchvideo/X3D_S
+  url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D_S.pyth
+  revision: pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  license: apache-2.0
+  local_path: weights/x3d/model.pyth
+
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: true
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+
+upstream_lock: integrations/x3d/upstream.lock.yaml

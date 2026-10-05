@@ -1,0 +1,52 @@
+schema_version: 1
+name: infinipot-v
+adapter: infinipot_v
+family: streaming_vlm
+constructor:
+  model_name: aiha-lab/InfiniPot-V
+  checkout_path: external/infinipot-v
+  model_path: weights/infinipot-v
+  runtime: external_python
+  device: cuda
+  prompt: Describe the visible video content, actions, objects, and temporal changes
+    without assuming any event label.
+  feature_stage: decoder_contextual
+  cache_mode: identity
+  streaming: true
+  chunk_frames: 4
+  strict_assets: true
+  upstream_entrypoint: infinipot_v/model.py:load_model
+  preprocess_profile: infinipot-v-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: local_upstream
+  model_id: aiha-lab/InfiniPot-V
+  revision: 81a4dbe2e74660a8148cc2a6cee1148a9a268479
+  license: unknown
+  local_path: weights/infinipot-v
+input_profile:
+  clip_frames: 4
+  frame_stride: 2
+  image_size: 448
+  sampling: streaming_uniform
+output:
+  feature_stage: decoder_contextual
+  sequence_source: decoder_hidden_state
+  implementation_source: external_worker_facade
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: true
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: false
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+cache_semantics:
+  kind: decoder_kv
+  compression: disabled
+  owner: language_model_decoder
+  prompt_policy: fixed_category_independent
+upstream_lock: integrations/infinipot_v/upstream.lock.yaml

@@ -1,0 +1,13 @@
+\begin{table*}[!t]
+\centering\small
+\caption{Four-system quality at every budget (0--100). Each cell reports the indicated two frame-level metrics; bold identifies the primary metric, not a ranking. On XD, the video systems use trapezoidal PR-AUC and DSANet uses step AP. CI is the paired 95\% interval for the primary-metric change at 40\% deletion, in percentage points.}
+\label{tab:quality}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrc@{}}
+\toprule
+System & Dense & Delete 20\% & Delete 40\% & Delete 60\% & CI of $\Delta_{40}$\\
+\midrule
+\tableinput{tables/quality_rows}
+\bottomrule
+\end{tabular}
+\end{table*}

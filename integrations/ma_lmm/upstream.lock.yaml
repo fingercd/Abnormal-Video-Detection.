@@ -1,0 +1,33 @@
+schema_version: 1
+integration: ma_lmm
+
+source:
+  repository: https://github.com/boheumd/MA-LMM
+  branch: main
+  default_branch: main
+  commit: ffe9fa9e89757e4433012029f19286c3c280ab1d
+  commit_url: https://github.com/boheumd/MA-LMM/commit/ffe9fa9e89757e4433012029f19286c3c280ab1d
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/boheumd/MA-LMM/blob/ffe9fa9e89757e4433012029f19286c3c280ab1d/LICENSE
+
+entrypoints:
+  loader: lavis/models/blip2_models/blip2.py:load_model
+  visual_memory: lavis/models/blip2_models/blip2.py:forward
+  memory_bank: lavis/models/blip2_models/blip2.py:memory_bank
+
+weights:
+  provider: upstream_release
+  model_id: boheumd/MA-LMM
+  revision: ffe9fa9e89757e4433012029f19286c3c280ab1d
+  local_dir: weights/ma-lmm
+  sha256: {}
+  status: planned
+
+integration_notes:
+  - MA-LMM memory bank 是 Q-Former cross-attention 的视觉记忆，不是语言模型 decoder KV。
+  - 本 adapter 只验证 memory state 的传递与输出契约，不执行 memory 压缩调参。

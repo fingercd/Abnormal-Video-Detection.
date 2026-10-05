@@ -1,0 +1,34 @@
+schema_version: 1
+integration: umt
+
+source:
+  repository: https://github.com/OpenGVLab/unmasked_teacher
+  branch: main
+  default_branch: main
+  commit: 4fb4049f5a87919882e68ccc427615ae7dab1c33
+  commit_url: https://github.com/OpenGVLab/unmasked_teacher/commit/4fb4049f5a87919882e68ccc427615ae7dab1c33
+  verified_with: github-atom
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/OpenGVLab/unmasked_teacher/blob/4fb4049f5a87919882e68ccc427615ae7dab1c33/LICENSE
+
+entrypoints:
+  backbone: models/umt.py
+  classification: downstream/finetune.py
+
+weights:
+  provider: official
+  model_id: UMT-B
+  revision: planned
+  license: MIT
+  local_dir: weights/umt
+  sha256: {}
+  size_bytes: null
+
+integration_notes:
+  - 固定 clip 适配；本锁只冻结官方代码，不隐式下载模型或依赖。
+  - 真实权重准备后由显式 loader 导出 backbone_tokens；当前 adapter 对缺失资产 fail-closed。
+  - UMT 内部 Transformer 注意力不被宣称为跨 clip KV cache。

@@ -1,0 +1,36 @@
+schema_version: 1
+integration: slowfast
+
+source:
+  repository: https://github.com/facebookresearch/pytorchvideo
+  branch: main
+  default_branch: main
+  commit: f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  commit_url: https://github.com/facebookresearch/pytorchvideo/commit/f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  verified_with: git-ls-remote
+  verified_on: "2026-08-31"
+
+license:
+  spdx: Apache-2.0
+  file: LICENSE
+  url: https://github.com/facebookresearch/pytorchvideo/blob/f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0/LICENSE
+
+entrypoints:
+  model_factory: pytorchvideo.models.hub.slowfast_r50
+  adapter: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
+
+weights:
+  provider: direct_url
+  model_id: pytorchvideo/SLOWFAST_8x8_R50
+  url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/SLOWFAST_8x8_R50.pyth
+  revision: SLOWFAST_8x8_R50
+  license: Apache-2.0
+  local_dir: weights/slowfast
+  filename: model.pyth
+  sha256:
+    model.pyth: 454f39e1c1f985df2bee2aa27887ed53ff56e74ed8b8cca11203a1a1264d7cc2
+
+integration_notes:
+  - SlowFast-R50 是固定 clip 双路径 RGB 路线；adapter 将 BCTHW 转为 [slow, fast]。
+  - slow pathway 默认每 4 个 fast 帧取 1 帧；alpha 可通过构造参数调整。
+  - checkpoint 只能由服务器预先下载到 local_dir；adapter 不调用 torch.hub。

@@ -1,0 +1,1009 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fingercd.github.io/Abnormal-Video-Detection/schemas/performance-result-v1.schema.json",
+  "title": "VADBench video encoder performance result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_utc",
+    "settings",
+    "comparison",
+    "provenance",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "vadbench.performance-result.v1"
+    },
+    "generated_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "settings": {
+      "$ref": "#/$defs/settings"
+    },
+    "comparison": {
+      "$ref": "#/$defs/comparison"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machine"],
+      "properties": {
+        "machine": {
+          "$ref": "#/$defs/machine"
+        },
+        "plan": {
+          "type": "string"
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "nonNegativeNumber": {
+      "type": "number",
+      "minimum": 0
+    },
+    "nullableNonNegativeNumber": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mean", "std", "p50", "p90", "p95", "min", "max"],
+      "properties": {
+        "mean": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "std": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "p50": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "p90": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "p95": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "min": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "max": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        }
+      }
+    },
+    "statsMap": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/stats"
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warmup", "repeat", "synchronize_cuda", "device"],
+      "properties": {
+        "warmup": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repeat": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "synchronize_cuda": {
+          "type": "boolean"
+        },
+        "device": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comparable",
+        "reasons",
+        "pairwise",
+        "criterion",
+        "token_rate_scope",
+        "accuracy_comparable",
+        "accuracy_reasons"
+      ],
+      "properties": {
+        "comparable": {
+          "type": "boolean"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pairwise": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["left", "right", "comparable", "reasons"],
+            "properties": {
+              "left": {
+                "type": "string",
+                "minLength": 1
+              },
+              "right": {
+                "type": "string",
+                "minLength": 1
+              },
+              "comparable": {
+                "type": "boolean"
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "criterion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token_rate_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accuracy_comparable": {
+          "type": "boolean"
+        },
+        "accuracy_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hostname",
+        "system",
+        "release",
+        "machine",
+        "processor",
+        "python_version",
+        "python_implementation",
+        "python_executable"
+      ],
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "release": {
+          "type": "string"
+        },
+        "machine": {
+          "type": "string"
+        },
+        "processor": {
+          "type": "string"
+        },
+        "python_version": {
+          "type": "string"
+        },
+        "python_implementation": {
+          "type": "string"
+        },
+        "python_executable": {
+          "type": "string"
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "mode",
+        "workload",
+        "repeats",
+        "aggregate",
+        "accuracy_eligibility",
+        "timing_semantics",
+        "provenance"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "enum": ["fixed", "streaming"]
+        },
+        "workload": {
+          "$ref": "#/$defs/workload"
+        },
+        "repeats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/repeat"
+          }
+        },
+        "aggregate": {
+          "$ref": "#/$defs/aggregate"
+        },
+        "accuracy_eligibility": {
+          "$ref": "#/$defs/accuracyEligibility"
+        },
+        "timing_semantics": {
+          "$ref": "#/$defs/timingSemantics"
+        },
+        "provenance": {
+          "$ref": "#/$defs/caseProvenance"
+        }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "task",
+        "declared_sampling",
+        "observed_sampling",
+        "sampling_consistent_across_repeats",
+        "sampling_consistency_reasons"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task": {
+          "type": "string",
+          "minLength": 1
+        },
+        "declared_sampling": {
+          "type": "object"
+        },
+        "observed_sampling": {
+          "$ref": "#/$defs/observedSampling"
+        },
+        "sampling_consistent_across_repeats": {
+          "type": "boolean"
+        },
+        "sampling_consistency_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "observedSampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampled_frames",
+        "video_seconds",
+        "spatial_sizes",
+        "batch_valid_lengths",
+        "video_ids",
+        "coordinate_sha256",
+        "coordinate_basis",
+        "all_frame_indices_present",
+        "layout",
+        "dtype"
+      ],
+      "properties": {
+        "sampled_frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "video_seconds": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "spatial_sizes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "integer",
+                "minimum": 1
+              }
+            ],
+            "items": false
+          }
+        },
+        "batch_valid_lengths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "video_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "coordinate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "coordinate_basis": {
+          "const": "video_id+frame_index+timestamp"
+        },
+        "all_frame_indices_present": {
+          "type": "boolean"
+        },
+        "layout": {
+          "const": "BTHWC"
+        },
+        "dtype": {
+          "const": "uint8"
+        }
+      }
+    },
+    "repeat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repeat_index",
+        "timings_seconds",
+        "counts",
+        "throughput",
+        "peak_gpu_memory_bytes",
+        "gpu_memory_bytes",
+        "token_semantics",
+        "feature_stages",
+        "cache"
+      ],
+      "properties": {
+        "repeat_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timings_seconds": {
+          "$ref": "#/$defs/timings"
+        },
+        "counts": {
+          "$ref": "#/$defs/counts"
+        },
+        "throughput": {
+          "$ref": "#/$defs/throughput"
+        },
+        "peak_gpu_memory_bytes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "gpu_memory_bytes": {
+          "$ref": "#/$defs/gpuMemory"
+        },
+        "token_semantics": {
+          "$ref": "#/$defs/tokenSemantics"
+        },
+        "feature_stages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cache": {
+          "$ref": "#/$defs/cache"
+        }
+      }
+    },
+    "timings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decode",
+        "preprocess",
+        "encoder",
+        "encoder_excluding_native_compression",
+        "native_compression",
+        "wall"
+      ],
+      "properties": {
+        "decode": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "preprocess": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "encoder": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "encoder_excluding_native_compression": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "native_compression": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "wall": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frames", "source_video_seconds", "output_tokens", "decoder_kv_input_tokens"],
+      "properties": {
+        "frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_video_seconds": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decoder_kv_input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "throughput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "end_to_end_frames_per_second",
+        "end_to_end_source_video_seconds_per_second",
+        "end_to_end_tokens_per_second",
+        "encoder_frames_per_second",
+        "encoder_source_video_seconds_per_second",
+        "encoder_tokens_per_second",
+        "end_to_end_decoder_kv_tokens_per_second",
+        "encoder_decoder_kv_tokens_per_second"
+      ],
+      "properties": {
+        "end_to_end_frames_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "end_to_end_source_video_seconds_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "end_to_end_tokens_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "encoder_frames_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "encoder_source_video_seconds_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "encoder_tokens_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "end_to_end_decoder_kv_tokens_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        },
+        "encoder_decoder_kv_tokens_per_second": {
+          "$ref": "#/$defs/nullableNonNegativeNumber"
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kv_tokens_before_max",
+        "kv_tokens_after_max",
+        "reused_tokens_total",
+        "cache_bytes_peak",
+        "native_compression_calls",
+        "native_compression_applied_steps",
+        "steps"
+      ],
+      "properties": {
+        "kv_tokens_before_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kv_tokens_after_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reused_tokens_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_bytes_peak": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_compression_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_compression_applied_steps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cacheStep"
+          }
+        }
+      }
+    },
+    "cacheStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_index",
+        "cache_owner",
+        "is_vision_encoder_kv",
+        "decoder_kv_layers",
+        "decoder_kv_input_tokens",
+        "output_tokens",
+        "frames_encoded",
+        "projected_visual_tokens",
+        "feature_stage",
+        "feature_cache_conditioned",
+        "cache_hit",
+        "kv_tokens_before_min",
+        "kv_tokens_before",
+        "kv_tokens_after_min",
+        "kv_tokens_after",
+        "kv_tokens_after_total",
+        "reused_tokens",
+        "cache_bytes",
+        "decoder_kv_bytes_after",
+        "decoder_kv_replaced",
+        "decoder_kv_replaced_by_policy",
+        "external_cache_policy",
+        "external_cache_policy_applied",
+        "native_compression_seconds",
+        "native_compression_called",
+        "native_compression_applied",
+        "native_compression_enabled",
+        "native_compression_mode",
+        "native_visual_budget_tokens",
+        "native_protected_prefix_tokens",
+        "native_effective_total_budget_tokens",
+        "native_tokens_before_min",
+        "native_tokens_before_max",
+        "native_tokens_before_total",
+        "native_tokens_after_min",
+        "native_tokens_after_max",
+        "native_tokens_after_total",
+        "native_tokens_evicted_total"
+      ],
+      "properties": {
+        "step_index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cache_owner": {
+          "type": ["string", "null"]
+        },
+        "is_vision_encoder_kv": {
+          "type": "boolean"
+        },
+        "decoder_kv_layers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decoder_kv_input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "frames_encoded": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projected_visual_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "feature_stage": {
+          "type": ["string", "null"]
+        },
+        "feature_cache_conditioned": {
+          "type": "boolean"
+        },
+        "cache_hit": {
+          "type": "boolean"
+        },
+        "kv_tokens_before_min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kv_tokens_before": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kv_tokens_after_min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kv_tokens_after": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kv_tokens_after_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reused_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decoder_kv_bytes_after": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decoder_kv_replaced": {
+          "type": "boolean"
+        },
+        "decoder_kv_replaced_by_policy": {
+          "type": "boolean"
+        },
+        "external_cache_policy": {
+          "type": ["string", "null"]
+        },
+        "external_cache_policy_applied": {
+          "type": "boolean"
+        },
+        "native_compression_seconds": {
+          "$ref": "#/$defs/nonNegativeNumber"
+        },
+        "native_compression_called": {
+          "type": "boolean"
+        },
+        "native_compression_applied": {
+          "type": "boolean"
+        },
+        "native_compression_enabled": {
+          "type": "boolean"
+        },
+        "native_compression_mode": {
+          "type": ["string", "null"]
+        },
+        "native_visual_budget_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_protected_prefix_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_effective_total_budget_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_before_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_before_min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_before_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_after_min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_after_max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_after_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "native_tokens_evicted_total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "gpuMemory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocated", "reserved"],
+      "properties": {
+        "allocated": {
+          "$ref": "#/$defs/memoryPoints"
+        },
+        "reserved": {
+          "$ref": "#/$defs/memoryPoints"
+        }
+      }
+    },
+    "memoryPoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "peak", "steady"],
+      "properties": {
+        "baseline": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "peak": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "steady": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "tokenSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_input", "output_tokens", "decoder_kv"],
+      "properties": {
+        "frame_input": {
+          "const": "decoded BTHWC uint8 frames"
+        },
+        "output_tokens": {
+          "const": "adapter feature tokens; per-case diagnostic"
+        },
+        "decoder_kv": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "accuracyEligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible",
+        "reasons",
+        "observed_feature_stages",
+        "performance_only",
+        "cache_conditioned"
+      ],
+      "properties": {
+        "eligible": {
+          "type": "boolean"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "observed_feature_stages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "performance_only": {
+          "type": "boolean"
+        },
+        "cache_conditioned": {
+          "type": "boolean"
+        }
+      }
+    },
+    "timingSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "encoder_includes_native_compression",
+        "native_compression_source",
+        "encoder_excluding_native_compression_is_approximate",
+        "throughput_wall_time_source"
+      ],
+      "properties": {
+        "encoder_includes_native_compression": {
+          "const": true
+        },
+        "native_compression_source": {
+          "const": "adapter_telemetry_host_wall"
+        },
+        "encoder_excluding_native_compression_is_approximate": {
+          "const": true
+        },
+        "throughput_wall_time_source": {
+          "const": "cuda_synchronized_perf_counter"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timings_seconds", "counts", "throughput", "memory", "cache"],
+      "properties": {
+        "timings_seconds": {
+          "$ref": "#/$defs/statsMap"
+        },
+        "counts": {
+          "$ref": "#/$defs/statsMap"
+        },
+        "throughput": {
+          "$ref": "#/$defs/statsMap"
+        },
+        "memory": {
+          "$ref": "#/$defs/statsMap"
+        },
+        "cache": {
+          "$ref": "#/$defs/statsMap"
+        }
+      }
+    },
+    "caseProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "torch_device", "config", "config_sha256"],
+      "properties": {
+        "adapter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["module", "class", "capabilities"],
+          "properties": {
+            "module": {
+              "type": "string"
+            },
+            "class": {
+              "type": "string"
+            },
+            "capabilities": {}
+          }
+        },
+        "torch_device": {
+          "$ref": "#/$defs/torchDevice"
+        },
+        "config": {
+          "type": "object"
+        },
+        "config_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["group", "python_executable", "overlay"],
+          "properties": {
+            "group": {
+              "type": "string",
+              "minLength": 1
+            },
+            "python_executable": {
+              "type": "string",
+              "minLength": 1
+            },
+            "overlay": {
+              "type": ["string", "null"]
+            }
+          }
+        }
+      }
+    },
+    "torchDevice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "torch_available",
+        "torch_version",
+        "cuda_available",
+        "cuda_version",
+        "cudnn_version",
+        "device_requested",
+        "device_name",
+        "device_capability",
+        "device_total_memory_bytes"
+      ],
+      "properties": {
+        "torch_available": {
+          "type": "boolean"
+        },
+        "torch_version": {
+          "type": ["string", "null"]
+        },
+        "cuda_available": {
+          "type": "boolean"
+        },
+        "cuda_version": {
+          "type": ["string", "null"]
+        },
+        "cudnn_version": {
+          "type": ["integer", "null"]
+        },
+        "device_requested": {
+          "type": ["string", "null"]
+        },
+        "device_name": {
+          "type": ["string", "null"]
+        },
+        "device_capability": {
+          "anyOf": [
+            {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              ],
+              "items": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "device_total_memory_bytes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

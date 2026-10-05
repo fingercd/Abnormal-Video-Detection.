@@ -1,0 +1,1 @@
+video anomaly detection, weak supervision, token selection, training-free compression, efficient inference

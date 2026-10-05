@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "real_weight_smokes_passed",
+  "date": "2026-08-31",
+  "host": "ibnode3",
+  "project_root": "/users/fotile/VAD",
+  "branch": "feat/video-encoder-benchmark-framework",
+  "commit": "381e8649ba52c463808eab879112a4afb1fff731",
+  "runtime": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu124",
+    "torch_cuda": "12.4",
+    "transformers": "4.56.1",
+    "opencv": "4.11.0",
+    "cuda_available": true
+  },
+  "hermes_runtime": {
+    "venv": "/users/fotile/VAD/.venv-hermes",
+    "transformers": "4.45.0.dev0",
+    "transformers_source_commit": "66bc4def9505fa7c7fe4aa7a248c34a026bb552b"
+  },
+  "tests": {
+    "passed": 167,
+    "skipped": 1,
+    "warning": "pynvml deprecation only"
+  },
+  "upstreams": {
+    "videomaev2": "29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+    "hermes": "8d699b16a6bedb9086c1b39ec4253c6a1d1ce789"
+  },
+  "checkpoints": {
+    "videomaev2-base-hf": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d",
+    "hermes-llava-ov-0.5b": "07b3362c3412de79baf2379e44e5b0b2a8f4b965ebebd11d7b5b3eb4450fe96e"
+  },
+  "dataset_link": {
+    "path": "/users/fotile/VAD/data/ucf_crime",
+    "target": "/users/fotile/datasets/UCF-Crime",
+    "current_state": "empty landing directory; full UCF-Crime transfer not yet present"
+  },
+  "real_weight_smokes": {
+    "videomaev2": "passed on node3 CPU",
+    "hermes": "passed on node3 CPU with two chunks, cache reuse, and native static_pseudo compression"
+  },
+  "remaining_performance_followup": "Run HERMES predict mode on an unoccupied A100 for throughput and peak-memory benchmarking."
+}

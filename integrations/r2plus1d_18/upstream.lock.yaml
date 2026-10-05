@@ -1,0 +1,30 @@
+schema_version: 1
+integration: r2plus1d_18
+
+source:
+  repository: https://github.com/pytorch/vision
+  branch: v0.20.1
+  default_branch: main
+  commit: 3ac97aa9120137381ed1060f37237e44485ac2aa
+  commit_url: https://github.com/pytorch/vision/commit/3ac97aa9120137381ed1060f37237e44485ac2aa
+  verified_with: github-api
+  verified_on: "2026-08-31"
+
+license:
+  spdx: BSD-3-Clause
+  file: LICENSE
+  url: https://github.com/pytorch/vision/blob/3ac97aa9120137381ed1060f37237e44485ac2aa/LICENSE
+
+entrypoints:
+  constructor: torchvision.models.video.r2plus1d_18
+
+weights:
+  provider: torchvision
+  model_id: torchvision.models.video.R2Plus1D_18_Weights.KINETICS400_V1
+  url: https://download.pytorch.org/models/r2plus1d_18-91a641e6.pth
+  local_path: weights/r2plus1d_18/model.pth
+  size_bytes: 126162996
+  sha256: 91a641e6c2ab531d1aca5f4321b4d802ec5c3babc15df855cdb6e39c6a1107c8
+
+integration_notes:
+  - "TorchVision 0.20.1 R(2+1)D-18 Kinetics-400 weight; local-only loading."

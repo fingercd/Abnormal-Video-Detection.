@@ -1,0 +1,121 @@
+schema_version: 2
+environment_root: .encoder-envs/v2
+overlay_root: .encoder-envs/v2/overlays
+cache_root: .cache-v2
+new_weight_root: weights-v2
+new_external_root: external-v2
+minimum_free_bytes: 429496729600
+protected_roots:
+- .venv
+- .venv-hermes
+- /users/fotile/miniconda3/envs/mllm-comp-awarevln
+- /users/fotile/miniconda3/envs/mllm-comp-internav
+groups:
+  classic-video-v2:
+    prefix: .encoder-envs/v2/classic-video-v2
+    seed: /users/fotile/miniconda3/envs/mllm-comp-awarevln
+    python_version: 3.10.20
+    packages:
+      torch: 2.3.0+cu121
+      torchvision: 0.18.0
+      transformers: 4.37.2
+      pytorchvideo: 0.1.5
+      timm: 0.9.12
+    encoders:
+    - r2plus1d_18
+    - x3d
+    - mvitv2
+    - slowfast
+    - c3d
+    - i3d
+    - timesformer
+    - video_swin
+    - videomae
+  foundation-video-v2:
+    prefix: .encoder-envs/v2/foundation-video-v2
+    seed: /users/fotile/miniconda3/envs/mllm-comp-internav
+    python_version: 3.10.20
+    packages:
+      torch: 2.8.0
+      torchvision: 0.23.0
+      transformers: 4.57.3
+      timm: 1.0.28
+    encoders:
+    - videomaev2
+    - uniformerv2
+    - umt
+    - internvideo2
+    - videomamba
+    - vjepa2
+  visual-vlm-v2:
+    prefix: .encoder-envs/v2/visual-vlm-v2
+    seed: /users/fotile/miniconda3/envs/h3
+    python_version: 3.11.15
+    packages:
+      torch: 2.5.1+cu124
+      torchvision: 0.20.1+cu124
+    encoders:
+    - longvu
+    - videochat
+    - videochat_online
+    - videochat_flash
+    - ma_lmm
+    - moviechat
+  stream-kv-v2:
+    prefix: .encoder-envs/v2/stream-kv-v2
+    seed: /users/fotile/miniconda3/envs/h3
+    python_version: 3.11.15
+    packages:
+      torch: 2.5.1+cu124
+      torchvision: 0.20.1+cu124
+    encoders:
+    - streaming_vlm
+    - infinipot_v
+    - hermes_llava_ov
+    - mukv
+overlays:
+  videomaev2:
+    group: foundation-video-v2
+    path: .encoder-envs/v2/overlays/videomaev2
+    packages:
+      transformers: 4.56.1
+  videomamba:
+    group: foundation-video-v2
+    path: .encoder-envs/v2/overlays/videomamba
+    packages:
+      causal_conv1d: 1.0.0
+      mamba_ssm: 1.0.1
+  longvu:
+    group: visual-vlm-v2
+    path: .encoder-envs/v2/overlays/longvu
+    packages:
+      transformers: 4.42.4
+      tokenizers: 0.19.1
+      accelerate: 0.34.2
+      peft: 0.4.0
+      timm: 0.9.16
+  videochat_online:
+    group: visual-vlm-v2
+    path: .encoder-envs/v2/overlays/videochat_online
+    packages:
+      transformers: 4.37.2
+      tokenizers: 0.15.1
+      peft: 0.10.0
+      timm: 0.9.12
+  videochat_flash:
+    group: visual-vlm-v2
+    path: .encoder-envs/v2/overlays/videochat_flash
+    packages:
+      transformers: 4.40.1
+  streaming_vlm:
+    group: stream-kv-v2
+    path: .encoder-envs/v2/overlays/streaming_vlm
+    packages:
+      transformers: 4.56.1
+  hermes_llava_ov:
+    group: stream-kv-v2
+    path: .encoder-envs/v2/overlays/hermes_llava_ov
+    packages:
+      transformers: 4.45.0.dev0
+      tokenizers: 0.19.1
+      transformers_commit: 66bc4def9505fa7c7fe4aa7a248c34a026bb552b

@@ -1,0 +1,233 @@
+{
+  "status": "encoder_timing_only",
+  "identity": [
+    "ucf",
+    "24fd56fe8e9ba7f338e938b7e7b5e53bf8ea37bfe2adbee397801c4720b8909f",
+    "d71d940b512b04c2696d862d4cef54876d558a8852a0f4c52949b0b9fdbf911c",
+    "5806e77cd80f8b59890b7e101eabd078d9fb84e6937f9e85e4ecb61988df416f",
+    "fp32_tf32_off_cudnn_off"
+  ],
+  "source_sha256": {
+    "work\\dsanet-extension-20260923-r01\\benchmark\\ucf-r00.json": "64b58b347b7bdc40ffe9616c5bb72e7e497f5ed3225ad15b08a4f31bff1ed9e7",
+    "work\\dsanet-extension-20260923-r01\\benchmark\\ucf-r01.json": "7b74e3fa9d2ba963d5660478f2f752a0fb5dcc9ff3fcb083283f337ddca46ade",
+    "work\\dsanet-extension-20260923-r01\\benchmark\\ucf-r02.json": "62604b4528bc1d2cf609c79fee43e92168d18ebc3a06f07caa85366328f70797"
+  },
+  "results": {
+    "batch1-keepNone": {
+      "batch": 1,
+      "keep_ratio": null,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 5.085184097290039,
+      "gpu_p95_ms_median_of_processes": 14.255565071105947,
+      "throughput_images_per_second_median": 196.64971432065028,
+      "speedup_vs_dense_median": 1.0,
+      "speedup_each_process": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "peak_allocated_mib_median": 597.55224609375,
+      "peak_reserved_mib_median": 642.0,
+      "selector_only_ms_median": 0.0,
+      "principal_block_gflops_per_image": 34.89490944
+    },
+    "batch1-keep0.8": {
+      "batch": 1,
+      "keep_ratio": 0.8,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 5.338111877441406,
+      "gpu_p95_ms_median_of_processes": 18.271795082092268,
+      "throughput_images_per_second_median": 187.3321546942375,
+      "speedup_vs_dense_median": 0.952618493962214,
+      "speedup_each_process": [
+        0.952618493962214,
+        0.9784257676243343,
+        0.9405482136145892
+      ],
+      "peak_allocated_mib_median": 596.97509765625,
+      "peak_reserved_mib_median": 640.0,
+      "selector_only_ms_median": 0.4546560049057007,
+      "principal_block_gflops_per_image": 31.327266816
+    },
+    "batch1-keep0.6": {
+      "batch": 1,
+      "keep_ratio": 0.6,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 5.321216106414795,
+      "gpu_p95_ms_median_of_processes": 18.226586055755615,
+      "throughput_images_per_second_median": 187.92696631780976,
+      "speedup_vs_dense_median": 0.955643220571287,
+      "speedup_each_process": [
+        0.955643220571287,
+        0.9793905967370558,
+        0.9300000108799367
+      ],
+      "peak_allocated_mib_median": 597.55224609375,
+      "peak_reserved_mib_median": 642.0,
+      "selector_only_ms_median": 0.4541440010070801,
+      "principal_block_gflops_per_image": 27.815694336
+    },
+    "batch1-keep0.4": {
+      "batch": 1,
+      "keep_ratio": 0.4,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 5.456896066665649,
+      "gpu_p95_ms_median_of_processes": 18.617343616485584,
+      "throughput_images_per_second_median": 183.25436068109582,
+      "speedup_vs_dense_median": 0.9323526741361826,
+      "speedup_each_process": [
+        0.9318821606945614,
+        0.9814229670594327,
+        0.9323526741361826
+      ],
+      "peak_allocated_mib_median": 597.55224609375,
+      "peak_reserved_mib_median": 642.0,
+      "selector_only_ms_median": 0.4479999989271164,
+      "principal_block_gflops_per_image": 24.272326656
+    },
+    "batch32-keepNone": {
+      "batch": 32,
+      "keep_ratio": null,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 80.5483512878418,
+      "gpu_p95_ms_median_of_processes": 80.87495803833008,
+      "throughput_images_per_second_median": 397.2769086936007,
+      "speedup_vs_dense_median": 1.0,
+      "speedup_each_process": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "peak_allocated_mib_median": 918.44775390625,
+      "peak_reserved_mib_median": 1056.0,
+      "selector_only_ms_median": 0.0,
+      "principal_block_gflops_per_image": 34.89490944
+    },
+    "batch32-keep0.8": {
+      "batch": 32,
+      "keep_ratio": 0.8,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 73.25286483764648,
+      "gpu_p95_ms_median_of_processes": 76.19419860839844,
+      "throughput_images_per_second_median": 436.8429831505293,
+      "speedup_vs_dense_median": 1.096460522942668,
+      "speedup_each_process": [
+        1.096460522942668,
+        1.0995931895136746,
+        1.088716892145788
+      ],
+      "peak_allocated_mib_median": 900.55615234375,
+      "peak_reserved_mib_median": 1056.0,
+      "selector_only_ms_median": 0.46592000126838684,
+      "principal_block_gflops_per_image": 31.327266816
+    },
+    "batch32-keep0.6": {
+      "batch": 32,
+      "keep_ratio": 0.6,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 65.81964874267578,
+      "gpu_p95_ms_median_of_processes": 66.40865364074708,
+      "throughput_images_per_second_median": 486.1770096207155,
+      "speedup_vs_dense_median": 1.2218979227614737,
+      "speedup_each_process": [
+        1.2209143494809915,
+        1.2237736424688073,
+        1.2218979227614737
+      ],
+      "peak_allocated_mib_median": 918.44775390625,
+      "peak_reserved_mib_median": 1056.0,
+      "selector_only_ms_median": 0.47206398844718933,
+      "principal_block_gflops_per_image": 27.815694336
+    },
+    "batch32-keep0.4": {
+      "batch": 32,
+      "keep_ratio": 0.4,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 58.12070274353027,
+      "gpu_p95_ms_median_of_processes": 58.82106971740722,
+      "throughput_images_per_second_median": 550.5783393777373,
+      "speedup_vs_dense_median": 1.381379850675604,
+      "speedup_each_process": [
+        1.381379850675604,
+        1.3858805466148303,
+        1.3805309484770578
+      ],
+      "peak_allocated_mib_median": 918.44775390625,
+      "peak_reserved_mib_median": 1056.0,
+      "selector_only_ms_median": 0.4551680088043213,
+      "principal_block_gflops_per_image": 24.272326656
+    },
+    "batch128-keepNone": {
+      "batch": 128,
+      "keep_ratio": null,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 314.21287536621094,
+      "gpu_p95_ms_median_of_processes": 315.0188980102539,
+      "throughput_images_per_second_median": 407.36713876163634,
+      "speedup_vs_dense_median": 1.0,
+      "speedup_each_process": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "peak_allocated_mib_median": 1917.26025390625,
+      "peak_reserved_mib_median": 2462.0,
+      "selector_only_ms_median": 0.0,
+      "principal_block_gflops_per_image": 34.89490944
+    },
+    "batch128-keep0.8": {
+      "batch": 128,
+      "keep_ratio": 0.8,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 280.1377410888672,
+      "gpu_p95_ms_median_of_processes": 283.1550094604492,
+      "throughput_images_per_second_median": 456.91808430551663,
+      "speedup_vs_dense_median": 1.1006010870560452,
+      "speedup_each_process": [
+        1.0989556300314607,
+        1.1248813718794175,
+        1.1006010870560452
+      ],
+      "peak_allocated_mib_median": 1861.47900390625,
+      "peak_reserved_mib_median": 2462.0,
+      "selector_only_ms_median": 0.5754879713058472,
+      "principal_block_gflops_per_image": 31.327266816
+    },
+    "batch128-keep0.6": {
+      "batch": 128,
+      "keep_ratio": 0.6,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 253.81324768066406,
+      "gpu_p95_ms_median_of_processes": 254.95956802368164,
+      "throughput_images_per_second_median": 504.30779783821055,
+      "speedup_vs_dense_median": 1.2379687752214528,
+      "speedup_each_process": [
+        1.2133240561274963,
+        1.2379687752214528,
+        1.2459309171930992
+      ],
+      "peak_allocated_mib_median": 1917.26025390625,
+      "peak_reserved_mib_median": 2462.0,
+      "selector_only_ms_median": 0.5114880204200745,
+      "principal_block_gflops_per_image": 27.815694336
+    },
+    "batch128-keep0.4": {
+      "batch": 128,
+      "keep_ratio": 0.4,
+      "independent_processes": 3,
+      "gpu_p50_ms_median_of_processes": 223.9267807006836,
+      "gpu_p95_ms_median_of_processes": 228.93920669555663,
+      "throughput_images_per_second_median": 571.6154164297743,
+      "speedup_vs_dense_median": 1.4031947156254174,
+      "speedup_each_process": [
+        1.3772917337862085,
+        1.4031947156254174,
+        1.4137031485631315
+      ],
+      "peak_allocated_mib_median": 1917.26025390625,
+      "peak_reserved_mib_median": 2462.0,
+      "selector_only_ms_median": 0.4904960095882416,
+      "principal_block_gflops_per_image": 24.272326656
+    }
+  }
+}

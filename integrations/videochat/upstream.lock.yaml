@@ -1,0 +1,34 @@
+schema_version: 1
+integration: videochat
+
+source:
+  repository: https://github.com/OpenGVLab/Ask-Anything
+  branch: main
+  default_branch: main
+  commit: 4dd8210b030374bb0c510a57dfbe916f70d3ef71
+  commit_url: https://github.com/OpenGVLab/Ask-Anything/commit/4dd8210b030374bb0c510a57dfbe916f70d3ef71
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/OpenGVLab/Ask-Anything/blob/4dd8210b030374bb0c510a57dfbe916f70d3ef71/LICENSE
+
+entrypoints:
+  loader: video_chat/models/videollama.py:load_model
+  visual_tokens: video_chat/models/visual_encoder.py:encode_img
+  inference: video_chat/inference.py
+
+weights:
+  provider: huggingface
+  model_id: OpenGVLab/VideoChat-7B
+  revision: main
+  local_dir: weights/videochat
+  sha256: {}
+  status: planned
+
+integration_notes:
+  - VideoChat 的公开代码包含多个历史分支；实际 variant 必须在运行产物中记录。
+  - adapter 只桥接视觉/projected 输出，不把语言 logits 当作视频特征。
+  - 未准备本地资产时构造器 fail-closed，不会触发自动下载。

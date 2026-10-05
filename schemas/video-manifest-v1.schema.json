@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/fingercd/Abnormal-Video-Detection/schemas/video-manifest-v1.schema.json",
+  "title": "VADBench video manifest record v1",
+  "description": "One JSON object per line. Paths are relative to the dataset root; spans use [start, end) semantics.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "video_id",
+    "path",
+    "split",
+    "category",
+    "is_anomaly",
+    "annotations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "video_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/\\\\]+$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+    },
+    "split": {
+      "enum": ["train", "val", "test"]
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1
+    },
+    "is_anomaly": {
+      "type": "boolean"
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/annotation"
+      }
+    },
+    "num_frames": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "fps": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "duration_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "unit"],
+      "properties": {
+        "start": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "enum": ["frame", "second", "segment"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "unit": {
+                "enum": ["frame", "segment"]
+              }
+            },
+            "required": ["unit"]
+          },
+          "then": {
+            "properties": {
+              "start": {
+                "type": "integer"
+              },
+              "end": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "is_anomaly"],
+      "properties": {
+        "scope": {
+          "enum": ["video", "segment", "frame", "caption"]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "is_anomaly": {
+          "type": ["boolean", "null"]
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "video"
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "not": {
+              "required": ["span"]
+            },
+            "anyOf": [
+              {
+                "required": ["label"]
+              },
+              {
+                "properties": {
+                  "is_anomaly": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "frame"
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "required": ["span"],
+            "properties": {
+              "span": {
+                "properties": {
+                  "unit": {
+                    "const": "frame"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "segment"
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "required": ["span"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "caption"
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "required": ["text"]
+          }
+        }
+      ]
+    }
+  }
+}

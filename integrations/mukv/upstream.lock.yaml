@@ -1,0 +1,33 @@
+schema_version: 1
+integration: mukv
+
+source:
+  repository: https://github.com/IMBALDY/MuKV
+  branch: main
+  default_branch: main
+  commit: 2127b875ea1c2d91e4349324edbd779168a3da9e
+  commit_url: https://github.com/IMBALDY/MuKV/commit/2127b875ea1c2d91e4349324edbd779168a3da9e
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: NOASSERTION
+  file: null
+  url: https://github.com/IMBALDY/MuKV
+
+entrypoints:
+  loader: mukv/model.py:load_model
+  decoder_context: mukv/model.py:forward
+  stream: inference.py
+
+weights:
+  provider: upstream_release
+  model_id: IMBALDY/MuKV
+  revision: 2127b875ea1c2d91e4349324edbd779168a3da9e
+  local_dir: weights/mukv
+  sha256: {}
+  status: planned
+
+integration_notes:
+  - MuKV 默认面向 LLaVA-OneVision 0.5B；代码仓库当前未提供明确许可证，需授权确认。
+  - 本 adapter 只验证 decoder-context 输出和显式 state，不实现 MuKV 压缩算法。

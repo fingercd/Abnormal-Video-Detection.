@@ -1,0 +1,33 @@
+schema_version: 1
+integration: moviechat
+
+source:
+  repository: https://github.com/wenhaochai/MovieChat
+  branch: main
+  default_branch: main
+  commit: ba9bb802ea209c6d8e8b4333ec917ae3aee55b1d
+  commit_url: https://github.com/wenhaochai/MovieChat/commit/ba9bb802ea209c6d8e8b4333ec917ae3aee55b1d
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: BSD-3-Clause
+  file: LICENSE
+  url: https://github.com/wenhaochai/MovieChat/blob/ba9bb802ea209c6d8e8b4333ec917ae3aee55b1d/LICENSE
+
+entrypoints:
+  loader: moviechat/models/moviechat.py:from_config
+  visual_memory: moviechat/models/moviechat.py:memory
+  inference: inference.py
+
+weights:
+  provider: huggingface
+  model_id: Enxin/MovieChat-vicuna
+  revision: main
+  local_dir: weights/moviechat
+  sha256: {}
+  status: planned
+
+integration_notes:
+  - MovieChat 具有短期/长期视觉记忆；其许可与多个第三方依赖需分别审核。
+  - 服务器未显式准备 checkpoint 时禁止调用会自动下载权重的 PyPI 默认路径。

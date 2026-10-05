@@ -1,3 +1,45 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+/.bootstrap-status
+/.incoming/
+
+# Local environments and editors
+.venv/
+.venv-*/
+.idea/
+.vscode/
+
+# Large or machine-specific research assets
+/assets
+/archive/
+/data/*
+/weights/*
+/outputs/*
+/external/*
+/external-v2/
+/weights-v2/
+/.encoder-envs/
+/.cache-v2/
+/logs/
+/wheels/
+/wandb/
+/mlruns/
+/projects/*/assets.local.yaml
+
+# Temporary research material
+/work/organization-20260925/
+/_tmp*/
+*.tmp
+
+# Keep directory contracts visible without committing payloads
+!/data/.gitkeep
+!/weights/.gitkeep
+!/outputs/.gitkeep
+!/external/.gitkeep

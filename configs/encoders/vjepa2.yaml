@@ -1,0 +1,32 @@
+schema_version: 1
+name: vjepa2
+adapter: vjepa2
+family: video_foundation
+constructor:
+  model_name: facebook/vjepa2-vitl-fpc64-256
+  model_path: weights/vjepa2
+  runtime: in_process
+  num_frames: 64
+  image_size: 256
+  device: cpu
+  feature_stage: backbone_tokens
+  preprocess_profile: vjepa2-bthwc-v1
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: facebook/vjepa2-vitl-fpc64-256
+  revision: b3c1679b7c34d3255ef3547f27c7b226aefab26f
+  license: mit
+  local_path: weights/vjepa2
+capabilities:
+  supports_fixed_clip: true
+  supports_streaming: false
+  supports_kv_cache: false
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: false
+  supports_training: true
+  fixed_num_frames: null
+  min_frames: 1
+  max_frames: null
+upstream_lock: integrations/vjepa2/upstream.lock.yaml

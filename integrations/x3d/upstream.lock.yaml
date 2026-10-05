@@ -1,0 +1,36 @@
+schema_version: 1
+integration: x3d
+
+source:
+  repository: https://github.com/facebookresearch/pytorchvideo
+  branch: main
+  default_branch: main
+  commit: f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  commit_url: https://github.com/facebookresearch/pytorchvideo/commit/f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  verified_with: git-ls-remote
+  verified_on: "2026-08-31"
+
+license:
+  spdx: Apache-2.0
+  file: LICENSE
+  url: https://github.com/facebookresearch/pytorchvideo/blob/f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0/LICENSE
+
+entrypoints:
+  model_factory: pytorchvideo.models.hub.x3d_s
+  adapter: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
+
+weights:
+  provider: direct_url
+  model_id: pytorchvideo/X3D_S
+  url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D_S.pyth
+  revision: X3D_S
+  license: Apache-2.0
+  local_dir: weights/x3d
+  filename: model.pyth
+  sha256:
+    model.pyth: 26b95f1605d49650b54049db40ba3a56e023b86b58c3b3e0e10e0992a9c8682f
+
+integration_notes:
+  - X3D-S 是固定 clip RGB 路线；adapter 不声明 streaming 或任何 cache。
+  - checkpoint 只能由服务器预先下载到 local_dir；adapter 不调用 torch.hub。
+  - 公开变体的 nominal 采样为 13 帧、stride 6、crop 182，实际采样由框架 sampler 负责。

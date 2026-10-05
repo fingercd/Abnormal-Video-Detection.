@@ -1,0 +1,21 @@
+schema_version: 1
+stage: probe
+encoder_ids: [videomaev2]
+method: identity
+cohort: outputs/icassp2027/assets/p04-heldout-confirmation-v1/cohort.jsonl
+manifest: outputs/icassp2027/assets/p04-heldout-confirmation-v1/manifest.jsonl
+dataset: ucf_crime
+partition: confirm
+role: confirm
+max_videos: 64
+sampling:
+  kind: uniform_segment_centers_full_clip
+  windows_per_video: 8
+  frame_stride: 2
+  position: center
+observation:
+  depths: [0.5]
+  max_tokens: 256
+  max_queries: 32
+  max_records: 128
+  probes: [P04]

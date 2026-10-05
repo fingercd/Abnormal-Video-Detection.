@@ -1,0 +1,84 @@
+schema_version: 1
+
+# 性能结果写入 schemas/performance-result-v1.schema.json。encoder wall time 已包含
+# HERMES 原生压缩；native_compression 是由 adapter telemetry 提供的嵌套子项。
+benchmark:
+  name: video-encoder-smoke
+  warmup: 1
+  repeat: 5
+  synchronize_cuda: true
+  device: cuda:0
+  output: outputs/benchmarks/video-encoder-smoke/performance.json
+
+# 两条路线必须消费同一段视频的同一组有序采样帧。fixed clip 与 streaming
+# chunk 可以有不同分组，但 runner 会按 video_id/frame_index/timestamp 指纹复核；
+# 任何差异都会写成 comparison.comparable=false 及明确 reasons。
+input:
+  task: encoder_performance_only
+  sampling_protocol: shared-ordered-frame-smoke-v1
+  video: data/smoke/surveillance-smoke.mp4
+  sample_fps: 0.5
+  sampled_frames: 32
+  frames_per_unit: 16
+  frame_stride: 1
+  spatial_preprocess: adapter_owned
+
+cases:
+  - name: videomaev2-fixed
+    track: fixed_clip_no_cache
+    mode: fixed
+    experiment: configs/experiments/ucf_videomaev2_weak.yaml
+    # 下面的 encoder 对象可直接合并进 experiment 后交给
+    # create_encoder_from_experiment()，不使用私有 override 字段。
+    encoder:
+      adapter: videomaev2
+      definition: configs/encoders/videomaev2-base.yaml
+      device: cuda:0
+      params: {}
+    grouping:
+      units: 2
+      frames_per_unit: 16
+    compression: null
+
+  - name: hermes-stream-identity
+    track: raw_decoder_kv
+    mode: streaming
+    experiment: configs/experiments/ucf_hermes_stream.yaml
+    encoder:
+      adapter: hermes_llava_ov
+      definition: configs/encoders/hermes-llava-ov-0.5b.yaml
+      device: cuda:0
+      params:
+        # projected_visual 不带历史 decoder-KV 条件，只用于性能/缓存遥测。
+        feature_stage: projected_visual
+        native_compression_mode: "off"
+    grouping:
+      units: 2
+      frames_per_unit: 16
+    compression:
+      policy: identity
+
+  - name: hermes-stream-native-predict
+    track: native_decoder_kv_predict
+    mode: streaming
+    experiment: configs/experiments/ucf_hermes_stream.yaml
+    encoder:
+      adapter: hermes_llava_ov
+      definition: configs/encoders/hermes-llava-ov-0.5b.yaml
+      device: cuda:0
+      params:
+        # 与 raw case 保持同一输出阶段；这是一项独立的 native decoder-KV
+        # predict 压缩性能消融，并非准确率比较。
+        feature_stage: projected_visual
+        native_compression_mode: predict
+        # 默认 2000 token 预算在 32 帧 smoke 上可能完全不触发压缩；缩小预算
+        # 并设置结果门禁，确保本 case 真正测到 predict_and_compress。
+        kv_size: 8
+    grouping:
+      units: 2
+      frames_per_unit: 16
+    compression:
+      policy: identity
+    result_requirements:
+      native_compression_calls_min: 1
+      native_compression_applied_steps_min: 1

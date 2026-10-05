@@ -1,0 +1,23 @@
+schema_version: 1
+name: r2plus1d-18
+adapter: r2plus1d_18
+family: fixed_clip
+
+constructor:
+  variant: r2plus1d_18
+  checkpoint_path: weights/r2plus1d_18/model.pth
+  clip_frames: 16
+  frame_stride: 2
+  image_size: 112
+  feature_stage: pooled
+  strict_checkpoint: false
+
+checkpoint:
+  constructor_key: checkpoint_path
+  source: torchvision
+  model_id: torchvision.models.video.r2plus1d_18
+  revision: v0.20.1
+  license: BSD-3-Clause
+  local_path: weights/r2plus1d_18/model.pth
+
+upstream_lock: integrations/r2plus1d_18/upstream.lock.yaml

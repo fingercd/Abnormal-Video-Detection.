@@ -1,0 +1,36 @@
+schema_version: 1
+integration: longvu
+
+source:
+  repository: https://github.com/Vision-CAIR/LongVU
+  branch: main
+  default_branch: main
+  commit: 1b0be5cc28614b03a423bbaf129ae364750b5012
+  commit_url: https://github.com/Vision-CAIR/LongVU/commit/1b0be5cc28614b03a423bbaf129ae364750b5012
+  verified_with: github-web
+  verified_on: "2026-08-31"
+
+license:
+  spdx: Apache-2.0
+  file: LICENSE
+  url: https://github.com/Vision-CAIR/LongVU/blob/1b0be5cc28614b03a423bbaf129ae364750b5012/LICENSE
+
+entrypoints:
+  loader: longvu/builder.py:load_pretrained_model
+  visual_tokens: longvu/model/llava_arch.py:encode_images
+  inference: app.py
+
+weights:
+  provider: huggingface
+  model_id: Vision-CAIR/LongVU_Qwen2_7B
+  revision: 2b4ed544d651064e4c30d51cf84c5c3e65afa069
+  local_dir: weights/longvu
+  sha256:
+    model.safetensors: e846f373072ab8e42ee7963e21514d543696ee2859c30570bb1b05a88d94f3ca
+  size_bytes: 15343381968
+  status: verified
+
+integration_notes:
+  - LongVU 是视频 VLM；本 adapter 导出 projected_visual 表征，而不是生成文本。
+  - 真实 checkpoint 与上游 checkout 必须由服务器上的显式资产步骤准备。
+  - 本接入固定类别无关 prompt，不启用或比较任何 KV/token 压缩策略。

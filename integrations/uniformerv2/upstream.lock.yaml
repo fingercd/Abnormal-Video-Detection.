@@ -1,0 +1,34 @@
+schema_version: 1
+integration: uniformerv2
+
+source:
+  repository: https://github.com/OpenGVLab/UniFormerV2
+  branch: main
+  default_branch: main
+  commit: 722a43440fc5b9662cc2a8f23b86caa205e45ebc
+  commit_url: https://github.com/OpenGVLab/UniFormerV2/commit/722a43440fc5b9662cc2a8f23b86caa205e45ebc
+  verified_with: github-atom
+  verified_on: "2026-08-31"
+
+license:
+  spdx: Apache-2.0
+  file: LICENSE
+  url: https://github.com/OpenGVLab/UniFormerV2/blob/722a43440fc5b9662cc2a8f23b86caa205e45ebc/LICENSE
+
+entrypoints:
+  backbone: models/uniformerv2.py
+  classification: run_class_finetuning.py
+
+weights:
+  provider: official
+  model_id: UniFormerV2-B/16
+  revision: planned
+  license: Apache-2.0
+  local_dir: weights/uniformerv2
+  sha256: {}
+  size_bytes: null
+
+integration_notes:
+  - 固定 clip 适配；官方实现的 image-pretrain/video-pretrain 变体由 config 明确选择。
+  - adapter 只导出 pooled/backbone 表征，不把 Transformer 内部状态解释为跨 clip cache。
+  - 权重和第三方依赖必须显式准备；缺失时 fail-closed 且不联网。

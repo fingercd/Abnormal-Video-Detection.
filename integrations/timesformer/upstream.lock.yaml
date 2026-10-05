@@ -1,0 +1,37 @@
+schema_version: 1
+integration: timesformer
+
+source:
+  repository: https://github.com/facebookresearch/TimeSformer
+  branch: main
+  default_branch: main
+  commit: a5ef29a7b7264baff199a30b3306ac27de901133
+  commit_url: https://github.com/facebookresearch/TimeSformer/commit/a5ef29a7b7264baff199a30b3306ac27de901133
+  verified_with: git-ls-remote
+  verified_on: "2026-08-31"
+
+license:
+  spdx: CC-BY-NC-4.0
+  file: LICENSE
+  url: https://github.com/facebookresearch/TimeSformer/blob/a5ef29a7b7264baff199a30b3306ac27de901133/LICENSE
+
+entrypoints:
+  transformers_model: transformers.models.timesformer.modeling_timesformer:TimesformerModel
+  processor: transformers.AutoImageProcessor
+
+weights:
+  provider: huggingface
+  model_id: facebook/timesformer-base-finetuned-k400
+  revision: 62e4dad07e65ec02438eb99391efd4836ec563bb
+  license: cc-by-nc-4.0
+  local_dir: weights/timesformer-base-finetuned-k400
+  filename: pytorch_model.bin
+  size_bytes: 486346639
+  sha256:
+    pytorch_model.bin: 968479f41eb3f2f4b1829ae06b663998dcc3782deb6a3e81746a9e51dbabd46d
+  status: planned
+
+integration_notes:
+  - 固定 8 帧 clip；VADBench 只导出 last_hidden_state/mean pooled 表征。
+  - 适配器只接受本地 checkpoint，并强制 local_files_only=True。
+  - TimeSformer 内部 attention 激活不作为跨 clip KV cache 暴露。

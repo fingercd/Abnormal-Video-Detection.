@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "fixed_before_official_model_scores",
+  "method_freeze_canonical_sha256": "54b81894e42e244c320b5d40a06c21199e3e77ebf1e53264b0f6069bda005271",
+  "role_lock_sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59",
+  "role_lock_seed": 20260918,
+  "dataset": "ucf-crime",
+  "official_training_videos": 1610,
+  "roles": {
+    "fit": {
+      "videos": 1288,
+      "source_manifest_sha256": "2208d377cd393283ff21334eccc2a8523b1a8857cd2b33877fdd11fc2c852ff5",
+      "source_manifest": "manifests/fit.jsonl",
+      "source_split": "train",
+      "controller_split": "train"
+    },
+    "select": {
+      "videos": 161,
+      "source_manifest_sha256": "6e4e3453c90717e5b88dcff263367cf2d567ff34c918ee53dd11abab98196f84",
+      "source_manifest": "manifests/select.jsonl",
+      "source_split": "train",
+      "controller_split": "val"
+    }
+  },
+  "verification": "exact role-lock ID sets and source video path, weak label, decoded frame count and fps; controller enrichment and explicit train-to-val derived metadata are preserved",
+  "source_manifest_role": "complete official-train metadata frozen before detector training",
+  "official_test_ids_labels_or_model_scores_used": false,
+  "changes_to_original_method_or_head_budget": false
+}

@@ -1,0 +1,119 @@
+{
+  "author_backend": {
+    "anomaly_bags_per_step": 64,
+    "architecture": "complete_WSAD_with_temporal_embedding_GL_MHSA_dual_memory_uncertainty_and_classifier",
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "checkpoint_selection": "fixed_final_step_no_test_selection",
+    "commit": "40cfdf5f8bebbc3b59373935f9d6ca00e2f32bbc",
+    "initialization": "official_random_initialization_per_seed_for_each_new_representation",
+    "learning_rate": 0.0001,
+    "loss": "unchanged_official_AD_Loss",
+    "memory_units_anomaly": 60,
+    "memory_units_normal": 60,
+    "name": "UR-DMU",
+    "normal_bags_per_step": 64,
+    "optimizer": "Adam",
+    "optimizer_steps": 3000,
+    "repository": "https://github.com/henrryzh1/UR-DMU",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "temporal_training_segments": 200,
+    "weight_decay": 5e-05
+  },
+  "author_reproduction": {
+    "new_encoder_checkpoint_transfer": false,
+    "original_crops": {
+      "ucf_crime": 10,
+      "xd_violence": 5
+    },
+    "original_feature_assets_ready": false,
+    "paper_score_reproduced": false,
+    "scope": "public_I3D_features_and_released_checkpoints_separate_reference_run",
+    "ucf_checkpoint_sha256": "2a64562df08a4142b19067fe46f07c6fdaf9923de36ded1b827489d6196429cd",
+    "xd_checkpoint_sha256": "f30e9fa84d9eb680b7b13d0c5d7406b11e53dcdf37f3827fcc8899d2448f3d9b"
+  },
+  "datasets": {
+    "ucf_crime": {
+      "author_reproduction_coordinates": "separate_original_I3D_feature_and_author_GT_contract",
+      "encoders": [
+        "videomaev2",
+        "timesformer",
+        "vjepa2",
+        "videomae"
+      ],
+      "evaluation_coordinates": "existing_audited_raw_decoded_frame_protocol",
+      "metric": "frame_roc_auc",
+      "official_test_videos": 290,
+      "official_train_anomalous": 810,
+      "official_train_normal": 800,
+      "official_train_videos": 1610
+    },
+    "xd_violence": {
+      "encoders": [
+        "videomaev2",
+        "timesformer",
+        "videomae"
+      ],
+      "evaluation_coordinates": "predeclared_author_prefix_16Ti_requires_full800_raw_alignment_seal",
+      "metric": "frame_pr_auc_trapezoid",
+      "name_group_isolated_1598": "supplementary_robustness_only",
+      "official_test_videos": 800,
+      "official_train_anomalous": 1905,
+      "official_train_normal": 2049,
+      "official_train_videos": 3954
+    }
+  },
+  "decision_date": "2026-09-20",
+  "direct_insert_contract": "same_encoder_same_seed_dense_checkpoint_bytes_frozen_for_all_reducers",
+  "execution_gates": [
+    "strict_upstream_model_and_loss_acceptance",
+    "complete_authoritative_official_training_view",
+    "native_dense_feature_sampling_and_content_identity",
+    "finite_nonzero_training_gradients_parameter_updates_and_exact_checkpoint_reload",
+    "fixed_dense_checkpoint_same_seed_for_direct_insert",
+    "dataset_audit_and_coordinate_seal_before_test_scoring",
+    "same_input_preprocessing_precision_sampling_and_readout_across_methods"
+  ],
+  "methods": {
+    "control": "global_uniform",
+    "learned_candidate": "pair_linear",
+    "no_new_test_based_selection": true,
+    "novelty_status": "not_established_requires_strong_compression_comparisons_and_evidence_review",
+    "plugin_policy_source": "reducer-evaluation-freeze-v1.json",
+    "plugin_weights": "existing_UCF_fit_only_frozen_calibration_reused_without_XD_recalibration",
+    "reference": "identity",
+    "training_free_candidate": "paired_random"
+  },
+  "primary_comparison": "direct_insert",
+  "quality_tolerance": 0.005,
+  "quality_uncertainty": "paired_video_bootstrap_10000_replicates_stratified_by_video_label",
+  "resources": {
+    "existing_V100_clip_results": "reference_only",
+    "formal_timing": "exclusive_gpu_with_foreign_process_and_noise_checks",
+    "ordinary_quality": "explicit_sharing_with_per_run_lease_and_memory_budget",
+    "primary_gpu": "node3_A100_all_eight_authorized"
+  },
+  "revision_note": "v3 (2026-09-20): the only change versus v2 is adding videomae to datasets.xd_violence.encoders — the user directed all three XD encoders (videomaev2/timesformer/videomae, 2026-09-20 14:1x, control-plane README). videomaev2/timesformer unchanged; every other field byte-identical to v2. v2 is preserved in place; consumers switch by passing this file with its SHA-256. The schema field intentionally stays icassp2027.official-detector-protocol/v2 so existing validators apply.",
+  "schema": "icassp2027.official-detector-protocol/v2",
+  "secondary_comparison": "refit_head",
+  "status": "implementation_in_progress_no_official_model_scores_accessed",
+  "training_view": {
+    "bin_index_dtype": "int64",
+    "construction": "new_view_union_of_original_fit_confirm_select_preserving_original_role_metadata",
+    "missing_or_corrupt_records": "block_complete_training_claim_and_repair_before_execution",
+    "name": "official-fulltrain-final",
+    "new_encoder_crop_policy": "existing_frozen_native_preprocessing_identical_across_compared_methods",
+    "new_encoder_crops": 1,
+    "new_encoder_features": "full_native_dense_sequence_then_author_equal_bin_mean_200",
+    "old_role_locks_and_runs": "immutable_historical_development_evidence",
+    "original_32_clip_features": "engineering_only_not_upsampled_to_claim_dense_coverage",
+    "require_complete_official_identity_set": true,
+    "short_sequence_bins": "author_empty_bin_rule_select_corresponding_existing_clip"
+  }
+}

@@ -1,0 +1,52 @@
+schema_version: 1
+name: hermes-llava-ov-0.5b
+adapter: hermes_llava_ov
+family: streaming_vlm
+
+constructor:
+  checkout_path: external-v2/hermes
+  model_path: weights/hermes-llava-ov-0.5b
+  kv_size: 2000
+  sample_fps: 0.5
+  streaming: true
+  device: cuda
+  initialize_prompt: true
+  # 默认 projected_visual 与既有特征兼容，但只适合性能对照；准确率消融需显式
+  # 改为 decoder_contextual，使当前 chunk 表征受历史 decoder KV/压缩策略影响。
+  feature_stage: projected_visual
+  # 真实 HERMES 冒烟启用官方 query-guided hierarchical decoder-KV policy。
+  # 设为 off 才是 raw/identity 对照；static_pseudo 使用下方固定中性问题。
+  native_compression_mode: predict
+  native_local_question: >-
+    Describe recent visible actions, objects, people, and scene changes in concrete
+    terms.
+  native_global_question: >-
+    Summarize the video timeline, recurring entities, locations, and interactions.
+
+checkpoint:
+  constructor_key: model_path
+  source: huggingface
+  model_id: llava-hf/llava-onevision-qwen2-0.5b-ov-hf
+  revision: 74dd0bf867a4cda7950c17663794267c60cf4b40
+  license: apache-2.0
+  local_path: weights/hermes-llava-ov-0.5b
+
+capabilities:
+  supports_fixed_clip: false
+  supports_streaming: true
+  supports_kv_cache: true
+  supports_token_cache: false
+  supports_visual_memory_cache: false
+  supports_external_cache_policy: true
+  supports_training: false
+
+cache_semantics:
+  kind: decoder_kv
+  owner: language_model_decoder
+  visual_tokens_output: projected_visual
+  projected_visual_scope: performance_only; representation is independent of past decoder KV
+  decoder_contextual_scope: accuracy_and_performance; current q_len only and conditioned on past decoder KV
+  native_budget_semantics: kv_size counts selected visual tokens per layer; protected prompt tokens are additional
+  native_risk: query-guided VideoQA compression adds pseudo-query compute and may not preserve rare VAD evidence
+
+upstream_lock: integrations/hermes/upstream.lock.yaml

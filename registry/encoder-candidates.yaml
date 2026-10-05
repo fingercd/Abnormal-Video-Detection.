@@ -1,0 +1,511 @@
+schema_version: 1
+target_count: 25
+runtime_target_count: 21
+candidates:
+- id: r2plus1d_18
+  display_name: R(2+1)D-18
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/r2plus1d_18/upstream.lock.yaml
+  checkpoint:
+    registry_id: r2plus1d_18-default
+    repo_id: pytorch/vision
+    repo_url: https://github.com/pytorch/vision
+    artifact_url: https://download.pytorch.org/models/r2plus1d_18-91a641e6.pth
+    revision: v0.20.1
+    license: bsd-3-clause
+    allow_patterns:
+    - r2plus1d_18-91a641e6.pth
+    expected_size_bytes: 126162996
+    reason: TorchVision 0.20.1 服务器现有文件已按本地路径和 SHA256 校验；文件名中的 8 位标识不是完整 SHA256，完整摘要以此处记录为准。
+- id: x3d
+  display_name: X3D
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/x3d/upstream.lock.yaml
+  checkpoint:
+    registry_id: x3d-default
+    repo_id: facebookresearch/pytorchvideo
+    repo_url: https://github.com/facebookresearch/pytorchvideo
+    artifact_url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D_S.pyth
+    revision: pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+    license: apache-2.0
+    allow_patterns:
+    - X3D_S.pyth
+    expected_size_bytes: 30779313
+    reason: PyTorchVideo 官方 model zoo 的 X3D-S/Kinetics-400 13x6 资产；服务器已有 文件已按本地路径和
+      SHA256 校验。
+- id: mvitv2
+  display_name: MViTv2
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/mvitv2/upstream.lock.yaml
+  checkpoint:
+    registry_id: mvitv2-default
+    repo_id: pytorch/vision
+    repo_url: https://github.com/pytorch/vision
+    artifact_url: https://download.pytorch.org/models/mvit_v2_s-ae3be167.pth
+    revision: v0.20.1
+    license: bsd-3-clause
+    allow_patterns:
+    - mvit_v2_s-ae3be167.pth
+    expected_size_bytes: 138290087
+    reason: TorchVision 0.20.1 服务器现有文件已按本地路径和 SHA256 校验；Kinetics-400 数据集条款仍需 与权重许可分开审查。
+- id: slowfast
+  display_name: SlowFast
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/slowfast/upstream.lock.yaml
+  checkpoint:
+    registry_id: slowfast-default
+    repo_id: facebookresearch/pytorchvideo
+    repo_url: https://github.com/facebookresearch/pytorchvideo
+    artifact_url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/SLOWFAST_8x8_R50.pyth
+    revision: pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+    license: apache-2.0
+    allow_patterns:
+    - SLOWFAST_8x8_R50.pyth
+    expected_size_bytes: 277138115
+    reason: 服务器现有文件实际是 PyTorchVideo SLOWFAST-8x8-R50（277138115 bytes）， 已按本地 SHA256
+      校验；不要把它误记为 PySlowFast 4x16 的 .pkl 资产。
+- id: c3d
+  display_name: C3D
+  group: classic-video-v2
+  registration_state: awaiting_manual_asset
+  asset_state: manual_required
+  license_state: verified
+  upstream_lock: integrations/c3d/upstream.lock.yaml
+  checkpoint:
+    registry_id: c3d-default
+    repo_id: facebookarchive/C3D
+    repo_url: https://github.com/facebookarchive/C3D
+    artifact_url: null
+    revision: master
+    license: cc-by-nc-4.0
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: 官方 C3D Sports1M Dropbox 权重下载在 node2 超时，且服务器没有 caffe；无替代 checkpoint。 Native
+      checkpoint is blocked; no substitute model is accepted for native smoke.
+- id: i3d
+  display_name: I3D
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/i3d/upstream.lock.yaml
+  checkpoint:
+    registry_id: i3d-default
+    repo_id: facebookresearch/pytorchvideo
+    repo_url: https://github.com/facebookresearch/pytorchvideo
+    artifact_url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/I3D_8x8_R50.pyth
+    revision: pytorchvideo-f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+    license: apache-2.0
+    allow_patterns:
+    - I3D_8x8_R50.pyth
+    expected_size_bytes: 224733497
+    reason: PyTorchVideo I3D-R50/Kinetics-400 8x8 资产；服务器现有文件已按本地路径和 SHA256 校验，adapter
+      只应使用本地文件。
+- id: timesformer
+  display_name: TimeSformer
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/timesformer/upstream.lock.yaml
+  checkpoint:
+    registry_id: timesformer-default
+    repo_id: facebook/timesformer-base-finetuned-k400
+    repo_url: https://huggingface.co/facebook/timesformer-base-finetuned-k400
+    artifact_url: https://huggingface.co/facebook/timesformer-base-finetuned-k400/resolve/62e4dad07e65ec02438eb99391efd4836ec563bb/pytorch_model.bin
+    revision: 62e4dad07e65ec02438eb99391efd4836ec563bb
+    license: cc-by-nc-4.0
+    allow_patterns:
+    - config.json
+    - preprocessor_config.json
+    - pytorch_model.bin
+    expected_size_bytes: 486346639
+    reason: TimeSformer K400 checkpoint 已经由 node2 的 hf-mirror 下载并在服务器按 immutable revision
+      与 SHA256 校验；许可证为 CC-BY-NC-4.0。
+- id: video_swin
+  display_name: Video Swin
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/video_swin/upstream.lock.yaml
+  checkpoint:
+    registry_id: video_swin-default
+    repo_id: pytorch/vision
+    repo_url: https://github.com/pytorch/vision
+    artifact_url: https://download.pytorch.org/models/swin3d_t-7615ae03.pth
+    revision: v0.20.1
+    license: bsd-3-clause
+    allow_patterns:
+    - swin3d_t-7615ae03.pth
+    expected_size_bytes: 127447114
+    reason: 使用 TorchVision 0.20.1 的 Swin3D-T 视频 Swin 端口，服务器现有文件已按本地路径和 SHA256 校验；variant
+      名称保留官方 API 名称，便于 adapter 直接构造。
+- id: videomae
+  display_name: VideoMAE
+  group: classic-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/videomae/upstream.lock.yaml
+  checkpoint:
+    registry_id: videomae-default
+    repo_id: MCG-NJU/videomae-base
+    repo_url: https://github.com/MCG-NJU/VideoMAE
+    artifact_url: https://huggingface.co/MCG-NJU/videomae-base/resolve/dc740ceda42fce44faed2ea03c6d447db72f6af9/model.safetensors
+    revision: dc740ceda42fce44faed2ea03c6d447db72f6af9
+    license: cc-by-nc-4.0
+    allow_patterns:
+    - config.json
+    - preprocessor_config.json
+    - model.safetensors
+    expected_size_bytes: 376873760
+    reason: VideoMAE base checkpoint 已由 node2 hf-mirror 下载并按 immutable revision 与
+      SHA256 校验；许可证为 CC-BY-NC-4.0。
+- id: videomaev2
+  display_name: VideoMAE V2
+  group: foundation-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/videomaev2/upstream.lock.yaml
+  checkpoint:
+    registry_id: videomaev2-base-hf
+    repo_id: OpenGVLab/VideoMAEv2-Base
+    repo_url: https://github.com/OpenGVLab/VideoMAEv2
+    artifact_url: https://huggingface.co/OpenGVLab/VideoMAEv2-Base/resolve/78c337a418cc4adaf7f1ff6c7ba343418393966b/model.safetensors
+    revision: 78c337a418cc4adaf7f1ff6c7ba343418393966b
+    license: cc-by-nc-4.0
+    allow_patterns:
+    - config.json
+    - preprocessor_config.json
+    - modeling_config.py
+    - modeling_videomaev2.py
+    - model.safetensors
+    expected_size_bytes: 344924592
+    reason: 固定 clip 基线。服务器已有权重与原有注册字段保持兼容，并已按 SHA256 校验； 权重为 CC-BY-NC-4.0，不能仅依据本仓
+      MIT 许可证推断可商用。
+- id: uniformerv2
+  display_name: UniFormerV2
+  group: foundation-video-v2
+  registration_state: candidate_only
+  asset_state: unavailable
+  license_state: verified
+  upstream_lock: integrations/uniformerv2/upstream.lock.yaml
+  checkpoint:
+    registry_id: uniformerv2-default
+    repo_id: OpenGVLab/UniFormerV2
+    repo_url: https://github.com/OpenGVLab/UniFormerV2
+    artifact_url: null
+    revision: 722a43440fc5b9662cc2a8f23b86caa205e45ebc
+    license: apache-2.0
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: 官方 UniFormerV2 model-zoo 当前目标链接返回 404，未获得可校验权重；无替代 checkpoint。 Native
+      checkpoint is blocked; no substitute model is accepted for native smoke.
+- id: umt
+  display_name: UMT
+  group: foundation-video-v2
+  registration_state: candidate_only
+  asset_state: unavailable
+  license_state: verified
+  upstream_lock: integrations/umt/upstream.lock.yaml
+  checkpoint:
+    registry_id: umt-default
+    repo_id: OpenGVLab/unmasked_teacher
+    repo_url: https://github.com/OpenGVLab/unmasked_teacher
+    artifact_url: null
+    revision: 4fb4049f5a87919882e68ccc427615ae7dab1c33
+    license: mit
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: 官方 UMT Issue 50 已记录模型链接失效，未获得可校验权重；无替代 checkpoint。 Native checkpoint is
+      blocked; no substitute model is accepted for native smoke.
+- id: internvideo2
+  display_name: InternVideo2
+  group: foundation-video-v2
+  registration_state: awaiting_manual_asset
+  asset_state: manual_required
+  license_state: verified
+  upstream_lock: integrations/internvideo2/upstream.lock.yaml
+  checkpoint:
+    registry_id: internvideo2-default
+    repo_id: OpenGVLab/InternVideo
+    repo_url: https://github.com/OpenGVLab/InternVideo
+    artifact_url: null
+    revision: 3965eef16e2dadd0ea6c8d0cc29c8a3039df52e3
+    license: apache-2.0
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: 官方 InternVideo2 HF 权重返回 gated 403，当前账号无访问权限；无替代 checkpoint。 Native checkpoint
+      is blocked; no substitute model is accepted for native smoke.
+- id: videomamba
+  display_name: VideoMamba
+  group: foundation-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/videomamba/upstream.lock.yaml
+  checkpoint:
+    registry_id: videomamba-default
+    repo_id: OpenGVLab/VideoMamba
+    repo_url: https://huggingface.co/OpenGVLab/VideoMamba
+    artifact_url: https://huggingface.co/OpenGVLab/VideoMamba/resolve/69502a732f8f69709cec9ed6c54d5345259fd825/videomamba_t16_k400_f16_res224.pth
+    revision: 69502a732f8f69709cec9ed6c54d5345259fd825
+    license: apache-2.0
+    allow_patterns:
+    - videomamba_t16_k400_f16_res224.pth
+    expected_size_bytes: 28290634
+    reason: 官方 VideoMamba Tiny K400 16-frame checkpoint 已从官方 Hugging Face 仓库同步并按 SHA256
+      校验；使用 pinned checkout 的 VisionMamba，不宣称跨 clip streaming state。
+- id: vjepa2
+  display_name: V-JEPA 2
+  group: foundation-video-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/vjepa2/upstream.lock.yaml
+  checkpoint:
+    registry_id: vjepa2-default
+    repo_id: facebook/vjepa2-vitl-fpc64-256
+    repo_url: https://github.com/facebookresearch/vjepa2
+    artifact_url: https://huggingface.co/facebook/vjepa2-vitl-fpc64-256/resolve/b3c1679b7c34d3255ef3547f27c7b226aefab26f/model.safetensors
+    revision: b3c1679b7c34d3255ef3547f27c7b226aefab26f
+    license: mit
+    allow_patterns:
+    - config.json
+    - video_preprocessor_config.json
+    - model.safetensors
+    expected_size_bytes: 1303947864
+    reason: Meta V-JEPA 2 ViT-L/16 checkpoint 已由 node2 hf-mirror 下载并按 immutable revision
+      与 SHA256 校验；使用官方 get_vision_features 接口。
+- id: longvu
+  display_name: LongVU
+  group: visual-vlm-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/longvu/upstream.lock.yaml
+  checkpoint:
+    registry_id: longvu-default
+    repo_id: Vision-CAIR/LongVU_Qwen2_7B
+    repo_url: https://github.com/Vision-CAIR/LongVU
+    artifact_url: https://huggingface.co/Vision-CAIR/LongVU_Qwen2_7B
+    revision: 2b4ed544d651064e4c30d51cf84c5c3e65afa069
+    license: apache-2.0
+    allow_patterns:
+    - config.json
+    - model.safetensors
+    expected_size_bytes: 15343381968
+    reason: 官方 LongVU Qwen2 7B checkpoint、SigLIP SO400M（SHA256 ea2abad2b7f8a9c1aa5e49a244d5d57ffa71c56f720c94bc5d240ef4d6e1d94a）与
+      DINOv2-Giant（SHA256 917d3c470db999d32a312f8542149be91c7cbac61ee8fb4b67ae3d82b79ce21f）均已同步；原生
+      adapter 按官方 SVA connector 导出 projected_visual，不用其他模型替代。
+- id: videochat
+  display_name: VideoChat
+  group: visual-vlm-v2
+  registration_state: awaiting_manual_asset
+  asset_state: manual_required
+  license_state: pending
+  upstream_lock: integrations/videochat/upstream.lock.yaml
+  checkpoint:
+    registry_id: videochat-default
+    repo_id: OpenGVLab/VideoChat-7B
+    repo_url: https://github.com/OpenGVLab/Ask-Anything
+    artifact_url: null
+    revision: 4dd8210b030374bb0c510a57dfbe916f70d3ef71
+    license: mit
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: Ask Anything 的 VideoChat-7B HF 目标预检返回 401/不可访问，未获得可校验权重；不冒充 VideoChat2。
+      Native checkpoint is blocked; no substitute model is accepted for native smoke.
+- id: videochat_online
+  display_name: VideoChat-Online
+  group: visual-vlm-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: blocked
+  upstream_lock: integrations/videochat_online/upstream.lock.yaml
+  checkpoint:
+    registry_id: videochat_online-default
+    repo_id: MCG-NJU/VideoChatOnline-4B
+    repo_url: https://github.com/MCG-NJU/VideoChat-Online
+    artifact_url: https://huggingface.co/MCG-NJU/VideoChatOnline-4B
+    revision: 7373f325b9265527b9363f231b168a14523ac875
+    license: unknown
+    allow_patterns:
+    - config.json
+    - model-00001-of-00002.safetensors
+    - model-00002-of-00002.safetensors
+    - model.safetensors.index.json
+    expected_size_bytes: 8293711872
+    reason: 官方 HF VideoChatOnline-4B 两分片 checkpoint 已同步并按 SHA256 校验；按官方 Pyramid Memory
+      Bank 代码注册为 visual_memory，绝不写成 decoder KV。仓库 README 有 MIT badge 但根目录无 LICENSE
+      文件，许可仍需审计。
+- id: videochat_flash
+  display_name: VideoChat-Flash
+  group: visual-vlm-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/videochat_flash/upstream.lock.yaml
+  checkpoint:
+    registry_id: videochat_flash-default
+    repo_id: OpenGVLab/VideoChat-Flash-Qwen2_5-2B_res448
+    repo_url: https://github.com/OpenGVLab/VideoChat-Flash
+    artifact_url: https://huggingface.co/OpenGVLab/VideoChat-Flash-Qwen2_5-2B_res448
+    revision: 878b4d86ab382a83b9353c33db89210aa459a735
+    license: apache-2.0
+    allow_patterns:
+    - config.json
+    - model.safetensors
+    - '*.py'
+    - '*.json'
+    expected_size_bytes: 4143085560
+    reason: 官方 HF VideoChat-Flash 2B res448 单文件 checkpoint 已同步并按 SHA256 校验；原生 adapter
+      只加载 checkpoint 中 model.vision_tower 与 model.mm_projector，关闭 mm_llm_compress，不宣称
+      decoder KV。
+- id: ma_lmm
+  display_name: MA-LMM
+  group: visual-vlm-v2
+  registration_state: awaiting_manual_asset
+  asset_state: manual_required
+  license_state: pending
+  upstream_lock: integrations/ma_lmm/upstream.lock.yaml
+  checkpoint:
+    registry_id: ma_lmm-default
+    repo_id: boheumd/MA-LMM
+    repo_url: https://github.com/boheumd/MA-LMM
+    artifact_url: null
+    revision: ffe9fa9e89757e4433012029f19286c3c280ab1d
+    license: mit
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: 官方 saved_model.tar Google Drive 端点在 node2 超时，未获得可校验权重；不使用随机或其他模型。 Native
+      checkpoint is blocked; no substitute model is accepted for native smoke.
+- id: moviechat
+  display_name: MovieChat
+  group: visual-vlm-v2
+  registration_state: awaiting_manual_asset
+  asset_state: manual_required
+  license_state: pending
+  upstream_lock: integrations/moviechat/upstream.lock.yaml
+  checkpoint:
+    registry_id: moviechat-default
+    repo_id: Enxin/MovieChat-vicuna
+    repo_url: https://github.com/wenhaochai/MovieChat
+    artifact_url: https://huggingface.co/Enxin/MovieChat-vicuna
+    revision: ba9bb802ea209c6d8e8b4333ec917ae3aee55b1d
+    license: bsd-3-clause
+    allow_patterns:
+    - config.json
+    - pytorch_model-00001-of-00002.bin
+    - pytorch_model-00002-of-00002.bin
+    - pytorch_model.bin.index.json
+    expected_size_bytes: null
+    reason: 官方/登记的 MovieChat-vicuna HF 目标预检不可访问，且 Vicuna/LLaMA base 未冻结；多许可证链未闭合。
+      Native checkpoint is blocked; no substitute model is accepted for native smoke.
+- id: streaming_vlm
+  display_name: StreamingVLM
+  group: stream-kv-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: blocked
+  upstream_lock: integrations/streaming_vlm/upstream.lock.yaml
+  checkpoint:
+    registry_id: streaming_vlm-default
+    repo_id: mit-han-lab/StreamingVLM
+    repo_url: https://github.com/mit-han-lab/streaming-vlm
+    artifact_url: https://huggingface.co/mit-han-lab/StreamingVLM
+    revision: 7ac1cef46d20432053a9814838760318cb26b348
+    license: unknown
+    allow_patterns:
+    - config.json
+    - model-00001-of-00004.safetensors
+    - model-00002-of-00004.safetensors
+    - model-00003-of-00004.safetensors
+    - model-00004-of-00004.safetensors
+    - model.safetensors.index.json
+    expected_size_bytes: 16584333312
+    reason: 官方 StreamingVLM 8B 四分片 checkpoint 已同步并按 SHA256 校验；原生 adapter 通过 Qwen2.5-VL
+      get_video_features + decoder DynamicCache 验证两步递进。模型卡未提供明确 license，许可审计后再计入 PASS。
+- id: infinipot_v
+  display_name: InfiniPot-V
+  group: stream-kv-v2
+  registration_state: candidate_only
+  asset_state: unavailable
+  license_state: blocked
+  upstream_lock: integrations/infinipot_v/upstream.lock.yaml
+  checkpoint:
+    registry_id: infinipot_v-default
+    repo_id: aiha-lab/InfiniPot-V
+    repo_url: https://github.com/aiha-lab/InfiniPot-V
+    artifact_url: null
+    revision: 81a4dbe2e74660a8148cc2a6cee1148a9a268479
+    license: unknown
+    allow_patterns: []
+    expected_size_bytes: null
+    reason: 官方 InfiniPot-V 仓库未发现明确 LICENSE 与可校验 checkpoint，许可/资产门禁未通过。 Native checkpoint
+      is blocked; no substitute model is accepted for native smoke.
+- id: hermes_llava_ov
+  display_name: HERMES + LLaVA-OneVision
+  group: stream-kv-v2
+  registration_state: registered_local
+  asset_state: local_verified
+  license_state: verified
+  upstream_lock: integrations/hermes/upstream.lock.yaml
+  checkpoint:
+    registry_id: hermes-llava-ov-0.5b
+    repo_id: llava-hf/llava-onevision-qwen2-0.5b-ov-hf
+    repo_url: https://github.com/haowei-freesky/HERMES
+    artifact_url: https://huggingface.co/llava-hf/llava-onevision-qwen2-0.5b-ov-hf/resolve/74dd0bf867a4cda7950c17663794267c60cf4b40/model.safetensors
+    revision: 74dd0bf867a4cda7950c17663794267c60cf4b40
+    license: apache-2.0
+    allow_patterns:
+    - added_tokens.json
+    - chat_template.json
+    - config.json
+    - generation_config.json
+    - merges.txt
+    - model.safetensors
+    - preprocessor_config.json
+    - processor_config.json
+    - special_tokens_map.json
+    - tokenizer.json
+    - tokenizer_config.json
+    - video_preprocessor_config.json
+    - video_processor/preprocessor_config.json
+    - vocab.json
+    expected_size_bytes: 1787445680
+    reason: HERMES 的最小官方支持基座；HERMES 修改的是语言模型 decoder KV cache，视觉 tower 仍按帧块前向。服务器已有权重与原有字段保持兼容，已按
+      SHA256 校验。
+- id: mukv
+  display_name: MuKV
+  group: stream-kv-v2
+  registration_state: candidate_only
+  asset_state: unavailable
+  license_state: blocked
+  upstream_lock: integrations/mukv/upstream.lock.yaml
+  checkpoint:
+    registry_id: mukv-default
+    repo_id: IMBALDY/MuKV
+    repo_url: https://github.com/IMBALDY/MuKV
+    artifact_url: https://huggingface.co/llava-hf/llava-onevision-qwen2-0.5b-ov-hf/resolve/74dd0bf867a4cda7950c17663794267c60cf4b40/model.safetensors
+    revision: 2127b875ea1c2d91e4349324edbd779168a3da9e
+    license: unknown
+    allow_patterns:
+    - model.safetensors
+    expected_size_bytes: null
+    reason: 官方 MuKV 仓库未发现 LICENSE，当前只有 LLaVA-OneVision 基座信息而无 MuKV 增量权重；许可门禁未通过。 Native
+      checkpoint is blocked; no substitute model is accepted for native smoke.

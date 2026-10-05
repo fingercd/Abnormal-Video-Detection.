@@ -1,0 +1,21 @@
+schema_version: 1
+stage: probe
+encoder_ids: [videomaev2]
+method: identity
+cohort: data/manifests/icassp2027/pilot.jsonl
+manifest: data/manifests/icassp2027/ucf_crime/train.jsonl
+dataset: ucf_crime
+partition: fit
+role: debug
+max_videos: 8
+sampling:
+  kind: uniform_segment_centers_full_clip
+  windows_per_video: 8
+  frame_stride: 2
+  position: center
+observation:
+  depths: [0.25, 0.5, 0.75, 1.0]
+  max_tokens: 256
+  max_queries: 32
+  max_records: 128
+  probes: [P01, P02, P04, P07, P10, P11, P13, P16]

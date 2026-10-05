@@ -1,0 +1,91 @@
+{
+  "schema": "icassp2027.method-freeze-contract/v1",
+  "contract_version": "v2",
+  "status": "active",
+  "frozen_at": "2026-09-22",
+  "frozen_by": "codex-six-cell-method-freeze-v2",
+  "markdown_contract": {
+    "path": "projects/icassp2027/decisions/six-cell-method-freeze-v2.md",
+    "sha256": "ac2f12d8e3c926875aadaa5d9575fa31b933a54d04513750e91607ed82c4cd5b"
+  },
+  "scope_contract": {
+    "path": "projects/icassp2027/decisions/six-cell-scope-contract-v1.json",
+    "sha256": "eac12d9248b4970e1d3528af30efc14a3a9d90ee7c7558965215b1cd9d6d7e25"
+  },
+  "method_scope": {
+    "encoders": [
+      "videomaev2",
+      "videomae",
+      "timesformer"
+    ],
+    "excluded_encoders": [
+      {
+        "runtime_id": "vjepa2",
+        "reason": "throughput-gate-exit-20260919-user-final"
+      }
+    ],
+    "encoder_finetuning": "frozen-backbone-no-finetuning",
+    "backend": {
+      "name": "UR-DMU",
+      "upstream_commit": "40cfdf5f8bebbc3b59373935f9d6ca00e2f32bbc",
+      "head": "dense",
+      "steps": 3000,
+      "bags_per_class": 64,
+      "seed_policy": "fixed",
+      "checkpoint_selection": "fixed_final_step_no_test_selection"
+    },
+    "operator_families": [
+      {
+        "kind": "selection",
+        "mechanism": "property-frozen adjacent pair/trajectory max-member-L2 selector",
+        "training_free": true,
+        "budgets": [
+          0.6
+        ]
+      }
+    ],
+    "rejected_operator_families": [
+      {
+        "kind": "merge",
+        "mechanism": "pair-mean",
+        "reason": "training-side distribution-shift-negative-evidence"
+      }
+    ],
+    "controls": [
+      "uniform_budget_matched",
+      "random_budget_matched"
+    ],
+    "optional_columns": [
+      "refit_head_budget_matched"
+    ]
+  },
+  "property_evidence": [
+    {
+      "id": "six-cell-method-selection-receipt-v2",
+      "role": "training-side-only selection receipt before official model scores",
+      "path": "projects/icassp2027/decisions/six-cell-method-selection-receipt-v2.json",
+      "sha256": "260c9d26a80d5d796ab6cea2149b284c8f4f0bc1f224927135e69537e015f442"
+    },
+    {
+      "id": "F04-four-encoder-observation",
+      "role": "property observation retained as historical evidence",
+      "path": "outputs/icassp2027/control/f04-scientific-review-20260919/review.md",
+      "sha256": "9458d3d4f5ac9d2d49bf8848fcf775a48b5ccc3e14ef7a545470ce3162cb51c6"
+    },
+    {
+      "id": "S7-merge-negative-result",
+      "role": "historical negative evidence retained",
+      "path": "work/s7-idea-a01/card-P1-local-redundancy.md",
+      "sha256": "9b0b45bd50be7d2128ff79ef1601873c398a7e9d362b6367aeccb60652545b6b"
+    }
+  ],
+  "evaluation_protocol": {
+    "ucf_crime": "frame_roc_auc_primary",
+    "xd_violence": "frame_pr_auc_trapezoid_primary_plus_sklearn_average_precision_separate",
+    "video_level": "auxiliary_only",
+    "test_usage": "evaluation-only after this freeze; no method/layer/budget/checkpoint selection on test",
+    "paired_bootstrap": "10000 video-stratified draws",
+    "noninferiority_ci_lower_bound": -0.005
+  },
+  "notes": "Compatibility contract for the current six-cell freeze-v2. The explicit six-cell-v2 markdown and selection receipt are SHA-bound; official test scores cannot influence method selection."
+}

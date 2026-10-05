@@ -1,0 +1,43 @@
+schema_version: 1
+
+dataset:
+  name: ucf_crime
+  root: data/raw/ucf_crime
+  train_manifest: data/manifests/ucf_crime/train.jsonl
+  test_manifest: data/manifests/ucf_crime/test.jsonl
+
+sampler:
+  kind: uniform_segments
+  segments_per_video: 32
+  clip_frames: 16
+  frame_stride: 2
+
+encoder:
+  adapter: videomaev2
+  checkpoint: videomaev2-base-hf
+  trainable: false
+
+streaming:
+  enabled: false
+
+task:
+  kind: weak_mil
+  supervision: video
+  pooling: attention
+  classification_weight: 1.0
+  ranking_weight: 0.0
+
+training:
+  feature_level: clip
+  batch_size: 2
+  epochs: 1
+  learning_rate: 0.001
+  weight_decay: 0.0
+  seed: 0
+  num_workers: 0
+  assume_unannotated_is_normal: false
+
+output:
+  root: outputs
+  run_name: ucf-videomaev2-weak
+

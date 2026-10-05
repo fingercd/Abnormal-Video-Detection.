@@ -1,0 +1,35 @@
+schema_version: 1
+integration: vjepa2
+
+source:
+  repository: https://github.com/facebookresearch/vjepa2
+  branch: main
+  default_branch: main
+  commit: 204698b45b3712590f06245fbfba32d3be539812
+  commit_url: https://github.com/facebookresearch/vjepa2/commit/204698b45b3712590f06245fbfba32d3be539812
+  verified_with: github-atom
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/facebookresearch/vjepa2/blob/204698b45b3712590f06245fbfba32d3be539812/LICENSE
+
+entrypoints:
+  backbone: src/hub/backbones.py
+  inference: evals/main.py
+
+weights:
+  provider: official
+  model_id: vjepa2-vitl-fpc64-256
+  revision: b3c1679b7c34d3255ef3547f27c7b226aefab26f
+  license: MIT
+  local_dir: weights/vjepa2
+  sha256:
+    model.safetensors: 25466aef85727d16546c6cf8c99f12fcfad9cbca8225d45f23685e2e025b786b
+  size_bytes: 1303947864
+
+integration_notes:
+  - 固定 clip 适配；官方 encoder 接口不声明跨 clip cache。
+  - V-JEPA2 代码中的 checkpoint URL 只作为上游说明，adapter 不调用 torch.hub 或任何网络客户端。
+  - 真实权重和预处理 profile 准备后，通过显式 loader 导出 backbone_tokens。

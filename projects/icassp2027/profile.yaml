@@ -1,0 +1,20 @@
+schema_version: 1
+project_id: icassp2027
+mode: contrast_first
+active_encoders:
+  - id: videomaev2
+    definition: configs/encoders/videomaev2-base.yaml
+    checkpoint: videomaev2-base-hf
+    role: discovery
+  - id: videomae
+    definition: configs/encoders/videomae.yaml
+    checkpoint: videomae-default
+    role: family_replication
+  - id: timesformer
+    definition: configs/encoders/timesformer.yaml
+    checkpoint: timesformer-default
+    role: structure_confirmation
+protocol: projects/icassp2027/protocol.yaml
+output_root: assets/experiments/icassp2027/runs
+paper_root: paper/icassp2027
+annotation_policy: weak_development

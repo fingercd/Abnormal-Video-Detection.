@@ -1,0 +1,40 @@
+schema_version: 1
+integration: hermes-llava-ov
+
+source:
+  repository: https://github.com/haowei-freesky/HERMES
+  branch: main
+  default_branch: main
+  commit: 8d699b16a6bedb9086c1b39ec4253c6a1d1ce789
+  commit_url: https://github.com/haowei-freesky/HERMES/commit/8d699b16a6bedb9086c1b39ec4253c6a1d1ce789
+  verified_with: gh-api
+  verified_on: "2026-08-31"
+
+license:
+  spdx: MIT
+  file: LICENSE
+  url: https://github.com/haowei-freesky/HERMES/blob/8d699b16a6bedb9086c1b39ec4253c6a1d1ce789/LICENSE
+
+entrypoints:
+  llava_loader: inference/llavaov_hermes.py:load_model
+  visual_tokens: inference/llavaov_hermes.py:get_video_features
+  stream_encode: inference/llavaov_hermes.py:encode_video_chunk
+  native_predict_compress: inference/llavaov_hermes.py:predict_and_compress
+  native_static_pseudo: inference/llavaov_hermes.py:pseudo_forward
+  native_cache_replace: inference/llavaov_hermes.py:apply_kv_cache_pruning_strict
+  cache_base: inference/abstract_hermes.py:Abstract_Hermes
+
+weights:
+  provider: huggingface
+  model_id: llava-hf/llava-onevision-qwen2-0.5b-ov-hf
+  revision: 74dd0bf867a4cda7950c17663794267c60cf4b40
+  license: apache-2.0
+  local_dir: weights/hermes-llava-ov-0.5b
+  sha256:
+    model.safetensors: 07b3362c3412de79baf2379e44e5b0b2a8f4b965ebebd11d7b5b3eb4450fe96e
+
+integration_notes:
+  - HERMES 将视频视觉 token 写入语言模型并维护 decoder past_key_values。
+  - 适配器暴露的是 decoder KV cache；不得描述为 vision encoder KV cache。
+  - 投影后视觉 token 与 decoder KV 遥测分开输出，便于分类与缓存压缩实验。
+  - 官方原生层次压缩入口是 predict_and_compress/pseudo_forward；它会增加伪查询注意力计算，且其 VideoQA 保留策略对稀疏 VAD 证据的有效性仍需实测。

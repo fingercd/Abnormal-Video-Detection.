@@ -1,0 +1,36 @@
+schema_version: 1
+integration: i3d
+
+source:
+  repository: https://github.com/facebookresearch/pytorchvideo
+  branch: main
+  default_branch: main
+  commit: f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  commit_url: https://github.com/facebookresearch/pytorchvideo/commit/f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0
+  verified_with: git-ls-remote
+  verified_on: "2026-08-31"
+
+license:
+  spdx: Apache-2.0
+  file: LICENSE
+  url: https://github.com/facebookresearch/pytorchvideo/blob/f3142bb05cdb56af0704ab6f0adfb0c7bbafe4a0/LICENSE
+
+entrypoints:
+  model_factory: pytorchvideo.models.hub.i3d_r50
+  adapter: vadbench.integrations.pytorchvideo:PytorchVideoAdapter
+
+weights:
+  provider: direct_url
+  model_id: pytorchvideo/I3D_8x8_R50
+  url: https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/I3D_8x8_R50.pyth
+  revision: I3D_8x8_R50
+  license: Apache-2.0
+  local_dir: weights/i3d
+  filename: model.pyth
+  sha256:
+    model.pyth: eabc0c8de27af9ee7aa6348fb3a18f2c53fee4e73806b26d4499748543e857d8
+
+integration_notes:
+  - I3D-R50 是固定 clip RGB 路线；adapter 不声明 streaming 或任何 cache。
+  - checkpoint 只能由服务器预先下载到 local_dir；adapter 不调用 torch.hub。
+  - 产物的 pooled 表征来自分类头之前的最后 backbone block（若该 block 可观察）。
