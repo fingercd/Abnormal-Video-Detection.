@@ -31,6 +31,11 @@ def parser() -> argparse.ArgumentParser:
     prepare.add_argument("--ready-manifest", type=Path)
     prepare.add_argument("--ready-receipt", type=Path)
     prepare.add_argument("--provider-metadata", type=Path)
+    prepare.add_argument(
+        "--quarantine",
+        type=Path,
+        help="XD only: independently bound quarantine list for official-source-corrupted members",
+    )
     return root
 
 

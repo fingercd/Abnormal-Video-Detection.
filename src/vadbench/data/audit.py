@@ -219,6 +219,7 @@ def verify_official_source_identity(
     result["test_identity_sha256"] = _identity_sha256(test_identity)
 
     mismatches: list[str] = []
+    author_clamped_equivalences: list[dict[str, Any]] = []
     for split, source_rows in (("train", train_identity), ("test", test_identity)):
         if split not in records_by_split:
             continue
@@ -273,7 +274,48 @@ def verify_official_source_identity(
                             "decoded_clamped": expected_end != raw_end,
                             "empty_after_source_end_reconciliation": expected_empty,
                         }
-                        if any(detail.get(key) != value for key, value in required.items()):
+                        diffs = {key for key, value in required.items() if detail.get(key) != value}
+                        allowed_author_clamp_diffs = {"decoded_clamped", "raw_end_1based_inclusive"}
+                        author_field = None
+                        if diffs and diffs <= allowed_author_clamp_diffs and detail.get("decoded_clamped") is False:
+                            # Author-side pre-clamp equivalence. Two real byte
+                            # patterns exist in sealed manifests (sha-immutable):
+                            #  (a) the author-clamped end occupies the
+                            #      raw_end slot (raw_end == effective end);
+                            #  (b) the raw_end slot keeps the FROZEN raw value
+                            #      and the author-clamped end lives in
+                            #      ``end_author_1based_inclusive`` (S0 byte
+                            #      evidence, s0-test290-official-eval.json).
+                            # Both are accepted ONLY when every recorded
+                            # interval value equals the decoded-side formula;
+                            # any value drift stays a mismatch.
+                            author_clamped_end = detail.get("raw_end_1based_inclusive")
+                            if (
+                                "raw_end_1based_inclusive" in diffs
+                                and author_clamped_end == expected_end
+                                and expected_end != raw_end
+                                and not expected_empty
+                            ):
+                                author_field = "raw_end_1based_inclusive(author_clamped_value)"
+                            elif (
+                                "raw_end_1based_inclusive" not in diffs
+                                and detail.get("end_author_1based_inclusive") == expected_end
+                                and expected_end != raw_end
+                                and not expected_empty
+                            ):
+                                author_field = "end_author_1based_inclusive"
+                        if author_field is not None:
+                            author_clamped_equivalences.append({
+                                "video_id": record.video_id,
+                                "span_index": len(expected_effective),
+                                "frozen_raw_end_1based_inclusive": raw_end,
+                                "author_clamped_field": author_field,
+                                "author_clamped_end_1based_inclusive": expected_end,
+                                "end_effective_1based_inclusive": expected_end,
+                                "effective_span_zero_based_half_open": [expected_start - 1, expected_end],
+                                "equivalence": "author_preclamped_decoded_end_intervals_identical",
+                            })
+                        elif diffs:
                             policy_valid = False
                             break
                         if not expected_empty:
@@ -291,6 +333,12 @@ def verify_official_source_identity(
         )
         result["status"] = "mismatch"
         return result
+    if author_clamped_equivalences:
+        # Accepted equivalences are recorded, never silent: the sealed
+        # manifest's interval values are identical; only the boolean's
+        # semantic source (author-side pre-clamp vs decoded-side clamp)
+        # differs.
+        result["author_clamped_equivalences"] = author_clamped_equivalences
     result["status"] = "verified"
     return result
 

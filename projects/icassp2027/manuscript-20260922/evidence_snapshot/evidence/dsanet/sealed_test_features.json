@@ -1,0 +1,54 @@
+{
+  "status": "ready_for_fixed_head_scoring",
+  "runs": {
+    "ucf-dense": {
+      "videos": 290,
+      "images": 69634,
+      "elapsed_seconds": 1233.5791607238352,
+      "keep_ratio": null
+    },
+    "ucf-0.8": {
+      "videos": 290,
+      "images": 69634,
+      "elapsed_seconds": 1237.2710507921875,
+      "keep_ratio": 0.8
+    },
+    "ucf-0.6": {
+      "videos": 290,
+      "images": 69634,
+      "elapsed_seconds": 1240.716540614143,
+      "keep_ratio": 0.6
+    },
+    "ucf-0.4": {
+      "videos": 290,
+      "images": 69634,
+      "elapsed_seconds": 1232.7837918754667,
+      "keep_ratio": 0.4
+    },
+    "xd-dense": {
+      "videos": 800,
+      "images": 146449,
+      "elapsed_seconds": 2742.9269730597734,
+      "keep_ratio": null
+    },
+    "xd-0.8": {
+      "videos": 800,
+      "images": 146449,
+      "elapsed_seconds": 2741.7258358392864,
+      "keep_ratio": 0.8
+    },
+    "xd-0.6": {
+      "videos": 800,
+      "images": 146449,
+      "elapsed_seconds": 2743.7216112744063,
+      "keep_ratio": 0.6
+    },
+    "xd-0.4": {
+      "videos": 800,
+      "images": 146449,
+      "elapsed_seconds": 2744.5878779515624,
+      "keep_ratio": 0.4
+    }
+  },
+  "test_scores_read": false
+}

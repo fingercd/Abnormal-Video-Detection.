@@ -1,0 +1,62 @@
+{
+  "schema": "icassp2027.six-cell-scope-contract/v1",
+  "status": "active_scope_not_official_test_freeze",
+  "created_at": "2026-09-21",
+  "purpose": "Bind the six encoder-by-dataset cells before training-side selector selection and the later official-test freeze.",
+  "active_encoders": ["videomaev2", "videomae", "timesformer"],
+  "cells": [
+    {"encoder": "videomaev2", "dataset": "ucf_crime", "train_videos": 1610, "test_videos": 290},
+    {"encoder": "videomae", "dataset": "ucf_crime", "train_videos": 1610, "test_videos": 290},
+    {"encoder": "timesformer", "dataset": "ucf_crime", "train_videos": 1610, "test_videos": 290},
+    {"encoder": "videomaev2", "dataset": "xd_violence", "train_videos": 3950, "declared_train_videos": 3954, "excluded_train_videos": 4, "test_videos": 800},
+    {"encoder": "videomae", "dataset": "xd_violence", "train_videos": 3950, "declared_train_videos": 3954, "excluded_train_videos": 4, "test_videos": 800},
+    {"encoder": "timesformer", "dataset": "xd_violence", "train_videos": 3950, "declared_train_videos": 3954, "excluded_train_videos": 4, "test_videos": 800}
+  ],
+  "training_roles": {
+    "method_development": ["fit", "confirm", "select"],
+    "official_test": ["test"],
+    "selection_rule": "No test score, test aggregate, test threshold, test layer, test budget, or test checkpoint may influence the method freeze.",
+    "supervision": "video_level_weak_labels_W"
+  },
+  "dense_head": {
+    "backend": "UR-DMU",
+    "upstream_commit": "40cfdf5f8bebbc3b59373935f9d6ca00e2f32bbc",
+    "steps": 3000,
+    "bags_per_class": 64,
+    "checkpoint": "fixed_final_step_no_test_selection",
+    "independence": "one encoder-by-dataset head per cell"
+  },
+  "training_side_candidate_families": {
+    "reference": "identity",
+    "controls": ["global_uniform", "paired_random"],
+    "candidate": ["pair_select"],
+    "rejected": [{"name": "pair_mean", "reason": "distribution_shift_negative_evidence"}],
+    "budget_and_layer": "must be registered from fit/confirm/select evidence and frozen in a later method-freeze-v2 contract",
+    "head_modes": ["direct_insert", "refit_head_optional_budget_matched"]
+  },
+  "quality_contract": {
+    "ucf_primary": "decoded_frame_micro_roc_auc",
+    "xd_primary": "precision_recall_trapezoid_auc",
+    "xd_secondary": "sklearn_average_precision_reported_separately",
+    "delta": "method_minus_dense",
+    "bootstrap": "paired_video_stratified_10000_replicates",
+    "noninferiority_ci_lower_bound": -0.005,
+    "video_level": "auxiliary_only"
+  },
+  "required_provenance": [
+    "training_manifest_sha256",
+    "feature_view_contract_sha256",
+    "head_checkpoint_sha256",
+    "method_freeze_contract_sha256",
+    "code_sha256",
+    "environment_receipt"
+  ],
+  "official_test_gate": [
+    "all six dense heads pass training QA",
+    "training-side selector/layer/budget/seed/head-mode choice is frozen in a method-freeze-v2 contract",
+    "UCF sealed test audit is complete",
+    "XD 800-video raw-coordinate seal is complete",
+    "dense and compressed inputs have matched coverage and preprocessing",
+    "formal evaluator accepts all three active encoders"
+  ]
+}

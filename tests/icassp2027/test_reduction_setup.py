@@ -123,6 +123,12 @@ def test_no_training_setup_runs_once_cleans_input_and_restores_native_modes(redu
 
     monkeypatch.setattr(adapter, "encode", observed)
     deployment, receipt = _prepare(adapter, reducer=reducer)
+    from vadbench.token_reduction.deployment_contracts import (
+        ReductionDeployment,
+        ReductionExecutionContext,
+    )
+    assert isinstance(deployment, ReductionDeployment)
+    assert isinstance(deployment(_batch()), ReductionExecutionContext)
     assert len(calls) == 1
     assert [module.training for module in model.modules()] == modes
     assert [parameter.requires_grad for parameter in model.parameters()] == gradients
@@ -306,6 +312,37 @@ def test_setup_failure_restores_flags_and_cleans_geometry_hooks():
     assert [module.training for module in adapter.encoder.modules()] == original_modes
     assert [parameter.requires_grad for parameter in adapter.encoder.parameters()] == original_gradients
     assert all(not module._forward_hooks and not module._forward_pre_hooks for module in adapter.encoder.modules())
+
+
+def test_selection_reducers_require_keep_ratio_and_prepare_three_tiers():
+    adapter = _adapter()
+    for bad in (None, 1.0, 0.5):
+        with pytest.raises(ValueError, match="keep_ratio"):
+            _prepare(adapter, reducer="pair_select", keep_ratio=bad)
+    for legacy in ("global_uniform", "paired_random"):
+        with pytest.raises(ValueError, match="keep_ratio"):
+            _prepare(adapter, reducer=legacy, keep_ratio=0.8)
+    for tier in (0.8, 0.6, 0.4):
+        for reducer in ("pair_select", "group_uniform", "group_random"):
+            deployment, receipt = _prepare(
+                adapter, reducer=reducer, keep_ratio=tier, seed=3,
+            )
+            identity = deployment.reducer_identity
+            from vadbench.token_reduction.deployment_contracts import ReductionDeployment
+            assert isinstance(deployment, ReductionDeployment)
+            assert identity["keep_ratio"] == tier
+            assert identity["budget_rule"] == "group_budget_v1"
+            assert identity["same_budget_for_all_controls"] is True
+            assert receipt["keep_ratio"] == tier
+            spec = deployment.selection_spec
+            assert receipt["reducer_identity"]["kept_tokens"] == spec.output_token_count
+            assert 0 < spec.actual_keep_ratio <= 1
+    # identical budgets across the three rules at the same tier
+    budgets = {}
+    for reducer in ("pair_select", "group_uniform", "group_random"):
+        deployment, _receipt = _prepare(adapter, reducer=reducer, keep_ratio=0.6, seed=3)
+        budgets[reducer] = deployment.selection_spec.output_token_count
+    assert len(set(budgets.values())) == 1
 
 
 def test_setup_requires_calibration_only_for_learned_reducer_and_checks_output_dim(tmp_path):

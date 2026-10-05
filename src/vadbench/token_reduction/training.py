@@ -23,10 +23,10 @@ import torch
 import vadbench
 from vadbench.checkpoints import sha256_file
 from vadbench.contracts import ClipBatch
+from vadbench.data.batches import clean_encoder_batch
 from vadbench.data.manifest import SupervisionScope, VideoManifestRecord, load_manifest_jsonl
 from vadbench.features import atomic_write_json
 from vadbench.integrations.common import pool_feature_sequence, select_feature_tensor
-from vadbench.paper.stages import clean_encoder_batch
 
 from .bridges import create_observation_bridge, indexed_gather
 from .pair_merge import PairLinearGate, PairWeightedMerge, horizontal_pair_merge_spec

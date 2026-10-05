@@ -1,0 +1,2682 @@
+{
+  "balanced_order": true,
+  "batch_sizes": [
+    16,
+    32
+  ],
+  "constructor": {
+    "device": "cuda:0",
+    "image_size": 224,
+    "model_name": "/users/fotile/VAD/weights/videomaev2-base-hf",
+    "num_frames": 16,
+    "pooling": "auto",
+    "use_half": true
+  },
+  "cudnn": false,
+  "encoder": "videomaev2",
+  "gpu_after": {
+    "gpu": "0, GPU-1cb1d768-9c5f-f2f4-384d-4f2f7d299781, NVIDIA A100-PCIE-40GB, 603 MiB, 14 %\n1, GPU-6a869044-a866-449a-44c9-6827cfa2efe7, NVIDIA A100-PCIE-40GB, 605 MiB, 14 %\n2, GPU-f070f4be-90a4-bc0c-037f-40b84f3a34dd, NVIDIA A100-PCIE-40GB, 0 MiB, 0 %\n3, GPU-df6a6409-c789-4e3c-4f49-3537e3f4a829, NVIDIA A100-PCIE-40GB, 12605 MiB, 100 %\n4, GPU-d14ce137-652e-7fbc-feda-8b27eb0639a3, NVIDIA A100-PCIE-40GB, 12605 MiB, 100 %\n5, GPU-3762702d-28b9-c7b6-34be-428c8a5125e9, NVIDIA A100-PCIE-40GB, 0 MiB, 0 %\n6, GPU-71a55fac-63a9-8504-5651-4c72fdf1f2b1, NVIDIA A100-PCIE-40GB, 0 MiB, 0 %\n7, GPU-0bc0aa0f-145b-ce09-2a93-5430d75cbe4d, NVIDIA A100-PCIE-40GB, 8935 MiB, 0 %\n",
+    "processes": "GPU-1cb1d768-9c5f-f2f4-384d-4f2f7d299781, 15885, python, 594 MiB\nGPU-6a869044-a866-449a-44c9-6827cfa2efe7, 15921, python, 596 MiB\nGPU-df6a6409-c789-4e3c-4f49-3537e3f4a829, 13712, /users/fotile/VAD/.encoder-envs/v2/classic-video-v2/bin/python, 12596 MiB\nGPU-d14ce137-652e-7fbc-feda-8b27eb0639a3, 13713, /users/fotile/VAD/.encoder-envs/v2/classic-video-v2/bin/python, 12596 MiB\nGPU-0bc0aa0f-145b-ce09-2a93-5430d75cbe4d, 7580, /users/fotile/miniconda3/envs/mllm-comp-platform/bin/python, 8926 MiB\n"
+  },
+  "gpu_before": {
+    "gpu": "0, GPU-1cb1d768-9c5f-f2f4-384d-4f2f7d299781, NVIDIA A100-PCIE-40GB, 603 MiB, 13 %\n1, GPU-6a869044-a866-449a-44c9-6827cfa2efe7, NVIDIA A100-PCIE-40GB, 605 MiB, 13 %\n2, GPU-f070f4be-90a4-bc0c-037f-40b84f3a34dd, NVIDIA A100-PCIE-40GB, 3 MiB, 0 %\n3, GPU-df6a6409-c789-4e3c-4f49-3537e3f4a829, NVIDIA A100-PCIE-40GB, 3 MiB, 0 %\n4, GPU-d14ce137-652e-7fbc-feda-8b27eb0639a3, NVIDIA A100-PCIE-40GB, 3 MiB, 0 %\n5, GPU-3762702d-28b9-c7b6-34be-428c8a5125e9, NVIDIA A100-PCIE-40GB, 0 MiB, 0 %\n6, GPU-71a55fac-63a9-8504-5651-4c72fdf1f2b1, NVIDIA A100-PCIE-40GB, 0 MiB, 0 %\n7, GPU-0bc0aa0f-145b-ce09-2a93-5430d75cbe4d, NVIDIA A100-PCIE-40GB, 8935 MiB, 0 %\n",
+    "processes": "GPU-1cb1d768-9c5f-f2f4-384d-4f2f7d299781, 15885, python, 594 MiB\nGPU-6a869044-a866-449a-44c9-6827cfa2efe7, 15921, python, 596 MiB\nGPU-0bc0aa0f-145b-ce09-2a93-5430d75cbe4d, 7580, /users/fotile/miniconda3/envs/mllm-comp-platform/bin/python, 8926 MiB\n"
+  },
+  "identity": {
+    "adapter": "videomaev2",
+    "checkpoint": {
+      "id": "videomaev2-base-hf",
+      "license": "cc-by-nc-4.0",
+      "model_id": "OpenGVLab/VideoMAEv2-Base",
+      "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+      "sha256": {
+        "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+      }
+    },
+    "code": {
+      "commit": "557e89fe9dea715f5ca06f6aa16354b1b06d4b54",
+      "source_sha256": "2315503d5d3c3576a051c2140b3e27d5b1f87c175f0ab05cd10c70f7eef4633c"
+    },
+    "constructor": {
+      "image_size": 224,
+      "model_name": {
+        "checkpoint_sha256": {
+          "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+        }
+      },
+      "num_frames": 16,
+      "pooling": "auto",
+      "use_half": true
+    },
+    "target": "vadbench.integrations.videomaev2:VideoMAEv2Adapter",
+    "upstream": {
+      "entrypoints": {
+        "backbone": "models/modeling_finetune.py",
+        "classification": "run_class_finetuning.py"
+      },
+      "integration": "videomaev2",
+      "integration_notes": [
+        "固定帧 clip 编码，不声明 streaming、decoder KV cache 或 vision token cache。",
+        "VADBench 复用仓库现有 lab_anomaly.models.vit_video_encoder.VideoMAEv2Encoder。"
+      ],
+      "license": {
+        "file": "LICENSE",
+        "spdx": "MIT",
+        "url": "https://github.com/OpenGVLab/VideoMAEv2/blob/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b/LICENSE"
+      },
+      "schema_version": 1,
+      "source": {
+        "branch": "master",
+        "commit": "29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+        "commit_url": "https://github.com/OpenGVLab/VideoMAEv2/commit/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+        "default_branch": "master",
+        "repository": "https://github.com/OpenGVLab/VideoMAEv2",
+        "verified_on": "2026-08-31",
+        "verified_with": "gh-api"
+      },
+      "weights": {
+        "license": "cc-by-nc-4.0",
+        "local_dir": "weights/videomaev2-base-hf",
+        "model_id": "OpenGVLab/VideoMAEv2-Base",
+        "provider": "huggingface",
+        "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+        "sha256": {
+          "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+        }
+      }
+    }
+  },
+  "input_receipts": [
+    {
+      "batch_size": 16,
+      "frames_sha256": "9682b3451a87907ccb7a03dc8840207c9617364cb82bfd99911b5c607260a984",
+      "prepared_sha256": "2878e05c4235a7ce5e13258755c8b7bda4d95b34ea867f94b63ce866ee6c00c5",
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4"
+    },
+    {
+      "batch_size": 32,
+      "frames_sha256": "dbdf801bf78a1a74b777c6942fd56067e95f21762c6ae91877c28c1c94e72200",
+      "prepared_sha256": "0a04218ca08aa80face56a82d55e7dc6a2be67471e2c5d3851ab9706e8fdd597",
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4"
+    },
+    {
+      "batch_size": 16,
+      "frames_sha256": "08787d40d267ac645b476037e7ea42836cd10d038df7fbead6c5a360fd0a23b2",
+      "prepared_sha256": "fc5ef8aeb4475ac879d52b2ca11479b44b0f5da6ba8e9266b8f1697de19ebb12",
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c"
+    },
+    {
+      "batch_size": 32,
+      "frames_sha256": "96feec312c6a06f0d76cad88007ae9b3fbfca49b44254fed6f4d7c24c76853fe",
+      "prepared_sha256": "e86b7542a43ba6c7165e5da535cf819433bd73ecc673c193af8ace6d7f489765",
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c"
+    }
+  ],
+  "model_details": {
+    "parameter_device": "cuda:0",
+    "parameter_dtype": "torch.float32"
+  },
+  "native_route": "VideoMAEv2Encoder.backbone(pixel_values)+VideoMAEv2Encoder._pool",
+  "precision": "float32",
+  "raw_samples": [
+    {
+      "batch_size": 16,
+      "case": "dense",
+      "cuda_event_ms": [
+        576.6533203125,
+        588.49072265625,
+        587.87841796875,
+        590.7384033203125,
+        586.99365234375,
+        588.2675170898438,
+        588.0176391601562,
+        587.0079956054688,
+        586.78271484375,
+        592.5703735351562,
+        580.6397705078125,
+        585.5139770507812,
+        587.0131225585938,
+        593.755126953125,
+        586.23486328125,
+        597.7692260742188,
+        590.3042602539062,
+        589.9520263671875,
+        587.7145385742188,
+        587.4555053710938
+      ],
+      "gathered_tokens": null,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        576.7249688506126,
+        588.49355019629,
+        587.8842677921057,
+        590.7471459358931,
+        587.0008114725351,
+        588.3254297077656,
+        588.0240760743618,
+        587.0139319449663,
+        586.7869611829519,
+        592.6004163920879,
+        580.6426871567965,
+        585.5227671563625,
+        587.0434157550335,
+        593.761283904314,
+        586.2444266676903,
+        597.7757424116135,
+        590.3711467981339,
+        589.9580735713243,
+        587.7190306782722,
+        587.4596070498228
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "keep_0.80",
+      "cuda_event_ms": [
+        562.4217529296875,
+        552.1909790039062,
+        552.2749633789062,
+        555.1841430664062,
+        553.0552368164062,
+        555.2312622070312,
+        554.387451171875,
+        551.8212890625,
+        564.9940185546875,
+        555.5015869140625,
+        556.63720703125,
+        554.7018432617188,
+        555.2864990234375,
+        557.5219116210938,
+        548.1564331054688,
+        555.8609619140625,
+        554.36083984375,
+        538.3157958984375,
+        538.7202758789062,
+        540.2695922851562
+      ],
+      "gathered_tokens": 1254,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        562.4254047870636,
+        552.1963015198708,
+        552.2784832865,
+        555.1879350095987,
+        553.0599188059568,
+        555.2372671663761,
+        554.3922148644924,
+        551.8271289765835,
+        564.9993550032377,
+        555.5065125226974,
+        556.6443186253309,
+        554.705860093236,
+        555.2882365882397,
+        557.5274266302586,
+        548.160657286644,
+        555.8669716119766,
+        554.3657969683409,
+        538.3212305605412,
+        538.7245677411556,
+        540.3219610452652
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "keep_0.60",
+      "cuda_event_ms": [
+        486.93963623046875,
+        486.60888671875,
+        485.41387939453125,
+        487.35028076171875,
+        485.46099853515625,
+        504.8616943359375,
+        504.3865661621094,
+        502.5003662109375,
+        486.8382568359375,
+        487.7291564941406,
+        489.818115234375,
+        489.8652038574219,
+        488.08038330078125,
+        487.04510498046875,
+        487.30316162109375,
+        487.5489196777344,
+        488.2984924316406,
+        488.72344970703125,
+        485.8214416503906,
+        487.34002685546875
+      ],
+      "gathered_tokens": 941,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        486.94390058517456,
+        486.6142515093088,
+        485.4206591844559,
+        487.3548559844494,
+        485.4706712067127,
+        504.86981123685837,
+        504.39443811774254,
+        502.50606425106525,
+        486.8451878428459,
+        487.73599974811077,
+        489.8232985287905,
+        489.8713957518339,
+        488.0851022899151,
+        487.0487879961729,
+        487.306322902441,
+        487.5588212162256,
+        488.30351419746876,
+        488.72947320342064,
+        485.82118190824986,
+        487.3493704944849
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "keep_0.40",
+      "cuda_event_ms": [
+        456.3302307128906,
+        456.4920349121094,
+        456.9302978515625,
+        457.8631591796875,
+        456.8217468261719,
+        456.0107421875,
+        457.1310119628906,
+        455.1587829589844,
+        453.8480529785156,
+        438.6897888183594,
+        438.6990051269531,
+        439.61138916015625,
+        440.9190368652344,
+        440.09368896484375,
+        439.40045166015625,
+        443.8149108886719,
+        442.1703796386719,
+        438.5904541015625,
+        440.98150634765625,
+        439.8305358886719
+      ],
+      "gathered_tokens": 627,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        456.3321117311716,
+        456.49614557623863,
+        456.9352753460407,
+        457.8684363514185,
+        456.8294733762741,
+        456.0176841914654,
+        457.13552087545395,
+        455.1639351993799,
+        453.85189168155193,
+        438.70040215551853,
+        438.70613165199757,
+        439.6163076162338,
+        440.92489033937454,
+        440.1030261069536,
+        439.4052214920521,
+        443.8209403306246,
+        442.17326305806637,
+        438.5944977402687,
+        440.98349288105965,
+        439.83758240938187
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "keep_0.40",
+      "cuda_event_ms": [
+        874.4642333984375,
+        875.4083862304688,
+        871.9175415039062,
+        873.1781005859375,
+        883.4457397460938,
+        841.9686279296875,
+        840.50537109375,
+        843.8599853515625,
+        844.126220703125,
+        843.6244506835938,
+        841.8723754882812,
+        844.695556640625,
+        849.3782958984375,
+        873.6163940429688,
+        873.3880615234375,
+        873.1371459960938,
+        875.2384033203125,
+        871.5581665039062,
+        871.36767578125,
+        865.7745971679688
+      ],
+      "gathered_tokens": 627,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        874.4645155966282,
+        875.4083123058081,
+        871.9685897231102,
+        873.1763157993555,
+        883.4465686231852,
+        841.9691734015942,
+        840.5088502913713,
+        843.8589945435524,
+        844.1309947520494,
+        843.626331537962,
+        841.872600838542,
+        844.6974027901888,
+        849.3802044540644,
+        873.6165929585695,
+        873.3858484774828,
+        873.132698237896,
+        875.2366621047258,
+        871.5575076639652,
+        871.3633436709642,
+        865.7732661813498
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "keep_0.60",
+      "cuda_event_ms": [
+        944.427001953125,
+        963.683349609375,
+        962.9490966796875,
+        972.2675170898438,
+        974.7896118164062,
+        966.530029296875,
+        967.5028686523438,
+        981.91357421875,
+        967.0604858398438,
+        965.0042724609375,
+        966.5802001953125,
+        941.8322143554688,
+        938.050537109375,
+        937.481201171875,
+        943.119384765625,
+        940.0985717773438,
+        938.1898193359375,
+        942.9442749023438,
+        939.3172607421875,
+        939.620361328125
+      ],
+      "gathered_tokens": 941,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        944.4267451763153,
+        963.6843409389257,
+        962.9488922655582,
+        972.268495708704,
+        974.7925139963627,
+        966.5334653109312,
+        967.5010964274406,
+        981.9115363061428,
+        967.0612756162882,
+        965.0032818317413,
+        966.6029699146748,
+        941.8302047997713,
+        938.049515709281,
+        937.4804366379976,
+        943.1184306740761,
+        940.0960244238377,
+        938.1895326077938,
+        942.9411347955465,
+        939.3174964934587,
+        939.6179746836424
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "keep_0.80",
+      "cuda_event_ms": [
+        1062.0938720703125,
+        1051.177001953125,
+        1047.5653076171875,
+        1049.597900390625,
+        1049.5406494140625,
+        1049.4730224609375,
+        1052.1640625,
+        1048.095703125,
+        1047.372802734375,
+        1072.9041748046875,
+        1071.7491455078125,
+        1071.2432861328125,
+        1073.544189453125,
+        1068.4620361328125,
+        1042.429931640625,
+        1041.6875,
+        1044.3192138671875,
+        1042.8641357421875,
+        1042.9542236328125,
+        1044.253662109375
+      ],
+      "gathered_tokens": 1254,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        1062.0918311178684,
+        1051.1765349656343,
+        1047.5679114460945,
+        1049.5973192155361,
+        1049.5396107435226,
+        1049.4732353836298,
+        1052.1674007177353,
+        1048.0940360575914,
+        1047.3727714270353,
+        1072.903050109744,
+        1071.749771013856,
+        1071.2427981197834,
+        1073.5436417162418,
+        1068.460451439023,
+        1042.4300115555525,
+        1041.6857115924358,
+        1044.3191584199667,
+        1042.8614988923073,
+        1042.9536644369364,
+        1044.2525036633015
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "dense",
+      "cuda_event_ms": [
+        1156.474853515625,
+        1157.9566650390625,
+        1160.605712890625,
+        1156.3406982421875,
+        1158.62939453125,
+        1159.8612060546875,
+        1158.551513671875,
+        1158.2679443359375,
+        1183.0384521484375,
+        1184.83349609375,
+        1181.4522705078125,
+        1174.60791015625,
+        1159.24169921875,
+        1163.9766845703125,
+        1183.5975341796875,
+        1183.6876220703125,
+        1179.810791015625,
+        1182.908447265625,
+        1183.9969482421875,
+        1186.723876953125
+      ],
+      "gathered_tokens": null,
+      "video_id": "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+      "video_index": 0,
+      "wall_ms": [
+        1156.4735192805529,
+        1157.9656172543764,
+        1160.616870969534,
+        1156.387273222208,
+        1158.6264725774527,
+        1159.8613765090704,
+        1158.5528440773487,
+        1158.2912560552359,
+        1183.037143200636,
+        1184.8350819200277,
+        1181.452764198184,
+        1174.6046543121338,
+        1159.2553984373808,
+        1163.990829139948,
+        1183.5961509495974,
+        1183.6842000484467,
+        1179.811753332615,
+        1182.9081512987614,
+        1183.995796367526,
+        1186.721732839942
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "keep_0.80",
+      "cuda_event_ms": [
+        582.3512573242188,
+        541.3662719726562,
+        542.9319458007812,
+        561.291259765625,
+        559.2371215820312,
+        563.6444091796875,
+        564.1287841796875,
+        573.3734130859375,
+        561.3557739257812,
+        558.7466430664062,
+        560.55908203125,
+        558.6011962890625,
+        559.5852661132812,
+        560.4515991210938,
+        558.4629516601562,
+        559.7337646484375,
+        542.9903564453125,
+        543.7460327148438,
+        543.44091796875,
+        541.497314453125
+      ],
+      "gathered_tokens": 1254,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        582.3533777147532,
+        541.3712374866009,
+        542.9398939013481,
+        561.306020244956,
+        559.2418629676104,
+        563.6515952646732,
+        564.1378276050091,
+        573.3796488493681,
+        561.3617263734341,
+        558.7564688175917,
+        560.5651270598173,
+        558.6105361580849,
+        559.5915727317333,
+        560.4631826281548,
+        558.4688894450665,
+        559.7397517412901,
+        543.0147144943476,
+        543.7593460083008,
+        543.444974347949,
+        541.5028631687164
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "keep_0.60",
+      "cuda_event_ms": [
+        490.967041015625,
+        492.5184020996094,
+        490.3946228027344,
+        494.5397644042969,
+        489.5887451171875,
+        488.869873046875,
+        489.41876220703125,
+        489.955322265625,
+        489.4576721191406,
+        489.0798034667969,
+        494.81317138671875,
+        490.6055603027344,
+        490.576904296875,
+        495.4194030761719,
+        487.6759033203125,
+        488.2769775390625,
+        489.72491455078125,
+        492.4876708984375,
+        488.2575378417969,
+        490.1140441894531
+      ],
+      "gathered_tokens": 941,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        490.97276479005814,
+        492.5237409770489,
+        490.4018584638834,
+        494.54825930297375,
+        489.5945582538843,
+        488.87632973492146,
+        489.42372389137745,
+        489.9595398455858,
+        489.4654992967844,
+        489.08563889563084,
+        494.8195517063141,
+        490.6214028596878,
+        490.58782681822777,
+        495.4277165234089,
+        487.6815974712372,
+        488.28267864882946,
+        489.7305779159069,
+        492.49257519841194,
+        488.26543614268303,
+        490.1210516691208
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "keep_0.40",
+      "cuda_event_ms": [
+        452.5014953613281,
+        440.0680847167969,
+        441.3204345703125,
+        441.3736877441406,
+        450.05517578125,
+        482.76171875,
+        458.65472412109375,
+        460.8594055175781,
+        461.4195251464844,
+        456.2493591308594,
+        460.2562561035156,
+        457.50067138671875,
+        460.09344482421875,
+        461.0570373535156,
+        458.903564453125,
+        457.97784423828125,
+        455.6605529785156,
+        458.4038391113281,
+        457.997314453125,
+        458.57177734375
+      ],
+      "gathered_tokens": 627,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        452.5059964507818,
+        440.07459841668606,
+        441.32612086832523,
+        441.3809310644865,
+        450.06467401981354,
+        482.7681723982096,
+        458.65982957184315,
+        460.8648531138897,
+        461.4253621548414,
+        456.25721476972103,
+        460.2658189833164,
+        457.50508457422256,
+        460.10585501790047,
+        461.06239780783653,
+        458.91084149479866,
+        457.9839874058962,
+        455.6656498461962,
+        458.409721031785,
+        458.0054711550474,
+        458.6118496954441
+      ]
+    },
+    {
+      "batch_size": 16,
+      "case": "dense",
+      "cuda_event_ms": [
+        591.9580078125,
+        593.4151611328125,
+        594.1514282226562,
+        595.99462890625,
+        591.847412109375,
+        597.0134887695312,
+        592.7782592773438,
+        595.39453125,
+        592.8345336914062,
+        580.9786987304688,
+        580.2833862304688,
+        594.840576171875,
+        595.145751953125,
+        594.8364868164062,
+        593.6691284179688,
+        594.9204711914062,
+        592.837646484375,
+        588.6965942382812,
+        596.4820556640625,
+        594.4422607421875
+      ],
+      "gathered_tokens": null,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        592.0241288840771,
+        593.4352297335863,
+        594.1662080585957,
+        596.055755391717,
+        591.8596051633358,
+        597.0294047147036,
+        592.8403083235025,
+        595.4136531800032,
+        592.8404834121466,
+        581.0476448386908,
+        580.3184751421213,
+        594.8474779725075,
+        595.1543264091015,
+        594.8500726372004,
+        593.6763193458319,
+        594.9433911591768,
+        592.8450394421816,
+        588.7631680816412,
+        596.4878387749195,
+        594.4500379264355
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "dense",
+      "cuda_event_ms": [
+        1155.27490234375,
+        1152.8140869140625,
+        1151.14599609375,
+        1156.4564208984375,
+        1151.709228515625,
+        1170.0531005859375,
+        1181.3529052734375,
+        1180.327880859375,
+        1182.5673828125,
+        1181.4564208984375,
+        1180.32080078125,
+        1157.986328125,
+        1157.291015625,
+        1154.2630615234375,
+        1155.6485595703125,
+        1157.328857421875,
+        1179.71044921875,
+        1180.453857421875,
+        1181.086669921875,
+        1183.1173095703125
+      ],
+      "gathered_tokens": null,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        1155.2655156701803,
+        1152.8299450874329,
+        1151.1451229453087,
+        1156.4588639885187,
+        1151.7173759639263,
+        1170.0531523674726,
+        1181.3900638371706,
+        1180.3263872861862,
+        1182.5674548745155,
+        1181.5280634909868,
+        1180.340787395835,
+        1157.9864770174026,
+        1157.3094632476568,
+        1154.263274744153,
+        1155.6463185697794,
+        1157.3901493102312,
+        1179.7104608267546,
+        1180.4618835449219,
+        1181.1057198792696,
+        1183.1167880445719
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "keep_0.40",
+      "cuda_event_ms": [
+        881.6721801757812,
+        891.3981323242188,
+        850.3910522460938,
+        850.6808471679688,
+        853.2531127929688,
+        850.5753784179688,
+        882.028564453125,
+        885.5214233398438,
+        881.5902709960938,
+        884.748291015625,
+        885.1077270507812,
+        883.9515991210938,
+        882.3634033203125,
+        883.5286865234375,
+        866.3388061523438,
+        895.8064575195312,
+        883.4990234375,
+        882.677734375,
+        883.7805786132812,
+        881.8626708984375
+      ],
+      "gathered_tokens": 627,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        881.672965362668,
+        891.3968931883574,
+        850.3899201750755,
+        850.683456286788,
+        853.2565589994192,
+        850.6071083247662,
+        882.02297501266,
+        885.5247404426336,
+        881.5892934799194,
+        884.7489431500435,
+        885.1075116544962,
+        883.9544393122196,
+        882.3617342859507,
+        883.5282865911722,
+        866.3398213684559,
+        895.8061169832945,
+        883.5192453116179,
+        882.6766479760408,
+        883.7778232991695,
+        881.8621914833784
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "keep_0.60",
+      "cuda_event_ms": [
+        950.240234375,
+        943.8341064453125,
+        945.2677001953125,
+        940.9669189453125,
+        946.7115478515625,
+        941.2402954101562,
+        943.6109008789062,
+        946.8753662109375,
+        941.507568359375,
+        945.455078125,
+        951.6195678710938,
+        974.1782836914062,
+        978.4791259765625,
+        977.4141235351562,
+        974.6903076171875,
+        978.3746337890625,
+        978.2999267578125,
+        978.820068359375,
+        992.4198608398438,
+        977.8165893554688
+      ],
+      "gathered_tokens": 941,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        950.2387829124928,
+        943.8336696475744,
+        945.2695846557617,
+        940.9807473421097,
+        946.7093925923109,
+        941.2404708564281,
+        943.6101727187634,
+        946.8723945319653,
+        941.5080640465021,
+        945.4532973468304,
+        951.6214448958635,
+        974.1768650710583,
+        978.5372726619244,
+        977.4125255644321,
+        974.6909476816654,
+        978.3731047064066,
+        978.2982282340527,
+        978.828027844429,
+        992.4195557832718,
+        977.8138939291239
+      ]
+    },
+    {
+      "batch_size": 32,
+      "case": "keep_0.80",
+      "cuda_event_ms": [
+        1051.230224609375,
+        1049.9429931640625,
+        1101.07958984375,
+        1079.5263671875,
+        1081.892822265625,
+        1085.5782470703125,
+        1056.7301025390625,
+        1051.039794921875,
+        1050.86669921875,
+        1051.4852294921875,
+        1051.1431884765625,
+        1066.376220703125,
+        1085.2945556640625,
+        1087.772705078125,
+        1087.205322265625,
+        1086.228515625,
+        1087.352783203125,
+        1063.2130126953125,
+        1082.850341796875,
+        1086.960693359375
+      ],
+      "gathered_tokens": 1254,
+      "video_id": "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c",
+      "video_index": 1,
+      "wall_ms": [
+        1051.2309558689594,
+        1050.037769600749,
+        1101.0718904435635,
+        1079.5249305665493,
+        1081.892967224121,
+        1085.576230660081,
+        1056.7273534834385,
+        1051.03724822402,
+        1050.8636459708214,
+        1051.5140537172556,
+        1051.1605106294155,
+        1066.4361231029034,
+        1085.3449385613203,
+        1087.8290850669146,
+        1087.2017610818148,
+        1086.2381011247635,
+        1087.3550586402416,
+        1063.2116757333279,
+        1082.848858088255,
+        1086.9570970535278
+      ]
+    }
+  ],
+  "scope": "prepared GPU input to pooled encoder output; PairSelect context and validation included",
+  "script_sha256": "37d509b65ec21ea305300db2e1accf211aa4d2915f66d0fc5d8b528c4915b922",
+  "setup_receipts": {
+    "0.4": {
+      "calibration": null,
+      "cross_runtime_numerical_validation": "not_performed",
+      "current_runtime": {
+        "adapter": {
+          "adapter_library_version": null,
+          "adapter_type": "vadbench.integrations.videomaev2.VideoMAEv2Adapter",
+          "capabilities": {
+            "fixed_num_frames": 16,
+            "max_frames": 16,
+            "min_frames": 16,
+            "supports_fixed_clip": true,
+            "supports_training": true
+          },
+          "encoder_library_version": null,
+          "encoder_type": "vadbench.integrations.videomaev2_encoder.VideoMAEv2Encoder",
+          "implementation_files": {
+            "adapter_input": {
+              "module": "vadbench.integrations.videomaev2",
+              "path": "/users/fotile/icassp2027-runs/code-bsw-r01/src/vadbench/integrations/videomaev2.py",
+              "role": "adapter_input",
+              "sha256": "eb79faaee8121d1753f39fe8734af114334f4e7e7f20c72e55b24d3257e50694"
+            },
+            "backbone": {
+              "module": "transformers_modules.videomaev2-base-hf.modeling_videomaev2",
+              "path": "/users/fotile/VAD/.cache-v2/huggingface/modules/transformers_modules/videomaev2-base-hf/modeling_videomaev2.py",
+              "role": "backbone",
+              "sha256": "f821aac219d959254c7189995afd4dd313d98c74a89d4efff05057771bae1079"
+            },
+            "encoder": {
+              "module": "vadbench.integrations.videomaev2_encoder",
+              "path": "/users/fotile/icassp2027-runs/code-bsw-r01/src/vadbench/integrations/videomaev2_encoder.py",
+              "role": "encoder",
+              "sha256": "d6c17a5608e9e7385f20fe1e4f63dc9a21dde8d0d93a7892c1f794534ec3efbc"
+            },
+            "processor": {
+              "module": "transformers.models.videomae.image_processing_videomae",
+              "path": "/users/fotile/VAD/.encoder-envs/v2/overlays/videomaev2/transformers/models/videomae/image_processing_videomae.py",
+              "role": "processor",
+              "sha256": "521b901d1012d08fd8e23e69cdc02f7a138d32e0c7a44c063c25235c68481120"
+            }
+          },
+          "loaded_library_versions": {
+            "timm": "0.9.12",
+            "torch": "2.3.0+cu121",
+            "transformers": "4.56.1"
+          },
+          "model_asset": {
+            "exists": true,
+            "kind": "directory",
+            "location": "/users/fotile/VAD/weights/videomaev2-base-hf"
+          },
+          "properties": {},
+          "runtime_configurations": {
+            "backbone_config": {
+              "add_cross_attention": false,
+              "architectures": [
+                "VideoMAEv2_Base"
+              ],
+              "auto_map": {
+                "AutoConfig": "modeling_config.VideoMAEv2Config",
+                "AutoModel": "modeling_videomaev2.VideoMAEv2"
+              },
+              "bad_words_ids": null,
+              "begin_suppress_tokens": null,
+              "bos_token_id": null,
+              "chunk_size_feed_forward": 0,
+              "cross_attention_hidden_size": null,
+              "decoder_start_token_id": null,
+              "diversity_penalty": 0.0,
+              "do_sample": false,
+              "dtype": "float32",
+              "early_stopping": false,
+              "encoder_no_repeat_ngram_size": 0,
+              "eos_token_id": null,
+              "exponential_decay_length_penalty": null,
+              "finetuning_task": null,
+              "forced_bos_token_id": null,
+              "forced_eos_token_id": null,
+              "id2label": {
+                "0": "LABEL_0",
+                "1": "LABEL_1"
+              },
+              "is_decoder": false,
+              "is_encoder_decoder": false,
+              "label2id": {
+                "LABEL_0": 0,
+                "LABEL_1": 1
+              },
+              "length_penalty": 1.0,
+              "max_length": 20,
+              "min_length": 0,
+              "model_config": {
+                "attn_drop_rate": 0.0,
+                "cos_attn": false,
+                "depth": 12,
+                "drop_path_rate": 0.0,
+                "drop_rate": 0.0,
+                "embed_dim": 768,
+                "img_size": 224,
+                "in_chans": 3,
+                "init_values": 0.0,
+                "layer_norm_eps": 1e-06,
+                "mlp_ratio": 4,
+                "norm_layer": "nn.LayerNorm",
+                "num_classes": 0,
+                "num_frames": 16,
+                "num_heads": 12,
+                "patch_size": 16,
+                "qk_scale": null,
+                "qkv_bias": true,
+                "tubelet_size": 2,
+                "use_learnable_pos_emb": false,
+                "use_mean_pooling": true,
+                "with_cp": false
+              },
+              "model_type": "VideoMAEv2_Base",
+              "no_repeat_ngram_size": 0,
+              "num_beam_groups": 1,
+              "num_beams": 1,
+              "num_return_sequences": 1,
+              "output_attentions": false,
+              "output_hidden_states": false,
+              "output_scores": false,
+              "pad_token_id": null,
+              "prefix": null,
+              "problem_type": null,
+              "pruned_heads": {},
+              "remove_invalid_values": false,
+              "repetition_penalty": 1.0,
+              "return_dict": true,
+              "return_dict_in_generate": false,
+              "sep_token_id": null,
+              "suppress_tokens": null,
+              "task_specific_params": null,
+              "temperature": 1.0,
+              "tf_legacy_loss": false,
+              "tie_encoder_decoder": false,
+              "tie_word_embeddings": true,
+              "tokenizer_class": null,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torchscript": false,
+              "transformers_version": "4.56.1",
+              "typical_p": 1.0,
+              "use_bfloat16": false,
+              "use_cache": true
+            },
+            "encoder_cfg": {
+              "image_size": 224,
+              "num_frames": 16,
+              "pooling": "auto",
+              "use_half": true
+            },
+            "processor": {
+              "_processor_class": null,
+              "crop_size": {
+                "height": 224,
+                "width": 224
+              },
+              "do_center_crop": true,
+              "do_normalize": true,
+              "do_rescale": true,
+              "do_resize": true,
+              "image_mean": [
+                0.485,
+                0.456,
+                0.406
+              ],
+              "image_processor_type": "VideoMAEImageProcessor",
+              "image_std": [
+                0.229,
+                0.224,
+                0.225
+              ],
+              "resample": 2,
+              "rescale_factor": 0.00392156862745098,
+              "size": {
+                "shortest_edge": 224
+              }
+            }
+          }
+        },
+        "device": "cuda:0",
+        "python_executable": "/users/fotile/VAD/.encoder-envs/v2/classic-video-v2/bin/python",
+        "python_version": "3.10.20 | packaged by conda-forge | (main, Jun 11 2026, 03:31:56) [GCC 14.3.0]",
+        "torch": "2.3.0+cu121",
+        "torch_cuda": "12.1"
+      },
+      "dense_geometry": {
+        "coordinate_scope": "processed crop/resize grid; no claim of original-image pixel localisation",
+        "flatten_verified": true,
+        "grid": [
+          8,
+          14,
+          14
+        ],
+        "patch_size": [
+          16,
+          16
+        ],
+        "processed_layout": "BCTHW",
+        "processed_shape": [
+          1,
+          3,
+          16,
+          224,
+          224
+        ],
+        "source_frame_indices": [
+          [
+            [
+              2748,
+              2750
+            ],
+            [
+              2752,
+              2754
+            ],
+            [
+              2756,
+              2758
+            ],
+            [
+              2760,
+              2762
+            ],
+            [
+              2764,
+              2766
+            ],
+            [
+              2768,
+              2770
+            ],
+            [
+              2772,
+              2774
+            ],
+            [
+              2776,
+              2778
+            ]
+          ]
+        ],
+        "token_order": "t,h,w (w fastest)",
+        "tubelet_size": 2,
+        "valid_token_counts": [
+          1568
+        ]
+      },
+      "dense_output": {
+        "features_dtype": "torch.float32",
+        "features_shape": [
+          1,
+          1568,
+          768
+        ],
+        "pooled_dtype": "torch.float32",
+        "pooled_shape": [
+          1,
+          768
+        ]
+      },
+      "depth": 5,
+      "encoder_id": "videomaev2",
+      "keep_ratio": 0.4,
+      "output_dim": 768,
+      "readout_structure": {
+        "feature_stage": null,
+        "pooling": "auto"
+      },
+      "record_diagnostics": false,
+      "reducer": "pair_select",
+      "reducer_identity": {
+        "ablation_note": "pair_fixed/pair_random_member/pair_reverse share the identical pair table, quota table, pair ordering and slot layout with pair_select; only the within-pair member preference differs (batch-1b ordering ablation); pair ordering signal is unchanged",
+        "actual_keep_ratio": 0.39987244897959184,
+        "budget_rule": "group_budget_v1",
+        "clip_frames": 16,
+        "deployment_sha256": "cbbecae3ee6fb42d08dffaf63880f674408e24ff1ed1b1adabe637b3d85941d9",
+        "depth": 5,
+        "discarded_mass": "discarded_not_redistributed",
+        "dynamic_selection": true,
+        "encoder_id": "videomaev2",
+        "geometry_snap": null,
+        "group_size": 10,
+        "hidden_dim": 768,
+        "indexed_sha256": "37e0d397a108d60ebdb66374567e49cade5e841ca22e022dba0685af9b255e12",
+        "input_topology_sha256": "3c575bc9b01d159ba7b548d3366ad225116b3f3673ab151ccf6d7a2183d70b09",
+        "keep_ratio": 0.4,
+        "kept_tokens": 627,
+        "kept_units": 627,
+        "leakage_contract": "no_labels_no_filenames_no_test_statistics_no_future_layers",
+        "mask_scope": "current_forward_mask_per_batch_item",
+        "mass_convention": "retained_unit_mass",
+        "name": "pair_select",
+        "operator": "group_budget_select_v1",
+        "position_anchor": "skeleton_slot_native_index",
+        "position_note": "kept unit tokens fill quota slots of their group; slot coordinates come from the uniform skeleton, real chosen indices are recorded per forward via selection_digest",
+        "position_semantics": "approximate_anchor_position",
+        "quotas": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          3
+        ],
+        "random_generator": null,
+        "record_diagnostics": false,
+        "reducible_tokens": 1568,
+        "rounding": "round_half_up_floor_x_plus_0.5",
+        "same_budget_for_all_controls": true,
+        "seed": null,
+        "selection_signal": "member_l2_norm_max",
+        "selection_unit": "native_patch_token",
+        "selection_unit_note": "videomaev2/videomae: native pair (budget slot = token); timesformer: complete spatial trajectory from verified coordinates (whole trajectories only, never per-frame spatial subsampling)",
+        "signal_scope": "current_block_output_only",
+        "slot_layout": "identical_across_rules_at_same_keep_ratio",
+        "special_tokens": "preserved_unmodified",
+        "tie_breaking": "stable_argsort_signal_desc_then_native_order",
+        "token_selection_sha256": "d7f4a2d969677694e891b02de811a1e4cb6bc64743fc8dc5735dbbf20e419ea5",
+        "tokens_per_slot": 1,
+        "within_unit_preference": "max_norm_member_first"
+      },
+      "schema_version": 1,
+      "status": "prepared",
+      "verified_encoder_identity": {
+        "adapter": "videomaev2",
+        "checkpoint": {
+          "id": "videomaev2-base-hf",
+          "license": "cc-by-nc-4.0",
+          "model_id": "OpenGVLab/VideoMAEv2-Base",
+          "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+          "sha256": {
+            "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+          }
+        },
+        "code": {
+          "commit": "557e89fe9dea715f5ca06f6aa16354b1b06d4b54",
+          "source_sha256": "2315503d5d3c3576a051c2140b3e27d5b1f87c175f0ab05cd10c70f7eef4633c"
+        },
+        "constructor": {
+          "image_size": 224,
+          "model_name": {
+            "checkpoint_sha256": {
+              "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+            }
+          },
+          "num_frames": 16,
+          "pooling": "auto",
+          "use_half": true
+        },
+        "target": "vadbench.integrations.videomaev2:VideoMAEv2Adapter",
+        "upstream": {
+          "entrypoints": {
+            "backbone": "models/modeling_finetune.py",
+            "classification": "run_class_finetuning.py"
+          },
+          "integration": "videomaev2",
+          "integration_notes": [
+            "固定帧 clip 编码，不声明 streaming、decoder KV cache 或 vision token cache。",
+            "VADBench 复用仓库现有 lab_anomaly.models.vit_video_encoder.VideoMAEv2Encoder。"
+          ],
+          "license": {
+            "file": "LICENSE",
+            "spdx": "MIT",
+            "url": "https://github.com/OpenGVLab/VideoMAEv2/blob/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b/LICENSE"
+          },
+          "schema_version": 1,
+          "source": {
+            "branch": "master",
+            "commit": "29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "commit_url": "https://github.com/OpenGVLab/VideoMAEv2/commit/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "default_branch": "master",
+            "repository": "https://github.com/OpenGVLab/VideoMAEv2",
+            "verified_on": "2026-08-31",
+            "verified_with": "gh-api"
+          },
+          "weights": {
+            "license": "cc-by-nc-4.0",
+            "local_dir": "weights/videomaev2-base-hf",
+            "model_id": "OpenGVLab/VideoMAEv2-Base",
+            "provider": "huggingface",
+            "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+            "sha256": {
+              "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+            }
+          }
+        }
+      }
+    },
+    "0.6": {
+      "calibration": null,
+      "cross_runtime_numerical_validation": "not_performed",
+      "current_runtime": {
+        "adapter": {
+          "adapter_library_version": null,
+          "adapter_type": "vadbench.integrations.videomaev2.VideoMAEv2Adapter",
+          "capabilities": {
+            "fixed_num_frames": 16,
+            "max_frames": 16,
+            "min_frames": 16,
+            "supports_fixed_clip": true,
+            "supports_training": true
+          },
+          "encoder_library_version": null,
+          "encoder_type": "vadbench.integrations.videomaev2_encoder.VideoMAEv2Encoder",
+          "implementation_files": {
+            "adapter_input": {
+              "module": "vadbench.integrations.videomaev2",
+              "path": "/users/fotile/icassp2027-runs/code-bsw-r01/src/vadbench/integrations/videomaev2.py",
+              "role": "adapter_input",
+              "sha256": "eb79faaee8121d1753f39fe8734af114334f4e7e7f20c72e55b24d3257e50694"
+            },
+            "backbone": {
+              "module": "transformers_modules.videomaev2-base-hf.modeling_videomaev2",
+              "path": "/users/fotile/VAD/.cache-v2/huggingface/modules/transformers_modules/videomaev2-base-hf/modeling_videomaev2.py",
+              "role": "backbone",
+              "sha256": "f821aac219d959254c7189995afd4dd313d98c74a89d4efff05057771bae1079"
+            },
+            "encoder": {
+              "module": "vadbench.integrations.videomaev2_encoder",
+              "path": "/users/fotile/icassp2027-runs/code-bsw-r01/src/vadbench/integrations/videomaev2_encoder.py",
+              "role": "encoder",
+              "sha256": "d6c17a5608e9e7385f20fe1e4f63dc9a21dde8d0d93a7892c1f794534ec3efbc"
+            },
+            "processor": {
+              "module": "transformers.models.videomae.image_processing_videomae",
+              "path": "/users/fotile/VAD/.encoder-envs/v2/overlays/videomaev2/transformers/models/videomae/image_processing_videomae.py",
+              "role": "processor",
+              "sha256": "521b901d1012d08fd8e23e69cdc02f7a138d32e0c7a44c063c25235c68481120"
+            }
+          },
+          "loaded_library_versions": {
+            "timm": "0.9.12",
+            "torch": "2.3.0+cu121",
+            "transformers": "4.56.1"
+          },
+          "model_asset": {
+            "exists": true,
+            "kind": "directory",
+            "location": "/users/fotile/VAD/weights/videomaev2-base-hf"
+          },
+          "properties": {},
+          "runtime_configurations": {
+            "backbone_config": {
+              "add_cross_attention": false,
+              "architectures": [
+                "VideoMAEv2_Base"
+              ],
+              "auto_map": {
+                "AutoConfig": "modeling_config.VideoMAEv2Config",
+                "AutoModel": "modeling_videomaev2.VideoMAEv2"
+              },
+              "bad_words_ids": null,
+              "begin_suppress_tokens": null,
+              "bos_token_id": null,
+              "chunk_size_feed_forward": 0,
+              "cross_attention_hidden_size": null,
+              "decoder_start_token_id": null,
+              "diversity_penalty": 0.0,
+              "do_sample": false,
+              "dtype": "float32",
+              "early_stopping": false,
+              "encoder_no_repeat_ngram_size": 0,
+              "eos_token_id": null,
+              "exponential_decay_length_penalty": null,
+              "finetuning_task": null,
+              "forced_bos_token_id": null,
+              "forced_eos_token_id": null,
+              "id2label": {
+                "0": "LABEL_0",
+                "1": "LABEL_1"
+              },
+              "is_decoder": false,
+              "is_encoder_decoder": false,
+              "label2id": {
+                "LABEL_0": 0,
+                "LABEL_1": 1
+              },
+              "length_penalty": 1.0,
+              "max_length": 20,
+              "min_length": 0,
+              "model_config": {
+                "attn_drop_rate": 0.0,
+                "cos_attn": false,
+                "depth": 12,
+                "drop_path_rate": 0.0,
+                "drop_rate": 0.0,
+                "embed_dim": 768,
+                "img_size": 224,
+                "in_chans": 3,
+                "init_values": 0.0,
+                "layer_norm_eps": 1e-06,
+                "mlp_ratio": 4,
+                "norm_layer": "nn.LayerNorm",
+                "num_classes": 0,
+                "num_frames": 16,
+                "num_heads": 12,
+                "patch_size": 16,
+                "qk_scale": null,
+                "qkv_bias": true,
+                "tubelet_size": 2,
+                "use_learnable_pos_emb": false,
+                "use_mean_pooling": true,
+                "with_cp": false
+              },
+              "model_type": "VideoMAEv2_Base",
+              "no_repeat_ngram_size": 0,
+              "num_beam_groups": 1,
+              "num_beams": 1,
+              "num_return_sequences": 1,
+              "output_attentions": false,
+              "output_hidden_states": false,
+              "output_scores": false,
+              "pad_token_id": null,
+              "prefix": null,
+              "problem_type": null,
+              "pruned_heads": {},
+              "remove_invalid_values": false,
+              "repetition_penalty": 1.0,
+              "return_dict": true,
+              "return_dict_in_generate": false,
+              "sep_token_id": null,
+              "suppress_tokens": null,
+              "task_specific_params": null,
+              "temperature": 1.0,
+              "tf_legacy_loss": false,
+              "tie_encoder_decoder": false,
+              "tie_word_embeddings": true,
+              "tokenizer_class": null,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torchscript": false,
+              "transformers_version": "4.56.1",
+              "typical_p": 1.0,
+              "use_bfloat16": false,
+              "use_cache": true
+            },
+            "encoder_cfg": {
+              "image_size": 224,
+              "num_frames": 16,
+              "pooling": "auto",
+              "use_half": true
+            },
+            "processor": {
+              "_processor_class": null,
+              "crop_size": {
+                "height": 224,
+                "width": 224
+              },
+              "do_center_crop": true,
+              "do_normalize": true,
+              "do_rescale": true,
+              "do_resize": true,
+              "image_mean": [
+                0.485,
+                0.456,
+                0.406
+              ],
+              "image_processor_type": "VideoMAEImageProcessor",
+              "image_std": [
+                0.229,
+                0.224,
+                0.225
+              ],
+              "resample": 2,
+              "rescale_factor": 0.00392156862745098,
+              "size": {
+                "shortest_edge": 224
+              }
+            }
+          }
+        },
+        "device": "cuda:0",
+        "python_executable": "/users/fotile/VAD/.encoder-envs/v2/classic-video-v2/bin/python",
+        "python_version": "3.10.20 | packaged by conda-forge | (main, Jun 11 2026, 03:31:56) [GCC 14.3.0]",
+        "torch": "2.3.0+cu121",
+        "torch_cuda": "12.1"
+      },
+      "dense_geometry": {
+        "coordinate_scope": "processed crop/resize grid; no claim of original-image pixel localisation",
+        "flatten_verified": true,
+        "grid": [
+          8,
+          14,
+          14
+        ],
+        "patch_size": [
+          16,
+          16
+        ],
+        "processed_layout": "BCTHW",
+        "processed_shape": [
+          1,
+          3,
+          16,
+          224,
+          224
+        ],
+        "source_frame_indices": [
+          [
+            [
+              2748,
+              2750
+            ],
+            [
+              2752,
+              2754
+            ],
+            [
+              2756,
+              2758
+            ],
+            [
+              2760,
+              2762
+            ],
+            [
+              2764,
+              2766
+            ],
+            [
+              2768,
+              2770
+            ],
+            [
+              2772,
+              2774
+            ],
+            [
+              2776,
+              2778
+            ]
+          ]
+        ],
+        "token_order": "t,h,w (w fastest)",
+        "tubelet_size": 2,
+        "valid_token_counts": [
+          1568
+        ]
+      },
+      "dense_output": {
+        "features_dtype": "torch.float32",
+        "features_shape": [
+          1,
+          1568,
+          768
+        ],
+        "pooled_dtype": "torch.float32",
+        "pooled_shape": [
+          1,
+          768
+        ]
+      },
+      "depth": 5,
+      "encoder_id": "videomaev2",
+      "keep_ratio": 0.6,
+      "output_dim": 768,
+      "readout_structure": {
+        "feature_stage": null,
+        "pooling": "auto"
+      },
+      "record_diagnostics": false,
+      "reducer": "pair_select",
+      "reducer_identity": {
+        "ablation_note": "pair_fixed/pair_random_member/pair_reverse share the identical pair table, quota table, pair ordering and slot layout with pair_select; only the within-pair member preference differs (batch-1b ordering ablation); pair ordering signal is unchanged",
+        "actual_keep_ratio": 0.6001275510204082,
+        "budget_rule": "group_budget_v1",
+        "clip_frames": 16,
+        "deployment_sha256": "cbbecae3ee6fb42d08dffaf63880f674408e24ff1ed1b1adabe637b3d85941d9",
+        "depth": 5,
+        "discarded_mass": "discarded_not_redistributed",
+        "dynamic_selection": true,
+        "encoder_id": "videomaev2",
+        "geometry_snap": null,
+        "group_size": 10,
+        "hidden_dim": 768,
+        "indexed_sha256": "37e0d397a108d60ebdb66374567e49cade5e841ca22e022dba0685af9b255e12",
+        "input_topology_sha256": "3c575bc9b01d159ba7b548d3366ad225116b3f3673ab151ccf6d7a2183d70b09",
+        "keep_ratio": 0.6,
+        "kept_tokens": 941,
+        "kept_units": 941,
+        "leakage_contract": "no_labels_no_filenames_no_test_statistics_no_future_layers",
+        "mask_scope": "current_forward_mask_per_batch_item",
+        "mass_convention": "retained_unit_mass",
+        "name": "pair_select",
+        "operator": "group_budget_select_v1",
+        "position_anchor": "skeleton_slot_native_index",
+        "position_note": "kept unit tokens fill quota slots of their group; slot coordinates come from the uniform skeleton, real chosen indices are recorded per forward via selection_digest",
+        "position_semantics": "approximate_anchor_position",
+        "quotas": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          5
+        ],
+        "random_generator": null,
+        "record_diagnostics": false,
+        "reducible_tokens": 1568,
+        "rounding": "round_half_up_floor_x_plus_0.5",
+        "same_budget_for_all_controls": true,
+        "seed": null,
+        "selection_signal": "member_l2_norm_max",
+        "selection_unit": "native_patch_token",
+        "selection_unit_note": "videomaev2/videomae: native pair (budget slot = token); timesformer: complete spatial trajectory from verified coordinates (whole trajectories only, never per-frame spatial subsampling)",
+        "signal_scope": "current_block_output_only",
+        "slot_layout": "identical_across_rules_at_same_keep_ratio",
+        "special_tokens": "preserved_unmodified",
+        "tie_breaking": "stable_argsort_signal_desc_then_native_order",
+        "token_selection_sha256": "d7f4a2d969677694e891b02de811a1e4cb6bc64743fc8dc5735dbbf20e419ea5",
+        "tokens_per_slot": 1,
+        "within_unit_preference": "max_norm_member_first"
+      },
+      "schema_version": 1,
+      "status": "prepared",
+      "verified_encoder_identity": {
+        "adapter": "videomaev2",
+        "checkpoint": {
+          "id": "videomaev2-base-hf",
+          "license": "cc-by-nc-4.0",
+          "model_id": "OpenGVLab/VideoMAEv2-Base",
+          "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+          "sha256": {
+            "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+          }
+        },
+        "code": {
+          "commit": "557e89fe9dea715f5ca06f6aa16354b1b06d4b54",
+          "source_sha256": "2315503d5d3c3576a051c2140b3e27d5b1f87c175f0ab05cd10c70f7eef4633c"
+        },
+        "constructor": {
+          "image_size": 224,
+          "model_name": {
+            "checkpoint_sha256": {
+              "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+            }
+          },
+          "num_frames": 16,
+          "pooling": "auto",
+          "use_half": true
+        },
+        "target": "vadbench.integrations.videomaev2:VideoMAEv2Adapter",
+        "upstream": {
+          "entrypoints": {
+            "backbone": "models/modeling_finetune.py",
+            "classification": "run_class_finetuning.py"
+          },
+          "integration": "videomaev2",
+          "integration_notes": [
+            "固定帧 clip 编码，不声明 streaming、decoder KV cache 或 vision token cache。",
+            "VADBench 复用仓库现有 lab_anomaly.models.vit_video_encoder.VideoMAEv2Encoder。"
+          ],
+          "license": {
+            "file": "LICENSE",
+            "spdx": "MIT",
+            "url": "https://github.com/OpenGVLab/VideoMAEv2/blob/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b/LICENSE"
+          },
+          "schema_version": 1,
+          "source": {
+            "branch": "master",
+            "commit": "29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "commit_url": "https://github.com/OpenGVLab/VideoMAEv2/commit/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "default_branch": "master",
+            "repository": "https://github.com/OpenGVLab/VideoMAEv2",
+            "verified_on": "2026-08-31",
+            "verified_with": "gh-api"
+          },
+          "weights": {
+            "license": "cc-by-nc-4.0",
+            "local_dir": "weights/videomaev2-base-hf",
+            "model_id": "OpenGVLab/VideoMAEv2-Base",
+            "provider": "huggingface",
+            "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+            "sha256": {
+              "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+            }
+          }
+        }
+      }
+    },
+    "0.8": {
+      "calibration": null,
+      "cross_runtime_numerical_validation": "not_performed",
+      "current_runtime": {
+        "adapter": {
+          "adapter_library_version": null,
+          "adapter_type": "vadbench.integrations.videomaev2.VideoMAEv2Adapter",
+          "capabilities": {
+            "fixed_num_frames": 16,
+            "max_frames": 16,
+            "min_frames": 16,
+            "supports_fixed_clip": true,
+            "supports_training": true
+          },
+          "encoder_library_version": null,
+          "encoder_type": "vadbench.integrations.videomaev2_encoder.VideoMAEv2Encoder",
+          "implementation_files": {
+            "adapter_input": {
+              "module": "vadbench.integrations.videomaev2",
+              "path": "/users/fotile/icassp2027-runs/code-bsw-r01/src/vadbench/integrations/videomaev2.py",
+              "role": "adapter_input",
+              "sha256": "eb79faaee8121d1753f39fe8734af114334f4e7e7f20c72e55b24d3257e50694"
+            },
+            "backbone": {
+              "module": "transformers_modules.videomaev2-base-hf.modeling_videomaev2",
+              "path": "/users/fotile/VAD/.cache-v2/huggingface/modules/transformers_modules/videomaev2-base-hf/modeling_videomaev2.py",
+              "role": "backbone",
+              "sha256": "f821aac219d959254c7189995afd4dd313d98c74a89d4efff05057771bae1079"
+            },
+            "encoder": {
+              "module": "vadbench.integrations.videomaev2_encoder",
+              "path": "/users/fotile/icassp2027-runs/code-bsw-r01/src/vadbench/integrations/videomaev2_encoder.py",
+              "role": "encoder",
+              "sha256": "d6c17a5608e9e7385f20fe1e4f63dc9a21dde8d0d93a7892c1f794534ec3efbc"
+            },
+            "processor": {
+              "module": "transformers.models.videomae.image_processing_videomae",
+              "path": "/users/fotile/VAD/.encoder-envs/v2/overlays/videomaev2/transformers/models/videomae/image_processing_videomae.py",
+              "role": "processor",
+              "sha256": "521b901d1012d08fd8e23e69cdc02f7a138d32e0c7a44c063c25235c68481120"
+            }
+          },
+          "loaded_library_versions": {
+            "timm": "0.9.12",
+            "torch": "2.3.0+cu121",
+            "transformers": "4.56.1"
+          },
+          "model_asset": {
+            "exists": true,
+            "kind": "directory",
+            "location": "/users/fotile/VAD/weights/videomaev2-base-hf"
+          },
+          "properties": {},
+          "runtime_configurations": {
+            "backbone_config": {
+              "add_cross_attention": false,
+              "architectures": [
+                "VideoMAEv2_Base"
+              ],
+              "auto_map": {
+                "AutoConfig": "modeling_config.VideoMAEv2Config",
+                "AutoModel": "modeling_videomaev2.VideoMAEv2"
+              },
+              "bad_words_ids": null,
+              "begin_suppress_tokens": null,
+              "bos_token_id": null,
+              "chunk_size_feed_forward": 0,
+              "cross_attention_hidden_size": null,
+              "decoder_start_token_id": null,
+              "diversity_penalty": 0.0,
+              "do_sample": false,
+              "dtype": "float32",
+              "early_stopping": false,
+              "encoder_no_repeat_ngram_size": 0,
+              "eos_token_id": null,
+              "exponential_decay_length_penalty": null,
+              "finetuning_task": null,
+              "forced_bos_token_id": null,
+              "forced_eos_token_id": null,
+              "id2label": {
+                "0": "LABEL_0",
+                "1": "LABEL_1"
+              },
+              "is_decoder": false,
+              "is_encoder_decoder": false,
+              "label2id": {
+                "LABEL_0": 0,
+                "LABEL_1": 1
+              },
+              "length_penalty": 1.0,
+              "max_length": 20,
+              "min_length": 0,
+              "model_config": {
+                "attn_drop_rate": 0.0,
+                "cos_attn": false,
+                "depth": 12,
+                "drop_path_rate": 0.0,
+                "drop_rate": 0.0,
+                "embed_dim": 768,
+                "img_size": 224,
+                "in_chans": 3,
+                "init_values": 0.0,
+                "layer_norm_eps": 1e-06,
+                "mlp_ratio": 4,
+                "norm_layer": "nn.LayerNorm",
+                "num_classes": 0,
+                "num_frames": 16,
+                "num_heads": 12,
+                "patch_size": 16,
+                "qk_scale": null,
+                "qkv_bias": true,
+                "tubelet_size": 2,
+                "use_learnable_pos_emb": false,
+                "use_mean_pooling": true,
+                "with_cp": false
+              },
+              "model_type": "VideoMAEv2_Base",
+              "no_repeat_ngram_size": 0,
+              "num_beam_groups": 1,
+              "num_beams": 1,
+              "num_return_sequences": 1,
+              "output_attentions": false,
+              "output_hidden_states": false,
+              "output_scores": false,
+              "pad_token_id": null,
+              "prefix": null,
+              "problem_type": null,
+              "pruned_heads": {},
+              "remove_invalid_values": false,
+              "repetition_penalty": 1.0,
+              "return_dict": true,
+              "return_dict_in_generate": false,
+              "sep_token_id": null,
+              "suppress_tokens": null,
+              "task_specific_params": null,
+              "temperature": 1.0,
+              "tf_legacy_loss": false,
+              "tie_encoder_decoder": false,
+              "tie_word_embeddings": true,
+              "tokenizer_class": null,
+              "top_k": 50,
+              "top_p": 1.0,
+              "torchscript": false,
+              "transformers_version": "4.56.1",
+              "typical_p": 1.0,
+              "use_bfloat16": false,
+              "use_cache": true
+            },
+            "encoder_cfg": {
+              "image_size": 224,
+              "num_frames": 16,
+              "pooling": "auto",
+              "use_half": true
+            },
+            "processor": {
+              "_processor_class": null,
+              "crop_size": {
+                "height": 224,
+                "width": 224
+              },
+              "do_center_crop": true,
+              "do_normalize": true,
+              "do_rescale": true,
+              "do_resize": true,
+              "image_mean": [
+                0.485,
+                0.456,
+                0.406
+              ],
+              "image_processor_type": "VideoMAEImageProcessor",
+              "image_std": [
+                0.229,
+                0.224,
+                0.225
+              ],
+              "resample": 2,
+              "rescale_factor": 0.00392156862745098,
+              "size": {
+                "shortest_edge": 224
+              }
+            }
+          }
+        },
+        "device": "cuda:0",
+        "python_executable": "/users/fotile/VAD/.encoder-envs/v2/classic-video-v2/bin/python",
+        "python_version": "3.10.20 | packaged by conda-forge | (main, Jun 11 2026, 03:31:56) [GCC 14.3.0]",
+        "torch": "2.3.0+cu121",
+        "torch_cuda": "12.1"
+      },
+      "dense_geometry": {
+        "coordinate_scope": "processed crop/resize grid; no claim of original-image pixel localisation",
+        "flatten_verified": true,
+        "grid": [
+          8,
+          14,
+          14
+        ],
+        "patch_size": [
+          16,
+          16
+        ],
+        "processed_layout": "BCTHW",
+        "processed_shape": [
+          1,
+          3,
+          16,
+          224,
+          224
+        ],
+        "source_frame_indices": [
+          [
+            [
+              2748,
+              2750
+            ],
+            [
+              2752,
+              2754
+            ],
+            [
+              2756,
+              2758
+            ],
+            [
+              2760,
+              2762
+            ],
+            [
+              2764,
+              2766
+            ],
+            [
+              2768,
+              2770
+            ],
+            [
+              2772,
+              2774
+            ],
+            [
+              2776,
+              2778
+            ]
+          ]
+        ],
+        "token_order": "t,h,w (w fastest)",
+        "tubelet_size": 2,
+        "valid_token_counts": [
+          1568
+        ]
+      },
+      "dense_output": {
+        "features_dtype": "torch.float32",
+        "features_shape": [
+          1,
+          1568,
+          768
+        ],
+        "pooled_dtype": "torch.float32",
+        "pooled_shape": [
+          1,
+          768
+        ]
+      },
+      "depth": 5,
+      "encoder_id": "videomaev2",
+      "keep_ratio": 0.8,
+      "output_dim": 768,
+      "readout_structure": {
+        "feature_stage": null,
+        "pooling": "auto"
+      },
+      "record_diagnostics": false,
+      "reducer": "pair_select",
+      "reducer_identity": {
+        "ablation_note": "pair_fixed/pair_random_member/pair_reverse share the identical pair table, quota table, pair ordering and slot layout with pair_select; only the within-pair member preference differs (batch-1b ordering ablation); pair ordering signal is unchanged",
+        "actual_keep_ratio": 0.7997448979591837,
+        "budget_rule": "group_budget_v1",
+        "clip_frames": 16,
+        "deployment_sha256": "cbbecae3ee6fb42d08dffaf63880f674408e24ff1ed1b1adabe637b3d85941d9",
+        "depth": 5,
+        "discarded_mass": "discarded_not_redistributed",
+        "dynamic_selection": true,
+        "encoder_id": "videomaev2",
+        "geometry_snap": null,
+        "group_size": 10,
+        "hidden_dim": 768,
+        "indexed_sha256": "37e0d397a108d60ebdb66374567e49cade5e841ca22e022dba0685af9b255e12",
+        "input_topology_sha256": "3c575bc9b01d159ba7b548d3366ad225116b3f3673ab151ccf6d7a2183d70b09",
+        "keep_ratio": 0.8,
+        "kept_tokens": 1254,
+        "kept_units": 1254,
+        "leakage_contract": "no_labels_no_filenames_no_test_statistics_no_future_layers",
+        "mask_scope": "current_forward_mask_per_batch_item",
+        "mass_convention": "retained_unit_mass",
+        "name": "pair_select",
+        "operator": "group_budget_select_v1",
+        "position_anchor": "skeleton_slot_native_index",
+        "position_note": "kept unit tokens fill quota slots of their group; slot coordinates come from the uniform skeleton, real chosen indices are recorded per forward via selection_digest",
+        "position_semantics": "approximate_anchor_position",
+        "quotas": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          6
+        ],
+        "random_generator": null,
+        "record_diagnostics": false,
+        "reducible_tokens": 1568,
+        "rounding": "round_half_up_floor_x_plus_0.5",
+        "same_budget_for_all_controls": true,
+        "seed": null,
+        "selection_signal": "member_l2_norm_max",
+        "selection_unit": "native_patch_token",
+        "selection_unit_note": "videomaev2/videomae: native pair (budget slot = token); timesformer: complete spatial trajectory from verified coordinates (whole trajectories only, never per-frame spatial subsampling)",
+        "signal_scope": "current_block_output_only",
+        "slot_layout": "identical_across_rules_at_same_keep_ratio",
+        "special_tokens": "preserved_unmodified",
+        "tie_breaking": "stable_argsort_signal_desc_then_native_order",
+        "token_selection_sha256": "d7f4a2d969677694e891b02de811a1e4cb6bc64743fc8dc5735dbbf20e419ea5",
+        "tokens_per_slot": 1,
+        "within_unit_preference": "max_norm_member_first"
+      },
+      "schema_version": 1,
+      "status": "prepared",
+      "verified_encoder_identity": {
+        "adapter": "videomaev2",
+        "checkpoint": {
+          "id": "videomaev2-base-hf",
+          "license": "cc-by-nc-4.0",
+          "model_id": "OpenGVLab/VideoMAEv2-Base",
+          "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+          "sha256": {
+            "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+          }
+        },
+        "code": {
+          "commit": "557e89fe9dea715f5ca06f6aa16354b1b06d4b54",
+          "source_sha256": "2315503d5d3c3576a051c2140b3e27d5b1f87c175f0ab05cd10c70f7eef4633c"
+        },
+        "constructor": {
+          "image_size": 224,
+          "model_name": {
+            "checkpoint_sha256": {
+              "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+            }
+          },
+          "num_frames": 16,
+          "pooling": "auto",
+          "use_half": true
+        },
+        "target": "vadbench.integrations.videomaev2:VideoMAEv2Adapter",
+        "upstream": {
+          "entrypoints": {
+            "backbone": "models/modeling_finetune.py",
+            "classification": "run_class_finetuning.py"
+          },
+          "integration": "videomaev2",
+          "integration_notes": [
+            "固定帧 clip 编码，不声明 streaming、decoder KV cache 或 vision token cache。",
+            "VADBench 复用仓库现有 lab_anomaly.models.vit_video_encoder.VideoMAEv2Encoder。"
+          ],
+          "license": {
+            "file": "LICENSE",
+            "spdx": "MIT",
+            "url": "https://github.com/OpenGVLab/VideoMAEv2/blob/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b/LICENSE"
+          },
+          "schema_version": 1,
+          "source": {
+            "branch": "master",
+            "commit": "29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "commit_url": "https://github.com/OpenGVLab/VideoMAEv2/commit/29eab1e8a588d1b3ec0cdec7b03a86cca491b74b",
+            "default_branch": "master",
+            "repository": "https://github.com/OpenGVLab/VideoMAEv2",
+            "verified_on": "2026-08-31",
+            "verified_with": "gh-api"
+          },
+          "weights": {
+            "license": "cc-by-nc-4.0",
+            "local_dir": "weights/videomaev2-base-hf",
+            "model_id": "OpenGVLab/VideoMAEv2-Base",
+            "provider": "huggingface",
+            "revision": "78c337a418cc4adaf7f1ff6c7ba343418393966b",
+            "sha256": {
+              "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+            }
+          }
+        }
+      }
+    }
+  },
+  "status": "completed",
+  "summary": {
+    "16": {
+      "dense": {
+        "gathered_tokens": null,
+        "median_cuda_event_ms_per_batch": 590.8533782958984,
+        "median_wall_ms_per_batch": 590.8614564687014,
+        "speedup_vs_dense": 1.0,
+        "throughput_clips_per_s": 27.07910598133175,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          587.801649235189,
+          593.9212637022138
+        ]
+      },
+      "keep_0.40": {
+        "gathered_tokens": 627,
+        "median_cuda_event_ms_per_batch": 450.5966110229492,
+        "median_wall_ms_per_batch": 450.60234889388084,
+        "speedup_vs_dense": 1.3112702539592227,
+        "throughput_clips_per_s": 35.50802617712959,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          442.9971016943455,
+          458.2075960934162
+        ]
+      },
+      "keep_0.60": {
+        "gathered_tokens": 941,
+        "median_cuda_event_ms_per_batch": 488.7421417236328,
+        "median_wall_ms_per_batch": 488.7485671788454,
+        "speedup_vs_dense": 1.2089272401948348,
+        "throughput_clips_per_s": 32.736668860954836,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          487.4568386003375,
+          490.0402957573533
+        ]
+      },
+      "keep_0.80": {
+        "gathered_tokens": 1254,
+        "median_cuda_event_ms_per_batch": 556.9779205322266,
+        "median_wall_ms_per_batch": 556.982877664268,
+        "speedup_vs_dense": 1.0608251710474559,
+        "throughput_clips_per_s": 28.72619723445844,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          554.5490374788642,
+          559.4167178496718
+        ]
+      }
+    },
+    "32": {
+      "dense": {
+        "gathered_tokens": null,
+        "median_cuda_event_ms_per_batch": 1166.656005859375,
+        "median_wall_ms_per_batch": 1166.6587782092392,
+        "speedup_vs_dense": 1.0,
+        "throughput_clips_per_s": 27.428756889069433,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          1169.2977417260408,
+          1164.0198146924376
+        ]
+      },
+      "keep_0.40": {
+        "gathered_tokens": 627,
+        "median_cuda_event_ms_per_batch": 876.9917449951172,
+        "median_wall_ms_per_batch": 876.9898083992302,
+        "speedup_vs_dense": 1.3302991289473955,
+        "throughput_clips_per_s": 36.48845139763894,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          871.4604256674647,
+          882.5191911309958
+        ]
+      },
+      "keep_0.60": {
+        "gathered_tokens": 941,
+        "median_cuda_event_ms_per_batch": 952.3089752197266,
+        "median_wall_ms_per_batch": 952.3089663125575,
+        "speedup_vs_dense": 1.225084315573198,
+        "throughput_clips_per_s": 33.60253986046927,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          953.6878187209368,
+          950.9301139041781
+        ]
+      },
+      "keep_0.80": {
+        "gathered_tokens": 1254,
+        "median_cuda_event_ms_per_batch": 1065.1082153320312,
+        "median_wall_ms_per_batch": 1065.1076859794557,
+        "speedup_vs_dense": 1.095343497720044,
+        "throughput_clips_per_s": 30.043910508986066,
+        "timed_samples": 40,
+        "video_medians_wall_ms": [
+          1049.5064230635762,
+          1080.7089488953352
+        ]
+      }
+    }
+  },
+  "tf32": false,
+  "timed_repeats_per_video_case": 20,
+  "videos": [
+    "xd-3aa008268bc7ed52833cbc0ddfc7c1b6a8a123a5e88efbc8f1bd2a87e7d3d6c4",
+    "xd-eacefb32065e1c00823ecf72f6b3dec229d39614c8c0989aa7ee99cddd655f8c"
+  ],
+  "warmup_per_case_batch": 20
+}

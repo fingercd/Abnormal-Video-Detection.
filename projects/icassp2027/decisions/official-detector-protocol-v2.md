@@ -1,5 +1,10 @@
 # 官方划分与原作者后端：正式实验口径 v2
 
+> **2026-09-20 修订指针**：`official-detector-protocol-v3.json` 已发布——相对 v2 的唯一实质差异是
+> `datasets.xd_violence.encoders` 加入 `videomae`（用户 2026-09-20 14:1x 指令：XD 三 encoder 全做，
+> 控制面 README 有记录；videomaev2/timesformer 不变）。v2 JSON 保留原位、字节不变；
+> XD 相关运行请改用 v3（路径 + SHA 见控制面 MANIFEST v12 增量）。本文件其余内容继续描述 v2 决策。
+
 2026-09-18，用户已回答三个实质问题：没有指定异常检测论文，由执行者选择并核验；
 **官方 train/test 划分为主，隔离子集为补充；冻结 dense 检测头的直接插入为主，重训头为补充。**
 这项决定发生在本项目访问官方模型测试分数之前。它取代旧工程队列的主次安排，

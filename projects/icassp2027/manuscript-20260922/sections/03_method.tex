@@ -1,82 +1,57 @@
 \section{PairSelect}
 \label{sec:method}
-
-
 \begin{table}[!b]
 \centering\small
-\caption{Token budgets and analytical twelve-block FLOPs reduction. Deletion is nominal unless marked actual.}
+\caption{Actual token counts entering blocks 7--12. Headers specify nominal deletion; CLS is included when present. Video encoders count tokens per clip; CLIP counts per image.}
 \label{tab:budgets}
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}rrrrr@{}}
+\begin{tabular}{@{}lrrrr@{}}
 \toprule
-Delete & $K$ & Actual delete & $N/K$ & Block FLOPs $\downarrow$\\
+Visual encoder + detector & Dense & 20\% & 40\% & 60\%\\
 \midrule
 \tableinput{tables/theory_rows}
 \bottomrule
 \end{tabular}
 \end{table}
-% Queue the double-column results early; do not allow them past the technical boundary.
 \input{figures/quality_table}
 
-\subsection{Frozen pipeline and design rationale}
-Let $E_{1:b}$ and $E_{b+1:L}$ denote the prefix and suffix of a pretrained encoder, $R$ its clip readout, and $H$ the temporal detection head. For scheduled clips $\{v_t\}_{t=1}^{M}$, inference is
+\subsection{Direct insertion into frozen systems}
+Let $E_{1:b}$ and $E_{b+1:L}$ be the prefix and suffix of a pretrained visual encoder, $R$ its readout, and $H$ its temporal detection head. For scheduled visual inputs $\{v_t\}_{t=1}^{M}$,
 \begin{equation}
  z_t^{(r)}=R\!\left(E_{b+1:L}\!\left(S_r(E_{1:b}(v_t))\right)\right),
  \quad \hat{\boldsymbol y}^{(r)}=H(\{z_t^{(r)}\}_{t=1}^{M}).
  \label{eq:pipeline}
 \end{equation}
-Only $S_r$, the selection operator at retention budget $r$, is inserted. We set $L=12$ and $b=6$ for all three encoders. The clip count $M$, output dimension, and head weights remain unchanged. Training-free refers to compression: the original detection head is trained once on dense features for each configuration.
+Only the selection operator $S_r$ is inserted, with retention ratio $r$. All four visual encoders use $L=12$, $b=6$. The original input schedule, feature dimension, temporal aggregation, and head weights are preserved. For the three video backbones, each UR-DMU head is trained once on the corresponding dense training features; DSANet uses the authors' released detector weights. \emph{Training-free} refers to inserting and changing the compression operator, not to training the original systems.
 
-Local redundancy motivates nearby comparisons; gathering existing vectors avoids additional mixing before the unchanged head. ATS motivates inexpensive magnitude-based scoring~\cite{fayyaz2022ats}, but our block-output L2 norm differs from its attention-weighted value norm. High norm is not an anomaly probability and may occur in background regions~\cite{darcet2024registers}; local quotas therefore constrain magnitude preference rather than treating it as a global anomaly oracle.
-% AUTHOR_TODO F04: recover the original finding card, cohort definition, layer,
-% effect sizes and uncertainty before claiming an experimentally established
-% normal-versus-anomalous redundancy difference. The present text does not
-% fabricate that missing observation. See notes/EVIDENCE_AND_LITERATURE.md.
+Local redundancy motivates comparisons among neighboring patches, while selection avoids introducing additional vector mixtures at the insertion point. Activation magnitude provides an inexpensive preference, inspired by magnitude-aware sampling~\cite{fayyaz2022ats}. It is not an anomaly probability~\cite{darcet2024registers}; the local quota prevents an unconstrained global ranking from concentrating the entire budget in a few regions.
 
-\subsection{Local quotas and pair-member priority}
-For VideoMAE and VideoMAEv2, the block output is $X\in\mathbb{R}^{N\times D}$ with a known patch grid. We form nonoverlapping horizontal pairs, ordered by native coordinates. Consecutive groups contain at most ten tokens (five pairs). A group with $n_g$ tokens retains
+\subsection{Local quotas and member priority}
+For VideoMAE, VideoMAEv2, and CLIP, spatially adjacent horizontal patches form pairs ordered by native coordinates. Each consecutive group contains at most ten patch tokens (five pairs). A group of $n_g$ tokens receives
 \begin{equation}
- q_g(r)=\left\lfloor rn_g+\tfrac12\right\rfloor,
+ q_g(r)=\lfloor rn_g+\tfrac12\rfloor,
  \qquad r\in\{0.8,0.6,0.4\}.
  \label{eq:quota}
 \end{equation}
 For pair $j$ with members $(x_{j,0},x_{j,1})$, define
 \begin{equation}
- a_j=\arg\max_{u\in\{0,1\}}\norm{x_{j,u}},\qquad
+ a_j=\arg\max_{u\in\{0,1\}}\norm{x_{j,u}},\quad
  s_j=\max_{u\in\{0,1\}}\norm{x_{j,u}}.
  \label{eq:score}
 \end{equation}
-Ties retain native order. Let $w_j=x_{j,a_j}$ and $\ell_j=x_{j,1-a_j}$. If $\pi$ sorts the $m_g$ pairs by descending $s_j$, the group's priority list is
+Let $w_j=x_{j,a_j}$ and $\ell_j=x_{j,1-a_j}$. If $\pi$ sorts the group's $m_g$ pairs by descending $s_j$, the priority sequence is
 \begin{equation}
- \mathcal{P}_g=
- (w_{\pi_1},\ldots,w_{\pi_{m_g}},\ell_{\pi_1},\ldots,\ell_{\pi_{m_g}}).
+ \mathcal P_g=(w_{\pi_1},\ldots,w_{\pi_{m_g}},
+                 \ell_{\pi_1},\ldots,\ell_{\pi_{m_g}}).
  \label{eq:priority}
 \end{equation}
-We take the first $q_g$ entries, then restore the selected indices to native order before gathering. At $r=0.8$ or $0.6$, every pair in a full group retains a representative; at $r=0.4$, only four of its five representatives survive. This is a coverage property of the rule, not a guarantee about anomaly preservation. No averaging or rescaling is applied to a selected vector.
+The first $q_g$ entries are retained and restored to native index order before gathering. Ties preserve native order. At 20\% and 40\% deletion, every pair in a full group retains a representative, with three or one additional members; 60\% deletion retains four of five representatives. Selected vectors are neither averaged nor rescaled. CLIP applies the rule independently per image and always retains CLS, yielding the counts in Table~\ref{tab:budgets}.
 
-\subsection{Divided attention and actual budgets}
-TimeSformer requires a different unit: all $T$ tokens at a spatial location form a trajectory, scored by the maximum member norm. Each group of ten trajectories retains its top $q_g$ trajectories. The current bridge requires the retained spatial count to be a multiple of the native patch width $W$; we round the total downward and remove excess quota from tail groups. With $P=196$, $T=8$, and $W=14$,
+\subsection{Structure-aware adaptation}
+For TimeSformer, the selection unit is a complete spatial trajectory of $T$ tokens, scored by its maximum member norm. Each group of ten trajectories retains its top $q_g$. The current bridge rounds the total spatial count down to a multiple of native width $W$, removing excess quota from tail groups:
 \begin{equation}
  P'=W\left\lfloor\frac{\sum_g q_g(r)}{W}\right\rfloor,
- \qquad K=TP'+1,
+ \qquad K=TP'+1.
  \label{eq:trajectory}
 \end{equation}
-where the CLS token is preserved. This width constraint belongs to the current implementation, not to all divided-attention models. Dynamic selections occupy a fixed quota-slot skeleton: gathered content is unchanged, but slot coordinates use approximate anchors rather than an exact reconstruction of the original lattice. Complete trajectories preserve their time indices; the geometry adjustment can empty tail groups.
-
-
-
-\subsection{Computational accounting}
-For joint attention with hidden width $D$ and MLP ratio four, the principal block cost in multiply--accumulate operations (MACs) is
-\begin{equation}
- C_{\mathrm J}(N,D)=12ND^2+2N^2D.
- \label{eq:joint}
-\end{equation}
-The linear term includes QKV, output projection, and the MLP; only attention products scale quadratically in $N$. For standard divided attention, including the temporal projection and replicated CLS in spatial attention~\cite{bertasius2021timesformer},
-\begin{equation}
- \begin{split}
- C_{\mathrm T}(P,T,D)={}&(17PT+4T+8)D^2\\
- &+2D\{PT^2+T(P+1)^2\}.
- \end{split}
- \label{eq:divided}
-\end{equation}
-The twelve-block cost ratio is $\tfrac12(1+C_{\rm reduced}/C_{\rm dense})$. Table~\ref{tab:budgets} uses $D=768$ and counts one MAC as two FLOPs. It excludes embedding, readout, normalization, and selection costs. The selector adds norm computation, bounded-size sorting, and gathering; these may have non-negligible runtime despite low arithmetic cost. Token compression, full-encoder FLOPs, latency, and peak memory are therefore distinct quantities.
+With $P=196$, $T=8$, and $W=14$, the three budgets retain 154, 112, and 70 trajectories plus CLS. Actual token deletion is 21.41\%, 42.83\%, and 64.24\%; this alignment constraint is implementation-specific. Video-encoder bridges use a fixed quota-slot skeleton with approximate spatial anchors while retaining trajectory time indices. CLIP gathers the already position-embedded patch states in native order and preserves its CLS readout. These adaptations keep the detector interface unchanged.

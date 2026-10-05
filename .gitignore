@@ -17,6 +17,8 @@ htmlcov/
 .vscode/
 
 # Large or machine-specific research assets
+/assets
+/archive/
 /data/*
 /weights/*
 /outputs/*
@@ -32,6 +34,7 @@ htmlcov/
 /projects/*/assets.local.yaml
 
 # Temporary research material
+/work/organization-20260925/
 /_tmp*/
 *.tmp
 

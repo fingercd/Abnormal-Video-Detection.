@@ -1,0 +1,28 @@
+{
+  "measurement_scope": "prepared GPU input to pooled encoder output, including PairSelect selection, gather, deployment context, and execution validation",
+  "hardware": "NVIDIA A100 40GB",
+  "batch_size": 32,
+  "precision": "float32",
+  "tf32": false,
+  "cudnn": false,
+  "protocol": "2 fixed XD training videos (one normal, one anomalous), 20 warmups and 20 timed repeats per video/configuration; balanced order",
+  "source": "work/batch-scaling-20260923/results/{encoder}/result.json",
+  "videomaev2": {
+    "1.00": {"throughput_clips_per_s": 27.428756889069433, "speedup_vs_dense": 1.0},
+    "0.80": {"throughput_clips_per_s": 30.043910508986066, "speedup_vs_dense": 1.095343497720044},
+    "0.60": {"throughput_clips_per_s": 33.60253986046927, "speedup_vs_dense": 1.225084315573198},
+    "0.40": {"throughput_clips_per_s": 36.48845139763894, "speedup_vs_dense": 1.3302991289473955}
+  },
+  "videomae": {
+    "1.00": {"throughput_clips_per_s": 27.584940928253722, "speedup_vs_dense": 1.0},
+    "0.80": {"throughput_clips_per_s": 30.017530360731044, "speedup_vs_dense": 1.0881854138750668},
+    "0.60": {"throughput_clips_per_s": 34.4041633632177, "speedup_vs_dense": 1.2472081579837433},
+    "0.40": {"throughput_clips_per_s": 38.025672240930696, "speedup_vs_dense": 1.3784938796799493}
+  },
+  "timesformer": {
+    "1.00": {"throughput_clips_per_s": 34.42025857931302, "speedup_vs_dense": 1.0},
+    "0.80": {"throughput_clips_per_s": 38.2306127598312, "speedup_vs_dense": 1.1107009167795225},
+    "0.60": {"throughput_clips_per_s": 43.96592993239706, "speedup_vs_dense": 1.2773271249862455},
+    "0.40": {"throughput_clips_per_s": 50.58620202941271, "speedup_vs_dense": 1.4696636259384643}
+  }
+}

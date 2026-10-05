@@ -1,11 +1,11 @@
-\begin{table*}[t]
+\begin{table*}[!t]
 \centering\small
-\caption{PairSelect at nominal deletion budgets (metrics: 0--100). $\Delta_{40}$ and its paired 95\% confidence interval (CI) are changes from dense in percentage points. Dashes denote unmeasured budgets; actual token counts are in Table~\ref{tab:budgets}.}
+\caption{Four-system quality at every budget (0--100). Each cell reports the indicated two frame-level metrics; bold identifies the primary metric, not a ranking. On XD, the video systems use trapezoidal PR-AUC and DSANet uses step AP. CI is the paired 95\% interval for the primary-metric change at 40\% deletion, in percentage points.}
 \label{tab:quality}
-\setlength{\tabcolsep}{7pt}
-\begin{tabular}{@{}lrrrrrc@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrc@{}}
 \toprule
-Encoder & Dense & Delete 20\% & Delete 40\% & Delete 60\% & $\Delta_{40}$ & 95\% CI of $\Delta_{40}$\\
+System & Dense & Delete 20\% & Delete 40\% & Delete 60\% & CI of $\Delta_{40}$\\
 \midrule
 \tableinput{tables/quality_rows}
 \bottomrule

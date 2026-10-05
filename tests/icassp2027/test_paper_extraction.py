@@ -11,14 +11,14 @@ from vadbench.contracts import EncoderCapabilities, EncoderOutput, TokenTimeline
 from vadbench.data.audit import compute_manifest_sha256
 from vadbench.data.manifest import VideoManifestRecord
 from vadbench.features import FeatureStore
-from vadbench.paper.compatibility import (
+from vadbench.data.feature_contracts import (
     CompatibilityDeclaration,
     RepresentationIdentity,
     SamplingIdentity,
     TrainingIdentity,
 )
-from vadbench.paper.detection import DetectionConfig, predict_detector, train_detector
-from vadbench.paper.extraction import (
+from vadbench.workflows.detection import DetectionConfig, predict_detector, train_detector
+from vadbench.workflows.extraction import (
     PooledExtractionSpec,
     adapter_runtime_summary,
     extract_pooled_features,

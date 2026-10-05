@@ -1,12 +1,11 @@
-\begin{table*}[t]
+\begin{table*}[!t]
 \centering\small
-\caption{Efficiency of dense and PairSelect configurations. $F_{\rm blocks}$ is an analytical principal-block estimate (1 MAC = 2 FLOPs). Full-encoder FLOPs, latency, throughput, and peak allocated/reserved memory remain unmeasured.}
+\caption{A100 encoder efficiency using XD training inputs. Block GFLOPs cover principal blocks per input. B32 measures prepared GPU input to encoder output, including selection (clips/s for video encoders; images/s for CLIP). Speedups use matching dense baselines. Bold marks the optimum within each system (arrows give direction).}
 \label{tab:efficiency}
-\setlength{\tabcolsep}{5.5pt}
-\begin{tabular}{@{}llrrrrrr@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrr@{}}
 \toprule
-Encoder & Delete & Tokens & $F_{\rm blocks}$ & $F_{\rm full}$ & Latency & Throughput & Peak memory\\
- & & & GFLOPs & GFLOPs & ms/clip & clips/s & alloc./res. GiB\\
+System & Delete & Block GFLOPs$\downarrow$ & B32 ms$\downarrow$ & Inputs/s$\uparrow$ & Encoder $\times\uparrow$\\
 \midrule
 \tableinput{tables/efficiency_rows}
 \bottomrule

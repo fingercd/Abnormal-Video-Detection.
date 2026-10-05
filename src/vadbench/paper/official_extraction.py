@@ -3,6 +3,13 @@
 This entry point produces features only. It cannot train a head, read test
 annotations, or publish a detector score. The original paper extractor retains
 its native sampling, FeatureStore, runtime identity and strict resume contracts.
+
+The sealed-test mode (``test_manifest_path``) extracts the official test split
+for evaluation only. Its videos come exclusively from the externally bound,
+SHA-pinned sealed test manifest — never from the training view — and any
+identity overlap with the training view is a hard leak failure. Test features
+must never enter a training view: every training consumer in this package
+accepts train-split records only.
 """
 
 from __future__ import annotations
@@ -16,11 +23,12 @@ from typing import Any, Literal
 from vadbench.artifacts import new_run_id, record_stage
 from vadbench.checkpoints import sha256_file
 from vadbench.data.dense_sampling import DenseSamplingPlan
-from vadbench.data.manifest import write_manifest_jsonl
+from vadbench.data.manifest import load_manifest_jsonl, validate_manifest_pair, write_manifest_jsonl
 from vadbench.data.video import build_clip_batch
 from vadbench.features import atomic_write_json
-from vadbench.paper.evaluation import _clip_frames, _coverage, _make_adapter
-from vadbench.paper.extraction import (
+from vadbench.engine.coverage import feature_store_coverage as _coverage
+from vadbench.paper.evaluation import _clip_frames, _make_adapter
+from vadbench.workflows.extraction import (
     PooledExtractionSpec,
     extract_pooled_features,
     make_sampling_identity,
@@ -46,12 +54,28 @@ class OfficialDenseExtractionRequest:
     engineering_video_ids: tuple[str, ...] = ()
     development_role: Literal["fit", "select"] | None = None
     resume_transport: Literal["copy", "hardlink_npz"] = "copy"
+    test_manifest_path: str | None = None
+    test_manifest_sha256: str | None = None
+    test_dataset_root: str | None = None
+    keep_ratio: float | None = None
 
     def __post_init__(self) -> None:
         if self.encoder not in {"videomaev2", "timesformer", "vjepa2", "videomae"}:
             raise ValueError("encoder is outside the active four-encoder scope")
-        if self.reducer not in {"identity", "global_uniform", "paired_random", "pair_linear"}:
+        if self.reducer not in {
+            "identity", "global_uniform", "paired_random", "pair_linear",
+            "pair_select", "pair_fixed", "pair_random_member", "pair_reverse",
+            "group_uniform", "group_random",
+        }:
             raise ValueError("reducer is outside the frozen comparison")
+        selection_reducers = {
+            "pair_select", "pair_fixed", "pair_random_member", "pair_reverse",
+            "group_uniform", "group_random",
+        }
+        if (self.reducer in selection_reducers) != (self.keep_ratio is not None):
+            raise ValueError("keep_ratio is required exactly for the selection reducers")
+        if self.keep_ratio is not None and self.keep_ratio not in (0.8, 0.6, 0.4):
+            raise ValueError("keep_ratio must be one of 0.8, 0.6, 0.4 (dense baseline uses identity)")
         if (self.reducer == "pair_linear") != (self.calibration_run is not None):
             raise ValueError("only pair_linear requires its frozen calibration run")
         if self.processor_tensor_type not in {None, "pt", "np"}:
@@ -64,6 +88,16 @@ class OfficialDenseExtractionRequest:
             raise ValueError("development_role must be fit, select, or null")
         if self.development_role is not None and self.engineering_video_ids:
             raise ValueError("development role extraction cannot be combined with engineering video IDs")
+        if (self.test_manifest_path is None) != (self.test_manifest_sha256 is None):
+            raise ValueError("sealed test manifest path and SHA-256 must be provided together")
+        if self.test_manifest_path is not None and (
+            self.development_role is not None or self.engineering_video_ids
+        ):
+            raise ValueError(
+                "sealed test extraction cannot be combined with a development role or engineering video IDs"
+            )
+        if self.test_dataset_root is not None and self.test_manifest_path is None:
+            raise ValueError("test dataset root is only meaningful with a sealed test manifest")
         if self.resume_transport not in {"copy", "hardlink_npz"}:
             raise ValueError("resume_transport must be copy or hardlink_npz")
         if self.resume_transport == "hardlink_npz" and (
@@ -133,7 +167,32 @@ def run_official_dense_extraction(
     root = Path(authority["dataset_root"]).resolve()
     data_role = "official-fulltrain-final"
     original_role_lock = None
-    if request.development_role is not None:
+    sealed_test_manifest = None
+    if request.test_manifest_path is not None:
+        # Sealed official test extraction for evaluation only. The training
+        # view is still loaded (and re-checked after the run) to pin the
+        # dataset, encoder scope and default root, but every extracted video
+        # comes from the externally bound test manifest. Videos are resolved
+        # against the test manifest's own root when given; the training root
+        # is never assumed to contain test videos.
+        test_path = Path(request.test_manifest_path).expanduser().resolve()
+        if sha256_file(test_path) != request.test_manifest_sha256:
+            raise ValueError("sealed test manifest SHA-256 differs from its external binding")
+        test_records = tuple(load_manifest_jsonl(test_path))
+        # Enforce split roles on both sides (test records must be split=test).
+        validate_manifest_pair(records, test_records)
+        overlap = {item.video_id for item in records} & {item.video_id for item in test_records}
+        if overlap:
+            raise ValueError(
+                "sealed test manifest overlaps the official training view: "
+                f"{sorted(overlap)}; test extraction refuses mixed identities"
+            )
+        records = test_records
+        if request.test_dataset_root is not None:
+            root = Path(request.test_dataset_root).expanduser().resolve()
+        data_role = "official-sealed-test"
+        sealed_test_manifest = _entry(test_path)
+    elif request.development_role is not None:
         records, original_role_lock = _development_role_records(
             records, authority, training_contract_path, request.development_role
         )
@@ -149,7 +208,7 @@ def run_official_dense_extraction(
         raise ValueError("run_id must be a basename")
     run_dir = Path(request.output_root).expanduser() / selected_run
     if request.resume_transport == "hardlink_npz":
-        from .feature_resume import _hardlink_destination_root
+        from vadbench.workflows.feature_resume import _hardlink_destination_root
 
         run_dir = _hardlink_destination_root(run_dir, Path(request.resume_source))
     else:
@@ -162,7 +221,7 @@ def run_official_dense_extraction(
         inputs={"training_contract": str(training_contract_path), "protocol": str(protocol_path)},
         project_root=Path.cwd(),
     ):
-        frozen_manifest = run_dir / "train.jsonl"
+        frozen_manifest = run_dir / ("test.jsonl" if sealed_test_manifest else "train.jsonl")
         write_manifest_jsonl(records, frozen_manifest, dataset_root=root, require_files=True)
         adapter, definition = (adapter_factory or _make_adapter)(request)
         verified = definition["identity"]
@@ -201,6 +260,7 @@ def run_official_dense_extraction(
                 calibration_run=None if request.calibration_run is None else Path(request.calibration_run),
                 seed=0,
                 batch_sizes=range(1, 9),
+                keep_ratio=request.keep_ratio,
             )
             reducer_identity = dict(factory.reducer_identity)
             atomic_write_json(run_dir / "resolved_reducer.json", reducer_receipt)
@@ -262,12 +322,23 @@ def run_official_dense_extraction(
         coverage = _coverage(records, feature_root, result.encoder_fingerprint)
         actual_contents = json.loads((feature_root / "resolved.json").read_text(encoding="utf-8"))["data_content_evidence"]["videos"]
         observed = {item["video_id"]: (item["sha256"], item["size_bytes"]) for item in actual_contents}
-        expected = {
-            item.video_id: (item.metadata["content_sha256"], item.metadata["content_size_bytes"])
+        if sealed_test_manifest is None or all(
+            "content_sha256" in item.metadata and "content_size_bytes" in item.metadata
             for item in records
-        }
-        if observed != expected:
-            raise ValueError("extracted video content differs from the independently audited training view")
+        ):
+            expected = {
+                item.video_id: (item.metadata["content_sha256"], item.metadata["content_size_bytes"])
+                for item in records
+            }
+            if observed != expected:
+                raise ValueError("extracted video content differs from the independently audited training view")
+            content_cross_check = "performed"
+        else:
+            # Some sealed test manifests predate the decoded-reconciliation
+            # content audit and embed no per-video content hashes. The run's
+            # own data_content_evidence in resolved.json remains the integrity
+            # record; the skip is explicit instead of silent.
+            content_cross_check = "unavailable-in-sealed-test-manifest"
         # Recheck the immutable authority files after a potentially long run.
         _bound_json(request.protocol_path, request.protocol_sha256)
         load_official_training_view(training_contract_path, request.training_contract_sha256)
@@ -281,6 +352,16 @@ def run_official_dense_extraction(
             "reducer": request.reducer,
             "training_view_contract": _entry(training_contract_path),
             "training_manifest": _entry(frozen_manifest),
+            "sealed_test_manifest": sealed_test_manifest,
+            "test_only": sealed_test_manifest is not None,
+            "content_cross_check": content_cross_check,
+            "leakage_note": (
+                "Sealed official test features for evaluation only. They must never "
+                "enter any training view; training consumers accept train-split "
+                "records only."
+                if sealed_test_manifest is not None
+                else None
+            ),
             "protocol": _entry(protocol_path),
             "feature_store": {
                 "root": str(feature_root),
@@ -291,7 +372,11 @@ def run_official_dense_extraction(
             "coverage": coverage,
             "videos": len(records),
             "clips": expected_clips,
-            "training_sampling_note": "test_dense is the existing sampler's name; all data are official training videos",
+            "training_sampling_note": (
+                "test_dense is the existing sampler's name; all data are official sealed test videos for evaluation only, never training input"
+                if sealed_test_manifest is not None
+                else "test_dense is the existing sampler's name; all data are official training videos"
+            ),
             "engineering_video_ids": list(request.engineering_video_ids),
             "development_role": request.development_role,
             "original_role_lock": original_role_lock,
@@ -305,6 +390,7 @@ def run_official_dense_extraction(
             "contract": _entry(path),
             "data_role": data_role,
             "development_role": request.development_role,
+            "test_only": sealed_test_manifest is not None,
         }
         atomic_write_json(run_dir / "result.json", result_document)
         return result_document

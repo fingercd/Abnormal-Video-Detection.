@@ -17,17 +17,44 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--protocol-sha256", required=True)
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--project", default="projects/icassp2027/profile.yaml")
-    parser.add_argument("--reducer", choices=("identity", "global_uniform", "paired_random", "pair_linear"), default="identity")
+    parser.add_argument("--reducer", choices=(
+        "identity", "global_uniform", "paired_random", "pair_linear",
+        "pair_select", "pair_fixed", "pair_random_member", "pair_reverse",
+        "group_uniform", "group_random",
+    ), default="identity")
+    parser.add_argument(
+        "--keep-ratio",
+        type=float,
+        choices=(0.8, 0.6, 0.4),
+        help="frozen three-tier budget for the selection reducers (pair_select/group_uniform/group_random)",
+    )
     parser.add_argument("--calibration-run")
     parser.add_argument("--processor-tensor-type", choices=("pt", "np"))
     parser.add_argument("--run-id")
     parser.add_argument("--resume-source")
     parser.add_argument("--engineering-video-id", action="append", default=[])
     parser.add_argument("--development-role", choices=("fit", "select"))
+    parser.add_argument(
+        "--test-manifest-path",
+        help="sealed official test manifest; evaluation-only extraction, mutually exclusive with roles/subsets",
+    )
+    parser.add_argument("--test-manifest-sha256")
+    parser.add_argument(
+        "--test-dataset-root",
+        help="root under which sealed test manifest paths resolve; never assumed to be the training root",
+    )
     parser.add_argument("--cuda-memory-fraction", type=float, default=0.5)
     args = parser.parse_args(argv)
     if not 0 < args.cuda_memory_fraction <= 1:
         parser.error("cuda-memory-fraction must be in (0, 1]")
+    if (args.test_manifest_path is None) != (args.test_manifest_sha256 is None):
+        parser.error("--test-manifest-path and --test-manifest-sha256 must be given together")
+    if args.test_manifest_path is not None and (
+        args.development_role is not None or args.engineering_video_id
+    ):
+        parser.error("sealed test extraction cannot be combined with --development-role or --engineering-video-id")
+    if args.test_dataset_root is not None and args.test_manifest_path is None:
+        parser.error("--test-dataset-root requires --test-manifest-path")
     if args.device == "cpu":
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
     import torch

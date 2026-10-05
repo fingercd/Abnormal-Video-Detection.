@@ -6,19 +6,15 @@ active_encoders:
     definition: configs/encoders/videomaev2-base.yaml
     checkpoint: videomaev2-base-hf
     role: discovery
-  - id: timesformer
-    definition: configs/encoders/timesformer.yaml
-    checkpoint: timesformer-default
-    role: structure_confirmation
-  - id: vjepa2
-    definition: configs/encoders/vjepa2.yaml
-    checkpoint: vjepa2-default
-    role: pretraining_confirmation
   - id: videomae
     definition: configs/encoders/videomae.yaml
     checkpoint: videomae-default
     role: family_replication
+  - id: timesformer
+    definition: configs/encoders/timesformer.yaml
+    checkpoint: timesformer-default
+    role: structure_confirmation
 protocol: projects/icassp2027/protocol.yaml
-output_root: outputs/icassp2027/runs
+output_root: assets/experiments/icassp2027/runs
 paper_root: paper/icassp2027
 annotation_policy: weak_development

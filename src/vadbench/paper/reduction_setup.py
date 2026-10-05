@@ -16,11 +16,13 @@ import torch
 from vadbench.checkpoints import sha256_file
 from vadbench.contracts import ClipBatch
 from vadbench.token_reduction.bridges import create_observation_bridge
-from vadbench.token_reduction.deployment import PairMergeDeployment
+from vadbench.token_reduction.deployment import GroupSelectDeployment, PairMergeDeployment
+from vadbench.token_reduction.deployment_contracts import ReductionDeployment
 from vadbench.token_reduction.pair_merge import PairLinearGate
+from vadbench.token_reduction.token_selection import SUPPORTED_KEEP_RATIOS
 
-from .extraction import adapter_runtime_summary
-from .stages import clean_encoder_batch
+from vadbench.workflows.extraction import adapter_runtime_summary
+from vadbench.data.batches import clean_encoder_batch
 
 _ROLE_LOCK_SHA256 = "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59"
 _GEOMETRY_KEYS = ("processed_shape", "processed_layout", "grid", "token_order", "patch_size", "tubelet_size")
@@ -171,18 +173,35 @@ def prepare_reduction(
     adapter: Any, encoder_id: str, clean_setup_batch: ClipBatch, *, reducer: str,
     output_dim: int, verified_encoder_identity: Mapping[str, Any],
     calibration_run: Path | None = None, seed: int = 0, batch_sizes: Iterable[int] = range(1, 9),
-) -> tuple[PairMergeDeployment, dict[str, Any]]:
+    keep_ratio: float | None = None, signal_fn: Any = None, record_diagnostics: bool = False,
+) -> tuple[ReductionDeployment, dict[str, Any]]:
     """Observe one dense B=1 clip and prepare a frozen mid-depth intervention.
 
     Calibration and inference runtime evidence remain separate. Matching
     checkpoint, geometry and readout establishes structural compatibility;
     this setup does not certify cross-runtime numerical equivalence or VAD
     quality. The formal evaluation gate belongs to the paper controller.
+    Selection reducers (pair_select/group_uniform/group_random) use the
+    frozen three-tier group budget: ``keep_ratio`` ∈ {0.80, 0.60, 0.40} with
+    identical actual budgets across all controls at the same tier.
     """
-    if reducer not in ("global_uniform", "paired_random", "pair_linear"):
-        raise ValueError("reducer must be global_uniform, paired_random or pair_linear")
+    selection_reducers = {
+        "pair_select", "pair_fixed", "pair_random_member", "pair_reverse",
+        "group_uniform", "group_random",
+    }
+    if reducer not in {"global_uniform", "paired_random", "pair_linear"} | selection_reducers:
+        raise ValueError(
+            "reducer must be global_uniform, paired_random, pair_linear, "
+            "pair_select, pair_fixed, pair_random_member, pair_reverse, "
+            "group_uniform or group_random"
+        )
     if (reducer == "pair_linear") != (calibration_run is not None):
         raise ValueError("calibration_run is required only for pair_linear")
+    if (reducer in selection_reducers) != (keep_ratio is not None):
+        raise ValueError("keep_ratio is required exactly for the selection reducers")
+    if keep_ratio is not None and keep_ratio not in SUPPORTED_KEEP_RATIOS:
+        raise ValueError(f"keep_ratio must be one of {SUPPORTED_KEEP_RATIOS}")
+
     if type(output_dim) is not int or output_dim <= 0:
         raise ValueError("output_dim must be a positive integer")
     if verified_encoder_identity.get("adapter") != encoder_id:
@@ -226,14 +245,23 @@ def prepare_reduction(
         )
         if gate.weight.dtype != tokens.dtype:
             raise ValueError("calibrated gate dtype differs from current native features; implicit conversion is forbidden")
-    deployment = PairMergeDeployment(
-        bridge, geometry.layout, depth=depth, dim=output_dim, batch_sizes=batch_sizes,
-        device=tokens.device, gate=gate, calibration_manifest_digest=manifest_digest,
-        strategy="mean" if reducer == "pair_linear" else reducer, seed=seed,
-    )
+    if reducer in selection_reducers:
+        deployment = GroupSelectDeployment(
+            bridge, geometry.layout, depth=depth, dim=output_dim, batch_sizes=batch_sizes,
+            device=tokens.device, keep_ratio=keep_ratio, rule=reducer, signal_fn=signal_fn,
+            seed=seed, record_diagnostics=record_diagnostics,
+        )
+    else:
+        deployment = PairMergeDeployment(
+            bridge, geometry.layout, depth=depth, dim=output_dim, batch_sizes=batch_sizes,
+            device=tokens.device, gate=gate, calibration_manifest_digest=manifest_digest,
+            strategy="mean" if reducer == "pair_linear" else reducer, seed=seed,
+        )
     receipt = {
         "schema_version": 1, "status": "prepared", "encoder_id": encoder_id,
         "reducer": reducer, "depth": depth, "output_dim": output_dim,
+        "keep_ratio": keep_ratio,
+        "record_diagnostics": record_diagnostics,
         "dense_geometry": evidence,
         "dense_output": {"features_shape": list(tokens.shape), "pooled_shape": list(pooled.shape),
                          "features_dtype": str(tokens.dtype), "pooled_dtype": str(pooled.dtype)},

@@ -47,6 +47,39 @@ class BinaryMetricTests(unittest.TestCase):
             average_precision_score(labels[permutation], tied[permutation]),
         )
 
+    def test_average_precision_matches_sklearn_with_and_without_ties(self) -> None:
+        """2026-09-20 sprint gate: the tie-merged AP must equal sklearn exactly.
+
+        The retired S7 per-sample implementation failed these cases (it kept
+        per-sample precision inside tied blocks and returned 1.0 where the
+        correct value is 5/6 or 6/7 on saturated heads).
+        """
+        sklearn_ap = pytest.importorskip(
+            "sklearn.metrics", reason="sklearn parity check requires scikit-learn"
+        ).average_precision_score
+        rng = np.random.default_rng(20260920)
+        cases = [
+            (np.array([0, 0, 1, 1, 1, 0]), np.array([0.9, 0.9, 0.9, 0.9, 0.9, 0.9])),
+            (np.array([0, 1, 1, 0, 1, 0, 1]), np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])),
+        ]
+        for _ in range(20):
+            n = int(rng.integers(6, 40))
+            y = (rng.random(n) > 0.5).astype(int)
+            y[0], y[1] = 0, 1
+            s = rng.integers(0, 4, n).astype(float)  # heavy ties
+            cases.append((y, s))
+            cases.append((y, rng.random(n)))
+        for labels, scores in cases:
+            expected = sklearn_ap(labels, scores)
+            actual = average_precision_score(labels, scores, undefined="raise")
+            self.assertAlmostEqual(actual, expected, places=12)
+        # Saturated / heavily tied scores must not return an optimistic 1.0;
+        # the exact sprint anchors are verified by the S7 recompute audit
+        # against the saved per-video scores.
+        y_tied = np.array([0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+        self.assertAlmostEqual(average_precision_score(y_tied, np.ones(12)), 0.5)
+        self.assertAlmostEqual(sklearn_ap(y_tied, np.ones(12)), average_precision_score(y_tied, np.ones(12)), places=12)
+
     def test_undefined_single_class_behavior(self) -> None:
         self.assertTrue(math.isnan(roc_auc_score([1, 1], [0.1, 0.2])))
         self.assertTrue(math.isnan(average_precision_score([0, 0], [0.1, 0.2])))

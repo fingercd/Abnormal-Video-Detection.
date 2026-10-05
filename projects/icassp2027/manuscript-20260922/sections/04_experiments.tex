@@ -1,46 +1,19 @@
 \section{Experiments}
 \label{sec:experiments}
-\begin{table}[t]
-\centering\small
-\caption{Same-quota references at nominal 40\% deletion: changes from dense in percentage points. Only PairSelect is proposed.}
-\label{tab:references}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Encoder & PairSelect & Prefix & Random\\
-\midrule
-\tableinput{tables/reference_rows}
-\bottomrule
-\end{tabular}
-\end{table}
-% Queue the efficiency table for page 4 after numbering the reference table.
 \input{figures/efficiency_table}
+\subsection{Four-system evaluation}
+We evaluate on UCF-Crime~\cite{sultani2018real} (1,610 training and 290 test videos) and XD-Violence~\cite{wu2020xd} (3,950 accepted training and all 800 test videos; four declared training files fail source-integrity checks). VideoMAEv2-B, VideoMAE-B, and TimeSformer-B use pretrained encoders and separate UR-DMU heads trained on the corresponding complete accepted training sets. The heads use 200 temporal bins, 64 normal and 64 anomalous bags per step, Adam with learning rate $10^{-4}$ and weight decay $5\!\times\!10^{-5}$, and the final checkpoint after 3,000 steps. CLIP ViT-B/16 uses the authors' released UCF/XD DSANet checkpoints~\cite{yin2026learning}, with no DSANet training in this study. All four systems reuse their dense detector at every budget.
 
+Each system preserves its native input schedule and temporal scoring protocol. VideoMAEv2-B and VideoMAE-B use 16-frame inputs, TimeSformer-B uses eight-frame inputs, and CLIP ViT-B/16 processes sampled frames under its fixed raw-video protocol, all at 224$\times$224 resolution. Detector weights and scoring rules remain fixed across token budgets, with the coarse branch used for DSANet. The CLIP dense reference is extracted from the same raw videos as its compressed counterparts, ensuring that the comparison uses the evaluated raw-video pipeline rather than a score obtained from externally released features.
 
+UCF uses frame ROC-AUC as primary metric and also reports step AP. On XD, the three video systems use trapezoidal PR-AUC with the fixed 16-frame prefix alignment, while DSANet uses step AP. Table~\ref{tab:quality} separates both integration definitions. Paired video-level, weak-label-stratified bootstrap uses 10,000 resamples; all-budget intervals are retained with the result exports.
 
-\subsection{Setup and evaluation}
-We evaluate UCF-Crime~\cite{sultani2018real} with 1,610 training and 290 test videos, and XD-Violence~\cite{wu2020xd} with 3,950 accepted training videos and all 800 test videos. Four of XD's 3,954 declared training videos are excluded after source-integrity checks. Only visual input and video-level training labels are used. Each of VideoMAEv2-B, VideoMAE-B, and TimeSformer-B is paired with a separately trained UR-DMU head~\cite{zhou2023urdmu}. Head training uses 200 temporal bins, 64 normal and 64 anomalous bags per step, Adam with learning rate $10^{-4}$ and weight decay $5\!\times\!10^{-5}$, and the final checkpoint after 3,000 steps. This is a controlled dense-feature training protocol, not a reproduction of the detector's published I3D-feature scores.
+\subsection{Quality across systems and budgets}
+At 40\% nominal deletion, \method{} is nearly lossless in most configurations. The three video systems change UCF AUC by $+0.39$, $-0.16$, and approximately $0.00$ points, and XD PR-AUC by $+0.32$, $+0.61$, and $+0.68$. DSANet changes UCF AUC by $-0.90$ and XD step AP by $-0.24$ points, retaining 87.97 AUC and 85.35 AP. UCF step AP is also stable: 19.29$\to$19.60, 18.82$\to$18.99, 20.37$\to$20.90, and 34.74$\to$34.36 across the four systems. No compression-specific training is used to obtain these results.
 
-The same head checkpoint, preprocessing, and clip schedule are reused across compression settings within a configuration. VideoMAE-family clips yield $8\!\times\!14\!\times\!14=1568$ tokens; TimeSformer yields the same patch count plus CLS. The completed runs preserve 69,364 UCF and 145,703 XD clips per VideoMAE-family encoder, and 138,853 and 291,781 clips for TimeSformer. Clip totals differ across encoders, but dense and reduced paths match exactly within each configuration. Model weights are frozen during compressed inference.
+Increasing deletion to 60\% generally incurs mild degradation while preserving high detection quality. Several configurations improve, and the three largest primary-metric drops are DSANet/UCF ($-1.80$), DSANet/XD ($-1.22$), and VideoMAE/UCF ($-1.05$ points). This extends the usable reduction range across video-pretrained and image--text-pretrained representations and across UR-DMU and DSANet. The two XD metrics need not move together: VideoMAE at 60\% gains 0.78 PR-AUC points but loses 1.39 step-AP points; both are retained in the table. Near-lossless describes point estimates rather than a blanket statistical guarantee: among DSANet budgets, only XD at 20\% has its 95\% lower bound above the predeclared $-0.5$-point margin.
 
-UCF uses frame ROC-AUC. XD uses trapezoidal PR-AUC under the fixed author-style 16-frame prefix alignment; non-interpolated average precision (AP) is reported separately. These are different integration conventions, not interchangeable names. Differences use 10,000 paired video-level bootstrap resamples stratified by video label. The intervals reflect test-video sampling uncertainty conditional on the reported runs, not variability across training seeds. The 20\% and 60\% deletion evaluations are a budget-sensitivity extension; no preferred operating point is inferred from missing results.
+\subsection{Encoder efficiency}
+Table~\ref{tab:efficiency} compares batch-32 encoder efficiency across budgets using XD training inputs. Encoder timing includes embedding, selection, gathering, all blocks, and readout. Video-encoder B32 tests use two fixed training videos, 20 warmups and 40 synchronized samples; CLIP uses three processes, 20 warmups and 40 timed samples per setting. Arithmetic values cover the principal twelve blocks (one MAC is two FLOPs), not a full-model profiler estimate.
 
-\subsection{Direct insertion without head adaptation}
-Table~\ref{tab:quality} reports the completed middle-budget results. On UCF, \method{} changes ROC-AUC by $+0.39$, $-0.16$, and approximately $0.00$ points for VideoMAEv2, VideoMAE, and TimeSformer, respectively. On XD, the corresponding trapezoidal PR-AUC changes are $+0.32$, $+0.61$, and $+0.68$ points. These point estimates support the feasibility of middle-layer reduction with an unchanged head across the tested encoders. They do not imply a universal improvement: all three UCF intervals include both positive and negative changes.
-
-The alternate XD metric matters. Non-interpolated AP changes from 70.33 to 71.30 for VideoMAEv2, 64.86 to 64.51 for VideoMAE, and 70.86 to 72.04 for TimeSformer. In particular, VideoMAE improves under trapezoidal PR-AUC but decreases under AP. We retain both definitions rather than interpret every positive primary-metric change as an unqualified detection gain.
-
-
-
-\subsection{Budget behavior and reference selections}
-The 20\%, 40\%, and 60\% deletion settings retain the same insertion depth. For joint attention, the highest setting drops entire pair representatives: a possible explanation for quality changes, not an established breakpoint. TimeSformer's actual highest deletion is 64.24\%; rounding must be reported but is not an isolated causal explanation.
-
-Table~\ref{tab:references} places the current method alongside fixed-prefix and fixed-seed random selection within each group. Neither is a global uniform sampler, and random masks are reused across videos. Rankings vary: random is higher on all three UCF configurations, whereas \method{} is higher on two XD configurations. Thus these references do not establish universal superiority of the norm signal. Their static native-position gathering also differs from the dynamic anchor-slot assignment, so this is a matched-budget reference rather than an isolated norm-only ablation.
-
-\subsection{FLOPs and hardware efficiency}
-
-Table~\ref{tab:efficiency} separates analytical and unmeasured hardware quantities. Principal-block FLOPs decrease by 23.04\% (joint attention) and 21.75\% (divided attention) at the middle budget, and 33.05\% and 32.43\% at the highest deletion. Savings are smaller than token deletion because the first six blocks remain dense.
-
-Measurements will fix GPU, input shape, batch size, precision, and attention backend. Full-encoder timing includes embedding, all blocks, selection, gathering, and readout; only diagnostic CPU exports are disabled. The protocol uses 20 warm-up passes, synchronized CUDA events, and three independent process repeats on identical representative non-test clips. Report throughput at the stated batch, batch-one latency, and peak allocated/reserved memory after synchronized counter resets, together with hardware and software identifiers.
-
-Decoding, host--device transfer, feature writing, and head inference require separate synchronized wall-clock timing. Different clip schedules preclude an end-to-end cross-encoder ranking by clips/s. The dense prefix or selector temporaries may determine peak memory; analytical savings establish neither measured speedup nor memory reduction.
+We evaluate encoder efficiency using speedup relative to each system’s dense counterpart at the same batch size. At batch size 32, PairSelect achieves encoder speedups of 1.22--1.28$\times$ at 40\% nominal token deletion while preserving near-dense detection performance in most configurations. Increasing deletion to 60\% raises encoder speedups to 1.33--1.47$\times$, with generally mild performance degradation. These results highlight a favorable accuracy--efficiency trade-off: PairSelect reduces internal token computation while preserving input coverage and reusing the same detector weights across budgets.

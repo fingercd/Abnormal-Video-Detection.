@@ -2,100 +2,298 @@
   "ucf_crime": {
     "videomaev2": {
       "0.80": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 80.89893986125115,
+        "delta_pp": 0.26698215138402953,
+        "ci_low_pp": -0.592521078072734,
+        "ci_high_pp": 1.2077500320593244,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\ucf_crime\\videomaev2\\0p80_pair_select.json",
+        "source_export_sha256": "26afdd76c1b7be83070be5baef70238c4e3241cb08c5b69dae5f06ff6d290839",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/ucf_crime/videomaev2/dense/predictions.jsonl": "e72eed5978d866aa4a129c37585780458b4e77487d452d0e56e0d92832a76aaf",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomaev2/pair_select_0p80/predictions.jsonl": "c0be141e6d5c56f60fc1ccb9846eda5042511dd1739d814604f7007673efd62f",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/ucf-test-frame-truth-20260922.jsonl": "3fdf2fafce62ac108d12d7af4bceab3297b4aec9825937a915d1b4092a4d84c5",
+          "/users/fotile/icassp2027-runs/code-cd39a5d/outputs/icassp2027/assets/ucf-decoded-reconciliation-20260918T081000Z/result/sealed-test/test-decoded-reconciled.jsonl": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomaev2/dense-test-view/merge-contract.json": "6628342102ea2752fff757d8cdcc5eb9cf23ce3f9f5837e7052f8a1d424a6be1",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomaev2/ucf/0p80/merged/pair_select-0p80-r01/merge-contract.json": "944ef235fe13467caa50ddba274166a3955046d7c65ea1c8de7c98ed198739f9",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomaev2/formal-dense-s0/checkpoints/final.pt": "d88b1ef49d7b5fb2aaabd7c2aeedba184b023193e617ec40c0652745bfdc2a26",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomaev2/pair_select_0p80-reuse-receipt.json": "8a34d7d361bdab73d52dc6692560688b5d9c8a42179a94a8d90c4c5201181eb7",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\ucf_crime\\videomaev2\\pair_select_0p80-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       },
       "0.40": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 80.94647614626278,
+        "delta_pp": 0.31451843639565097,
+        "ci_low_pp": -2.2652168553482475,
+        "ci_high_pp": 2.942936589031953,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\ucf_crime\\videomaev2\\0p40_pair_select.json",
+        "source_export_sha256": "717b213a37f288aae946e26673142144ea22e5325ded96064f6587040bae8481",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/ucf_crime/videomaev2/dense/predictions.jsonl": "e72eed5978d866aa4a129c37585780458b4e77487d452d0e56e0d92832a76aaf",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomaev2/pair_select_0p40/predictions.jsonl": "904cb94ba1f74a9243af1fd0027b6c2eada57d90e6010ef73b24a19404cb50af",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/ucf-test-frame-truth-20260922.jsonl": "3fdf2fafce62ac108d12d7af4bceab3297b4aec9825937a915d1b4092a4d84c5",
+          "/users/fotile/icassp2027-runs/code-cd39a5d/outputs/icassp2027/assets/ucf-decoded-reconciliation-20260918T081000Z/result/sealed-test/test-decoded-reconciled.jsonl": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomaev2/dense-test-view/merge-contract.json": "6628342102ea2752fff757d8cdcc5eb9cf23ce3f9f5837e7052f8a1d424a6be1",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomaev2/ucf/0p40/merged/pair_select-0p40-r01/merge-contract.json": "4b37f3a44c811c0878742fb5a0616adeb7f1cff33f1b2c74457556d105921670",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomaev2/formal-dense-s0/checkpoints/final.pt": "d88b1ef49d7b5fb2aaabd7c2aeedba184b023193e617ec40c0652745bfdc2a26",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomaev2/pair_select_0p40-reuse-receipt.json": "b447c605743e7097dd46921f00df300419b7d63dbf2b9b82b1aad9b61100d68a",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\ucf_crime\\videomaev2\\pair_select_0p40-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       }
     },
     "videomae": {
       "0.80": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 80.54307459002435,
+        "delta_pp": -0.005670399092235215,
+        "ci_low_pp": -0.5444900577328154,
+        "ci_high_pp": 0.6113049868479241,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\ucf_crime\\videomae\\0p80_pair_select.json",
+        "source_export_sha256": "98af9830c1a0981daf9bcc51f22294869c27d8640f679a26cdf17ea84f808ec7",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/ucf_crime/videomae/dense/predictions.jsonl": "f2a8af92215083935094317931d6e26f0da5e920738f1ad961722f699332089b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomae/pair_select_0p80/predictions.jsonl": "004e881888462fbc9e23482205094043d89e69d944a2a1fd750f472b628234ef",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/ucf-test-frame-truth-20260922.jsonl": "3fdf2fafce62ac108d12d7af4bceab3297b4aec9825937a915d1b4092a4d84c5",
+          "/users/fotile/icassp2027-runs/code-cd39a5d/outputs/icassp2027/assets/ucf-decoded-reconciliation-20260918T081000Z/result/sealed-test/test-decoded-reconciled.jsonl": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomae/dense-test-view-v2/merge-contract.json": "d103d72c58a1d3917a07ab2ae0e985ec6258f316a9bd0717a148f77e0df2ffd0",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomae/ucf/0p80/merged/pair_select-0p80-r01/merge-contract.json": "b21121b3cf57189d18e9721c1a58bf708427bab55556223f350976afc18433cf",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomae/formal-dense-s0/checkpoints/final.pt": "9c47365f8fb13a5380ac10cb9ade7c9acec685856b61c9fe5520521e10b63a36",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomae/pair_select_0p80-reuse-receipt.json": "c3685bfdc879b5614bc136f8fbb7a2ec1965e8686df549ab614f31db0969c9c7",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\ucf_crime\\videomae\\pair_select_0p80-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       },
       "0.40": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 79.49564989622199,
+        "delta_pp": -1.0530950928945837,
+        "ci_low_pp": -2.9498644650144117,
+        "ci_high_pp": 0.5454685240222039,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\ucf_crime\\videomae\\0p40_pair_select.json",
+        "source_export_sha256": "7e3e0ad6d8c42fa7ad0d8b9cabeb9107a14fe1a5d8c7e308a2b2beb9a78d4dd2",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/ucf_crime/videomae/dense/predictions.jsonl": "f2a8af92215083935094317931d6e26f0da5e920738f1ad961722f699332089b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomae/pair_select_0p40/predictions.jsonl": "101e2dcaf7d7cab556a3081cce3f47ebf636dc2aad24b531a62ffc1c2aa36519",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/ucf-test-frame-truth-20260922.jsonl": "3fdf2fafce62ac108d12d7af4bceab3297b4aec9825937a915d1b4092a4d84c5",
+          "/users/fotile/icassp2027-runs/code-cd39a5d/outputs/icassp2027/assets/ucf-decoded-reconciliation-20260918T081000Z/result/sealed-test/test-decoded-reconciled.jsonl": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomae/dense-test-view-v2/merge-contract.json": "d103d72c58a1d3917a07ab2ae0e985ec6258f316a9bd0717a148f77e0df2ffd0",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomae/ucf/0p40/merged/pair_select-0p40-r01/merge-contract.json": "28d45ffdd3e7211c0cb5ee000b2eecb31f8644c38bb82241f2430e04070ecf0a",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomae/formal-dense-s0/checkpoints/final.pt": "9c47365f8fb13a5380ac10cb9ade7c9acec685856b61c9fe5520521e10b63a36",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/ucf_crime/videomae/pair_select_0p40-reuse-receipt.json": "03b389d7149db3e2c761d0f892f79527940b4146853d1c4391ab6f9b5b596e2a",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\ucf_crime\\videomae\\pair_select_0p40-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       }
     },
     "timesformer": {
       "0.80": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 78.74328978993897,
+        "delta_pp": 0.06322314311107116,
+        "ci_low_pp": -0.5438258326179979,
+        "ci_high_pp": 0.6737046586126565,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\ucf_crime\\timesformer\\0p80_pair_select.json",
+        "source_export_sha256": "66295a51302d9f7b38f4c96cf4a62c52b82d671e3b9c6aa1a7281c343e0356f9",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/ucf_crime/timesformer/dense/predictions.jsonl": "03499ff190b75a8124046d834e90ae39f930bb9c5f55de85de837188aa752c9b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r01/ucf_crime/timesformer/pair_select_0p80/predictions.jsonl": "a40e46b29b93eaea1f449c4fd6d2ece35e0485153d5f68263b63113e9ba09de4",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/ucf-test-frame-truth-20260922.jsonl": "3fdf2fafce62ac108d12d7af4bceab3297b4aec9825937a915d1b4092a4d84c5",
+          "/users/fotile/icassp2027-runs/code-cd39a5d/outputs/icassp2027/assets/ucf-decoded-reconciliation-20260918T081000Z/result/sealed-test/test-decoded-reconciled.jsonl": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/timesformer/dense-test-view/merge-contract.json": "5015cc388b1bd679c06464149877fb3c25cb715b8f5cea26a71c0645adf0ea44",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/timesformer/ucf/0p80/merged/pair_select-0p80-r01/merge-contract.json": "3e0e754ed6b90568b84fd17a58c2fc7b891e1b8d9d0857c3fc8f788bcad36359",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/timesformer/formal-dense-s0/checkpoints/final.pt": "2b55818baffcf82f6ded925e7c8d13ce32eba6d85b48c87f0f93aefd730a9389"
+        },
+        "identity_override_used": null,
+        "override_evidence": "not recorded",
+        "runtime_difference_note": ""
       },
       "0.40": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 79.23764441624496,
+        "delta_pp": 0.5575777694170758,
+        "ci_low_pp": -1.435274482590791,
+        "ci_high_pp": 2.521632627178079,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\ucf_crime\\timesformer\\0p40_pair_select.json",
+        "source_export_sha256": "6f8959e373b9eff8330f4bf9c567f3f16cba532d3cb0f15d1460e5adb546ad8c",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/ucf_crime/timesformer/dense/predictions.jsonl": "03499ff190b75a8124046d834e90ae39f930bb9c5f55de85de837188aa752c9b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r01/ucf_crime/timesformer/pair_select_0p40/predictions.jsonl": "19563bd303a662bb904109822765c4197460f4041d06afd0706b9b1d131e5812",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/ucf-test-frame-truth-20260922.jsonl": "3fdf2fafce62ac108d12d7af4bceab3297b4aec9825937a915d1b4092a4d84c5",
+          "/users/fotile/icassp2027-runs/code-cd39a5d/outputs/icassp2027/assets/ucf-decoded-reconciliation-20260918T081000Z/result/sealed-test/test-decoded-reconciled.jsonl": "a2a66ae55db22f1a6ece0da6b87e77b8b92a0031e1aafc4c10d32aa956c7e17c",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/timesformer/dense-test-view/merge-contract.json": "5015cc388b1bd679c06464149877fb3c25cb715b8f5cea26a71c0645adf0ea44",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/timesformer/ucf/0p40/merged/pair_select-0p40-r01/merge-contract.json": "1a831cd6000f23cdec35a7be3e44ffbaca06c08ffd80a1e12c5f015232243e7d",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/timesformer/formal-dense-s0/checkpoints/final.pt": "2b55818baffcf82f6ded925e7c8d13ce32eba6d85b48c87f0f93aefd730a9389"
+        },
+        "identity_override_used": null,
+        "override_evidence": "not recorded",
+        "runtime_difference_note": ""
       }
     }
   },
   "xd_violence": {
     "videomaev2": {
       "0.80": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 76.51909327288989,
+        "delta_pp": 0.3380177797241979,
+        "ci_low_pp": 0.1252504224761053,
+        "ci_high_pp": 0.5723559083525317,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\xd_violence\\videomaev2\\0p80_pair_select.json",
+        "source_export_sha256": "1404196eca2a94f7cb14289605ee16e20e24e574d6427c1453e7eb6818f7e83e",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/xd_violence/videomaev2/dense/predictions.jsonl": "022fab63f093d7ec80a5a161f39d18c605341491c135cb95cc8bee0cb9bbcd1b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomaev2/pair_select_0p80/predictions.jsonl": "e01cc48932cd22540110ed6e206d5c681233b0a9ed9f8b7e806decb6ebb534e7",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/xd-test-frame-truth-20260922.jsonl": "538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330",
+          "/users/fotile/icassp2027-runs/code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02/runs/full800-raw-coordinate-code1b-b02/private/test.jsonl": "0d9314f45407e933c0023ba9868905fb9ccc087f1e35a6823880f6fea6c4be03",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomaev2/xd-dense-test-view/merge-contract.json": "0bea79fed95a48955a71baa44986dc29a256684df70e72e39469fd19e1b2679f",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomaev2/xd/0p80/merged/pair_select-0p80-r01/merge-contract.json": "c90ba121e2e09b770dfe2fb07a4578002ed98ce86f1629d4c30bec526cc362b7",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomaev2/xd-formal-dense-s0-r02/checkpoints/final.pt": "35f320f3f34e3a82e5d7e2eef70e509104d7383e84dbe48ed47c2111fde20d99",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomaev2/pair_select_0p80-reuse-receipt.json": "d0035ed397470f45a931ab7d905e57111e1d649538d1cb63b1f52d4be2719f98",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\xd_violence\\videomaev2\\pair_select_0p80-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       },
       "0.40": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 75.81005904763063,
+        "delta_pp": -0.3710164455350662,
+        "ci_low_pp": -1.036160562377177,
+        "ci_high_pp": 0.3955145965142781,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\xd_violence\\videomaev2\\0p40_pair_select.json",
+        "source_export_sha256": "a6cab7018e447f8573ea8d3617fff44b0e36c67cb970efe471c71fa0bb3ba355",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/xd_violence/videomaev2/dense/predictions.jsonl": "022fab63f093d7ec80a5a161f39d18c605341491c135cb95cc8bee0cb9bbcd1b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomaev2/pair_select_0p40/predictions.jsonl": "556d25a220264d8cdf73a8ada9d9861a26c18c40e32fc11d91089abc30a1309a",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/xd-test-frame-truth-20260922.jsonl": "538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330",
+          "/users/fotile/icassp2027-runs/code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02/runs/full800-raw-coordinate-code1b-b02/private/test.jsonl": "0d9314f45407e933c0023ba9868905fb9ccc087f1e35a6823880f6fea6c4be03",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomaev2/xd-dense-test-view/merge-contract.json": "0bea79fed95a48955a71baa44986dc29a256684df70e72e39469fd19e1b2679f",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomaev2/xd/0p40/merged/pair_select-0p40-r01b/merge-contract.json": "5a1217fdf8970d590adb566c09a911de5a36f1748ba559d4c5abcf0917eef05c",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomaev2/xd-formal-dense-s0-r02/checkpoints/final.pt": "35f320f3f34e3a82e5d7e2eef70e509104d7383e84dbe48ed47c2111fde20d99",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomaev2/pair_select_0p40-reuse-receipt.json": "56661543d54e7aea5912eb98cfa185d01663f8e265b91ac28f033555fc647241",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\xd_violence\\videomaev2\\pair_select_0p40-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       }
     },
     "videomae": {
       "0.80": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 70.65893870238811,
+        "delta_pp": 0.3238667687592067,
+        "ci_low_pp": -0.02152600166984181,
+        "ci_high_pp": 0.6723639947694822,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\xd_violence\\videomae\\0p80_pair_select.json",
+        "source_export_sha256": "79109ffe6e2111d2deedd26f9a6aa760423aebaf4087fd04d7a4f54d1d99e30d",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/xd_violence/videomae/dense/predictions.jsonl": "7c75db07af2c7c30a2bd73716c02706decce85de1aed9f55e79f51048ee33bbd",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomae/pair_select_0p80/predictions.jsonl": "c7b7275a9e866796b9578bab65cf5052474084fe7eeec1067a0a2c6274b5089b",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/xd-test-frame-truth-20260922.jsonl": "538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330",
+          "/users/fotile/icassp2027-runs/code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02/runs/full800-raw-coordinate-code1b-b02/private/test.jsonl": "0d9314f45407e933c0023ba9868905fb9ccc087f1e35a6823880f6fea6c4be03",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomae/xd-dense-test-view/merge-contract.json": "e9ad95e107035f9b8697c0aaf3726b869e58bb5be9379bb52a705bc8b77cae39",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomae/xd/0p80/merged/pair_select-0p80-r05-resumed/merge-contract.json": "90d0f2cba8976a270f68af149e713939086afff4596439cc060b455b807c8b01",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomae/xd-formal-dense-s0/checkpoints/final.pt": "4b273e634b61a9187ab8c64856f489ff97485b117742a249204df2cd57d1a90e",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomae/pair_select_0p80-reuse-receipt.json": "915f23060f5820d4f21cb9e577e468e300ac097a130170ebfeaba4d798a60d5b",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\xd_violence\\videomae\\pair_select_0p80-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       },
       "0.40": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 71.11139776202779,
+        "delta_pp": 0.7763258283988939,
+        "ci_low_pp": -0.09246516365720657,
+        "ci_high_pp": 1.6409119901091438,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\xd_violence\\videomae\\0p40_pair_select.json",
+        "source_export_sha256": "ab43c4806ee6a953c95b6ab444f9013de3f69f88c265304431ec5904011d439b",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/xd_violence/videomae/dense/predictions.jsonl": "7c75db07af2c7c30a2bd73716c02706decce85de1aed9f55e79f51048ee33bbd",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomae/pair_select_0p40/predictions.jsonl": "b95b82cf1c1c35e43f513cc6b0f9c5407498682f95632b5f5e4ae193b0350715",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/xd-test-frame-truth-20260922.jsonl": "538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330",
+          "/users/fotile/icassp2027-runs/code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02/runs/full800-raw-coordinate-code1b-b02/private/test.jsonl": "0d9314f45407e933c0023ba9868905fb9ccc087f1e35a6823880f6fea6c4be03",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/videomae/xd-dense-test-view/merge-contract.json": "e9ad95e107035f9b8697c0aaf3726b869e58bb5be9379bb52a705bc8b77cae39",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/videomae/xd/0p40/merged/pair_select-0p40-r05-resumed/merge-contract.json": "f1431a7c5fc430e1856b39674bd54be8e3e14d9bc86578d8c36080e15dfef36a",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/videomae/xd-formal-dense-s0/checkpoints/final.pt": "4b273e634b61a9187ab8c64856f489ff97485b117742a249204df2cd57d1a90e",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r02-reuse/xd_violence/videomae/pair_select_0p40-reuse-receipt.json": "c15d1e11a70d9b76b01b8fa35b675a001db25daf43ae9e3e2ee0fb2793b7b944",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": true,
+        "override_evidence": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\reuse-receipts\\xd_violence\\videomae\\pair_select_0p40-reuse-receipt.json",
+        "runtime_difference_note": "User-accepted runtime difference; numerical equivalence unverified"
       }
     },
     "timesformer": {
       "0.80": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 77.2098936249676,
+        "delta_pp": 0.5204630372034447,
+        "ci_low_pp": 0.3010069707474419,
+        "ci_high_pp": 0.7289844451526467,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\xd_violence\\timesformer\\0p80_pair_select.json",
+        "source_export_sha256": "ccca7df706a6740d86d433fca86790bfdfae774d79f3439ff07c5f83f4dfdbd0",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/xd_violence/timesformer/dense/predictions.jsonl": "91286df3a89340354c243dfe37d6c1f8b8635b0b72911f13cfbcf735389b1a93",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r01/xd_violence/timesformer/pair_select_0p80/predictions.jsonl": "f7af635b514f6366dc1010e28edae362d828dadc70088ed815370b9ddf1b94b8",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/xd-test-frame-truth-20260922.jsonl": "538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330",
+          "/users/fotile/icassp2027-runs/code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02/runs/full800-raw-coordinate-code1b-b02/private/test.jsonl": "0d9314f45407e933c0023ba9868905fb9ccc087f1e35a6823880f6fea6c4be03",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/timesformer/xd-dense-test-view/merge-contract.json": "c5fcfe89097e4bd25ea1dd5fd486828e0984288d07d5c2e79b6992401ed0231f",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/timesformer/xd/0p80/merged/pair_select-0p80-r01/merge-contract.json": "df692bccc64b8bb44af74f0cd1be2b9c94f12474ab62e5c0db78155680082067",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/timesformer/xd-formal-dense-s0/checkpoints/final.pt": "85586f8959cebfdf280cf777cf912f354ae1a54280392608347bf40c7e05cf69",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": null,
+        "override_evidence": "not recorded",
+        "runtime_difference_note": ""
       },
       "0.40": {
-        "quality": null,
-        "delta_pp": null,
-        "ci_low_pp": null,
-        "ci_high_pp": null,
-        "source": null
+        "quality": 77.0468107969046,
+        "delta_pp": 0.35738020914043434,
+        "ci_low_pp": -0.40327646520439686,
+        "ci_high_pp": 1.0921056275477694,
+        "source": "D:\\PythonProject\\VAD\\work\\result-review-20260923-r01\\quality\\xd_violence\\timesformer\\0p40_pair_select.json",
+        "source_export_sha256": "cfaeb8c0c65ce603882bb352de0968bbaf227b39ba55a75c231914fa01fc68e2",
+        "source_sha256": {
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-r08/xd_violence/timesformer/dense/predictions.jsonl": "91286df3a89340354c243dfe37d6c1f8b8635b0b72911f13cfbcf735389b1a93",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/urdmu-official-predictions-budgetsweep-r01/xd_violence/timesformer/pair_select_0p40/predictions.jsonl": "cc6b31d7d865855db1ea691118800c38803707ced55fa23eb8973cf4701ae40c",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/control/xd-test-frame-truth-20260922.jsonl": "538e764805db263efcf72f356fd5e0150b6f7f9dfaa6908c8f77155a2b58e330",
+          "/users/fotile/icassp2027-runs/code-1b6bd26/outputs/icassp2027/control/xd-raw-audit-20260918-b02/runs/full800-raw-coordinate-code1b-b02/private/test.jsonl": "0d9314f45407e933c0023ba9868905fb9ccc087f1e35a6823880f6fea6c4be03",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/method-freeze-contract-v2.json": "50dadbdd4a0201f275f75b4ab439de03504cd73bcfa594457208133bbe724bfc",
+          "/users/fotile/icassp2027-runs/code-bsw-r01/projects/icassp2027/decisions/six-cell-method-freeze-v2.json": "4874ce4fe3f82179d9bafaa6efe859125e21cdd3bd26a590827485d6cd3db658",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/merged/timesformer/xd-dense-test-view/merge-contract.json": "c5fcfe89097e4bd25ea1dd5fd486828e0984288d07d5c2e79b6992401ed0231f",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/compressed-budgetsweep-r01/timesformer/xd/0p40/merged/pair_select-0p40-r01/merge-contract.json": "4e8bd28fd2b7f76544f45aff922f4c3e7122d899c09262c5c7c71e53842af607",
+          "/data2/localdisk/fotile-icassp2027-kimi-20260919-a01/training-full/timesformer/xd-formal-dense-s0/checkpoints/final.pt": "85586f8959cebfdf280cf777cf912f354ae1a54280392608347bf40c7e05cf69",
+          "/users/fotile/icassp2027-runs/budget-resume-20260923/user-reuse-decision.json": "bd86e433c6190994b07909e0031d2fc55aa9b40b1b058cc106e6e2aecb73e869"
+        },
+        "identity_override_used": null,
+        "override_evidence": "not recorded",
+        "runtime_difference_note": ""
       }
     }
   }

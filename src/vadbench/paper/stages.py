@@ -16,25 +16,10 @@ from typing import Any
 import numpy as np
 
 from vadbench.artifacts import file_identity, new_run_id, record_stage
+from vadbench.data.batches import clean_encoder_batch
 from vadbench.features import atomic_write_json, atomic_write_jsonl
-from vadbench.paper.profile import PaperProject, project_path
+from vadbench.paper.profile import PaperProject, output_path, project_path
 from vadbench.paper.resolve import digest
-
-
-def clean_encoder_batch(batch: Any) -> Any:
-    """Preserve frame tensors while removing labels and identifying filenames."""
-    from vadbench.contracts import ClipBatch
-
-    return ClipBatch(
-        frames=batch.frames,
-        timestamps_s=batch.timestamps_s,
-        video_ids=tuple(f"sample-{i}" for i in range(batch.batch_size)),
-        valid_mask=batch.valid_mask,
-        frame_indices=batch.frame_indices,
-        metadata={
-            k: batch.metadata[k] for k in ("source_num_frames", "source_fps") if k in batch.metadata
-        },
-    )
 
 
 def _array(value: Any) -> np.ndarray:
@@ -273,7 +258,7 @@ def run_probe(
     resolved = plan["resolved"]
     suite = resolved["suite"]
     run_id = new_run_id("probe")
-    destination = project_path(project.root, project.profile["output_root"]) / run_id
+    destination = output_path(project.root, project.profile["output_root"]) / run_id
     destination.mkdir(parents=True, exist_ok=False)
     inputs = {
         "profile": project.path,
@@ -543,7 +528,7 @@ def run_verification(project: PaperProject, plan: dict[str, Any]) -> dict[str, A
     from vadbench.registry import ENCODER_REGISTRY
 
     run_id = new_run_id("observer-validation")
-    destination = project_path(project.root, project.profile["output_root"]) / run_id
+    destination = output_path(project.root, project.profile["output_root"]) / run_id
     destination.mkdir(parents=True, exist_ok=False)
     with record_stage(
         destination,

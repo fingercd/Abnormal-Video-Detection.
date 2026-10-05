@@ -35,6 +35,13 @@ VIEW = "official-fulltrain-final"
 ROLES = ("fit", "confirm", "select")
 EXPECTED = {"ucf_crime": (1610, 800, 810), "xd_violence": (3954, 2049, 1905)}
 UCF_AUDIT_KIND = "ucf-official-training-content-audit-v1"
+QUARANTINE_SCHEMA = "icassp2027.xd-official-quarantine/v1"
+QUARANTINE_DISCLOSURE = (
+    "XD official train declares 3954 members; the quarantined members are corrupted at the "
+    "official source (confirmed by two independent audits, evidence pointers in the quarantine "
+    "file). The accepted training view is 3954 minus quarantine; the paper must report the "
+    "training set as 3950/3954 accepted/quarantined."
+)
 
 
 class OfficialTrainingError(ValueError):
@@ -323,14 +330,79 @@ def _validated(dataset, paths, evidence_sha256, dataset_root):
     return tuple(records), missing, official, lock, proof_path
 
 
+def _load_quarantine(quarantine_path: Path) -> tuple[Mapping[str, Any], set[str]]:
+    """Bind an independent XD quarantine list; fail closed on any drift.
+
+    Each quarantined member must carry a corruption-evidence pointer (relative
+    path resolved under the quarantine file's directory, no escapes) whose
+    SHA-256 matches; the evidence file must exist at consumption time.
+    """
+
+    document = _json(quarantine_path)
+    _require(isinstance(document, Mapping), "quarantine file must contain an object")
+    _require(document.get("schema") == QUARANTINE_SCHEMA, "quarantine schema differs")
+    _require(document.get("dataset") == "xd_violence", "quarantine dataset differs")
+    _require(document.get("declared_members") == EXPECTED["xd_violence"][0],
+             "quarantine declared_members differs from the official XD declaration")
+    items = document.get("quarantined")
+    _require(isinstance(items, list) and items, "quarantine list is empty")
+    base = quarantine_path.parent.resolve()
+    ids: set[str] = set()
+    for item in items:
+        _require(isinstance(item, Mapping), "quarantine entries must be objects")
+        video_id = item.get("video_id")
+        _require(isinstance(video_id, str) and video_id, "quarantine entry lacks a video_id")
+        _require(video_id not in ids, "quarantine list contains duplicate video IDs")
+        _require(item.get("reason") == "official_source_corrupted",
+                 "quarantine reason must be official_source_corrupted")
+        evidence = item.get("evidence")
+        _require(isinstance(evidence, Mapping), f"{video_id}: quarantine evidence pointer missing")
+        pointer = Path(str(evidence.get("path", "")))
+        _require(not pointer.is_absolute() and ".." not in pointer.parts and str(pointer),
+                 f"{video_id}: quarantine evidence path escapes its directory")
+        target = (base / pointer).resolve()
+        _require(target.is_relative_to(base), f"{video_id}: quarantine evidence path escapes its directory")
+        _require(target.is_file(), f"{video_id}: quarantine evidence file is missing")
+        _require(_sha(evidence.get("sha256")) and sha256_file(target) == evidence["sha256"],
+                 f"{video_id}: quarantine evidence SHA-256 differs")
+        ids.add(video_id)
+    return document, ids
+
+
+def _apply_quarantine(dataset: str, quarantine_path: Path | None, records: tuple, missing: list) -> dict[str, Any] | None:
+    """Validate the exemption: exactly the missing members, nothing else."""
+
+    if quarantine_path is None:
+        return None
+    _require(dataset == "xd_violence", "quarantine exemption is XD-only")
+    _document, quarantined = _load_quarantine(quarantine_path)
+    missing_ids = {item["video_id"] for item in missing}
+    _require(quarantined <= missing_ids,
+             "quarantine lists a member that is not missing from the audited view")
+    _require(missing_ids <= quarantined,
+             "missing official members exist outside the quarantine list; view stays blocked")
+    return {
+        "declared_members": EXPECTED[dataset][0],
+        "accepted_members": len(records),
+        "quarantined": sorted(quarantined),
+        "disclosure_note": QUARANTINE_DISCLOSURE,
+    }
+
+
 def materialize(
     *, dataset: str, full_manifest: Path, role_lock: Path, evidence: Path,
     evidence_sha256: str, output: Path, dataset_root: Path,
     fit: Path | None = None, confirm: Path | None = None, select: Path | None = None,
     ready_manifest: Path | None = None, ready_receipt: Path | None = None,
-    provider_metadata: Path | None = None,
+    provider_metadata: Path | None = None, quarantine: Path | None = None,
 ) -> dict[str, Any]:
-    """Create one unique complete view, or a blocked inventory without a contract."""
+    """Create one unique complete view, or a blocked inventory without a contract.
+
+    ``quarantine`` (XD only) is an independently bound exemption list for
+    official-source-corrupted members: the view is accepted as
+    declared minus quarantine, fully disclosed in the contract. Without it
+    the historical all-members rule is unchanged.
+    """
     dataset = _dataset(dataset)
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -338,6 +410,10 @@ def materialize(
     extras = {"fit": fit, "confirm": confirm, "select": select,
               "provider_metadata": provider_metadata} if dataset == "ucf_crime" else {
         "ready_manifest": ready_manifest, "ready_receipt": ready_receipt}
+    if quarantine is not None:
+        _require(dataset == "xd_violence", "quarantine exemption is XD-only")
+        paths["quarantine"] = Path(quarantine)
+        extras["quarantine"] = quarantine
     inventory = {"dataset": dataset, "training_view": VIEW, "expected_videos": EXPECTED[dataset][0],
                  "dataset_root": str(Path(dataset_root).resolve()), "role_reassignment": False,
                  "name_overlap_exclusions": 0, "authority_sha256": evidence_sha256}
@@ -346,12 +422,15 @@ def materialize(
         paths.update({key: Path(value) for key, value in extras.items()})
         bindings = _file_bindings(paths)
         records, missing, official, lock, proof_path = _validated(dataset, paths, evidence_sha256, dataset_root)
+        exemption = _apply_quarantine(dataset, paths.get("quarantine"), records, missing)
         _require(bindings == _file_bindings(paths), "upstream inputs changed during view validation")
         inventory.update(available_videos=len(records), missing_members=missing,
                          official_identity_sha256=_digest(official),
                          original_role_counts=dict(Counter(lock["partitions"].values())),
                          source_files=bindings)
-        if missing:
+        if exemption is not None:
+            inventory.update(quarantine_exemption=exemption)
+        if missing and exemption is None:
             inventory.update(state="blocked", reason="official_full_training_members_incomplete")
             atomic_write_json(output / "blocked-inventory.json", inventory)
             atomic_write_json(output / "receipt.json", inventory)
@@ -359,7 +438,24 @@ def materialize(
         sources = output / "sources"
         sources.mkdir()
         capsule = {}
+        quarantine_evidence: list[tuple[Path, Path]] = []
         for name, source in paths.items():
+            if name == "quarantine":
+                target = sources / "quarantine" / "quarantine.json"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+                _require(sha256_file(target) == bindings[name]["sha256"], "quarantine file changed during snapshot")
+                capsule[name] = {"path": target.relative_to(output).as_posix(), "sha256": sha256_file(target)}
+                _quarantine_document, _ids = _load_quarantine(Path(source))
+                for item in _quarantine_document["quarantined"]:
+                    pointer = Path(item["evidence"]["path"])
+                    evidence_target = sources / "quarantine" / pointer
+                    evidence_target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile((Path(source).parent / pointer).resolve(), evidence_target)
+                    _require(sha256_file(evidence_target) == item["evidence"]["sha256"],
+                             "quarantine evidence changed during snapshot")
+                    quarantine_evidence.append((pointer, evidence_target))
+                continue
             suffix = ".txt" if name == "full_manifest" and dataset == "ucf_crime" else source.suffix
             target = sources / (name + suffix)
             if name == "evidence":
@@ -378,6 +474,9 @@ def materialize(
         manifest = write_manifest_jsonl(records, output / "official-fulltrain.jsonl")
         contract = {**inventory, "schema_version": 1, "state": "ready", "status": "ready",
                     "official_counts": {"videos": EXPECTED[dataset][0], "normal": EXPECTED[dataset][1], "anomaly": EXPECTED[dataset][2]},
+                    "accepted_counts": {"videos": len(records),
+                                        "normal": sum(1 for row in records if not row.is_anomaly),
+                                        "anomaly": sum(1 for row in records if row.is_anomaly)},
                     "inputs": capsule, "training_manifest": {"path": manifest.name, "file_sha256": sha256_file(manifest)},
                     "member_identity_sha256": _digest([row.to_dict() for row in records]),
                     "raw_validation": "independent content audit; current size and audited mtime checked; frozen legacy XD evidence supplies size"}
@@ -414,9 +513,30 @@ def load_official_training_view(
         paths[key] = source
         source_hashes[str(source)] = item["sha256"]
     data_root = Path(dataset_root or contract["dataset_root"]).resolve()
+    quarantine_path = None
+    if contract.get("quarantine_exemption") is not None:
+        _require(contract["dataset"] == "xd_violence", "quarantine exemption is XD-only")
+        binding = contract["inputs"].get("quarantine")
+        _require(isinstance(binding, Mapping), "quarantine contract lacks its quarantine input binding")
+        relative = Path(binding["path"])
+        _require(not relative.is_absolute() and ".." not in relative.parts, "quarantine path escapes contract")
+        quarantine_path = (root / relative).resolve()
+        _require(quarantine_path.is_relative_to(root)
+                 and sha256_file(quarantine_path) == binding["sha256"], "quarantine snapshot changed")
     records, missing, official, _lock, _proof = _validated(
         contract["dataset"], paths, contract["authority_sha256"], data_root)
-    _require(not missing and len(records) == EXPECTED[contract["dataset"]][0], "official training raw inventory is incomplete")
+    if quarantine_path is not None:
+        exemption = _apply_quarantine(contract["dataset"], quarantine_path, records, missing)
+        declared = contract["quarantine_exemption"]["declared_members"]
+        _require(exemption["declared_members"] == declared, "quarantine declared_members changed")
+        _require(exemption["accepted_members"] == len(records)
+                 and len(records) == declared - len(exemption["quarantined"]),
+                 "official training accepted inventory differs from declared minus quarantine")
+        _require(not [item for item in missing if item["video_id"] not in exemption["quarantined"]],
+                 "missing official members exist outside the quarantine list")
+    else:
+        _require(not missing and len(records) == EXPECTED[contract["dataset"]][0],
+                 "official training raw inventory is incomplete")
     _require(_digest(official) == contract["official_identity_sha256"], "official membership changed")
     relative = Path(contract["training_manifest"]["path"])
     manifest = (root / relative).resolve()

@@ -16,6 +16,8 @@
 
 对于当前 RGB-only 项目，保存 `archive_volume`、archive 相对路径、完整 video ID、视频级 `weak_label` 与原始 label token；按 archive member count 验证 train=3,954、test=800 后才接受 manifest。官方 README/论文未提供另一个已核对的“原视频名→split”文本清单，故不得擅自用 lexicographic 或类别规则替代卷身份。
 
+**训练成员 quarantine 口径（2026-09-20 增补，与代码 `official_training.py` 一致）**：两次独立审计一致确认官方 train 3954 名成员中 4 个在官方源损坏、无法修复（quarantine 隔离清单为独立文件，含成员 ID、损坏证据指针与 SHA，`schema=icassp2027.xd-official-quarantine/v1`）。官方训练视图在绑定该清单后可被接受为 `declared=3954 − quarantined=4 = accepted 3950`，契约如实记录 `declared_members` / `accepted_members` / `quarantined` / `disclosure_note`；无清单仍 fail-closed（视图不 ready）。**论文必须如实报告 XD 训练集为 3950/3954（接受/隔离）**，不得声称完整 3954 训练；UCF 1610 无此豁免，"完整"定义不变。
+
 ### 3. 时间坐标与帧率
 
 官方 ReadMe 把每个 test 视频的一对或多对数称为 violent event 的 start/end **frame**；原论文也称对测试暴力视频标记 violent event 的 start/end frames。作者历史特征流程将视频固定为 24 FPS，使用 16-frame sliding window；其特征评测代码将每个 snippet 分数 `np.repeat(..., 16)` 再与 `gt` 比较。

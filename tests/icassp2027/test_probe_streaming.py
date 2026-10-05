@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from vadbench.data.manifest import VideoManifestRecord
-from vadbench.paper.profile import PaperProject
+from vadbench.paper.profile import PaperProject, output_path
 from vadbench.paper.stages import _probe_shard_path, _write_probe_shard, run_probe
 
 
@@ -124,7 +124,7 @@ def _patch_probe_dependencies(monkeypatch: pytest.MonkeyPatch, *, fail_second: b
 
 
 def _single_output(project: PaperProject) -> Path:
-    runs = list((project.root / "outputs").iterdir())
+    runs = list(output_path(project.root, project.profile["output_root"]).iterdir())
     assert len(runs) == 1
     return runs[0]
 
@@ -134,7 +134,7 @@ def test_probe_merges_two_clip_shards_streamingly_into_legacy_jsonl(tmp_path: Pa
     _patch_probe_dependencies(monkeypatch, fail_second=False)
 
     summary = run_probe(project, plan)
-    output = tmp_path / "outputs" / summary["run_id"]
+    output = output_path(project.root, project.profile["output_root"]) / summary["run_id"]
 
     assert summary["status"] == "completed"
     assert summary["clips"] == 2

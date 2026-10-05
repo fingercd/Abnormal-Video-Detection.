@@ -269,6 +269,14 @@ def test_formal_budget_cannot_be_replaced_by_engineering_smoke(source):
         replace(source, run_mode="formal", steps=3000, bags_per_class=64)
 
 
+def test_default_protocol_is_anchored_to_repository_when_cwd_is_external(source, monkeypatch):
+    monkeypatch.chdir(Path(source.feature_store).parent)
+    request = replace(source, protocol_path="projects/icassp2027/decisions/official-detector-protocol-v2.json")
+    expected = Path(training.__file__).resolve().parents[3] / "projects/icassp2027/decisions/official-detector-protocol-v2.json"
+    assert Path(request.protocol_path) == expected
+    assert training._protocol(request)["schema"] == "icassp2027.official-detector-protocol/v2"
+
+
 def test_development_budget_cannot_be_replaced_by_engineering_smoke(source):
     with pytest.raises(ValueError, match="3000 steps"):
         replace(source, run_mode="development")
@@ -412,7 +420,7 @@ def test_one_normal_one_anomaly_native_acceptance_batch_runs_two_real_steps(sour
 
 def test_reused_aggregation_receipt_requires_the_original_external_pin(source):
     records, _, sources = training._source(source)
-    document, representation, _, _ = training._dense_source(source, records, sources)
+    document, representation, _, _, _ = training._dense_source(source, records, sources)
     preparation = Path(source.output_root) / "cache-preparation"
     preparation.mkdir(parents=True)
     _, _, cache_root, _ = training._aggregate(

@@ -4,7 +4,7 @@ from fractions import Fraction
 
 import numpy as np
 import pytest
-from sklearn.metrics import auc, precision_recall_curve
+from sklearn.metrics import auc, average_precision_score as sklearn_average_precision_score, precision_recall_curve
 
 from vadbench.metrics import average_precision_score, roc_auc_score
 from vadbench.paper import quality_comparison as qc
@@ -44,6 +44,8 @@ def reference(videos, weights, method, metric):
         return np.nan  # comparison policy requires BOTH frame classes
     if metric == "frame_roc_auc":
         return roc_auc_score(y, s)
+    if metric == "frame_ap":
+        return sklearn_average_precision_score(y, s)
     value = precision_recall_trapezoid_auc(y, s)
     precision, recall, _ = precision_recall_curve(y, s)
     assert value == pytest.approx(auc(recall, precision), abs=2e-15)
@@ -58,7 +60,7 @@ def histograms(videos, method_index):
     return output
 
 
-@pytest.mark.parametrize("metric", ["frame_roc_auc", "frame_pr_auc"])
+@pytest.mark.parametrize("metric", ["frame_roc_auc", "frame_pr_auc", "frame_ap"])
 def test_weighted_engines_equal_brute_frame_repetition_with_ties(metric):
     videos = cohort()
     draws = np.random.default_rng(42).multinomial(4, [.25] * 4, size=300)
@@ -70,12 +72,13 @@ def test_weighted_engines_equal_brute_frame_repetition_with_ties(metric):
         p, n = np.array([h.positive.sum() for h in dense]), np.array([h.negative.sum() for h in dense])
         actual = qc._auc_delta(draws, qc._auc_pair_matrix(method) - qc._auc_pair_matrix(dense), p, n)
     else:
-        actual = qc._PRCurve.prepare(method).evaluate(draws) - qc._PRCurve.prepare(dense).evaluate(draws)
+        integration = "step" if metric == "frame_ap" else "trapezoid"
+        actual = qc._PRCurve.prepare(method).evaluate(draws, integration=integration) - qc._PRCurve.prepare(dense).evaluate(draws, integration=integration)
     expected = np.array([reference(videos, w, "method_scores", metric) - reference(videos, w, "dense_scores", metric) for w in draws])
     np.testing.assert_allclose(actual, expected, rtol=0, atol=3e-15, equal_nan=True)
 
 
-@pytest.mark.parametrize("metric", ["frame_roc_auc", "frame_pr_auc"])
+@pytest.mark.parametrize("metric", ["frame_roc_auc", "frame_pr_auc", "frame_ap"])
 def test_public_point_draws_counts_and_order_invariance(metric):
     videos = cohort()
     result = qc.compare_paired_quality(videos, metric=metric, source_sha256=SHA)
@@ -349,8 +352,8 @@ def test_malformed_or_unpaired_inputs_are_rejected(mutation):
         qc.compare_paired_quality(videos, metric="frame_roc_auc", source_sha256=SHA)
 
 
-def test_source_binding_and_metric_name_cannot_silently_select_step_ap():
-    with pytest.raises(ValueError, match="step AP"):
-        qc.compare_paired_quality(cohort(), metric="frame_ap", source_sha256=SHA)
+def test_source_binding_and_metric_name_are_explicit():
+    with pytest.raises(ValueError, match="metric must"):
+        qc.compare_paired_quality(cohort(), metric="frame_f1", source_sha256=SHA)
     with pytest.raises(ValueError, match="SHA-256"):
         qc.compare_paired_quality(cohort(), metric="frame_pr_auc", source_sha256={})

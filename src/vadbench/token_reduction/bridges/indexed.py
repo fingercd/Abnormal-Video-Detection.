@@ -55,6 +55,8 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
     suffix_shapes: dict[int, tuple[int, ...]] = field(default_factory=dict, init=False)
     suffix_position_masks: dict[int, torch.Tensor] = field(default_factory=dict, init=False)
     position_injections: int = field(default=0, init=False)
+    transform_ms: float = field(default=0.0, init=False)
+    gather_ms: float = field(default=0.0, init=False)
 
     def __post_init__(self) -> None:
         self.bridge._validate_depth(self.depth)
@@ -155,6 +157,8 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
             handle.remove()
 
     def _gather_after_block(self, _module: Any, _inputs: tuple[Any, ...], output: Any) -> Any:
+        import time
+
         hidden = self.bridge.block_output_tensor(self.depth, output)
         if hidden.shape[:2] != (self.indices.shape[0], self.layout.token_capacity):
             raise IndexedInterventionError(
@@ -162,11 +166,15 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
             )
         indices = self.indices.to(hidden.device, dtype=torch.long)
         if self.transform is None:
+            started = time.perf_counter()
             gathered = hidden.gather(
                 1, indices.unsqueeze(-1).expand(-1, -1, hidden.shape[-1])
             )
+            self.gather_ms += (time.perf_counter() - started) * 1000.0
         else:
+            started = time.perf_counter()
             gathered = self.transform(hidden, indices)
+            self.transform_ms += (time.perf_counter() - started) * 1000.0
             if (
                 not isinstance(gathered, torch.Tensor)
                 or gathered.shape != (
@@ -227,6 +235,13 @@ class IndexedTokenIntervention(AbstractContextManager["IndexedTokenIntervention"
             "gathered_shape": list(self.gathered_shape),
             "suffix_shapes": {
                 str(depth): list(shape) for depth, shape in self.suffix_shapes.items()
+            },
+            "per_layer_token_counts": {
+                str(depth): int(shape[1]) for depth, shape in self.suffix_shapes.items()
+            },
+            "plugin_overhead_ms": {
+                "gather_ms": self.gather_ms,
+                "transform_ms": self.transform_ms,
             },
             "vjepa2_original_rope_positions": self.bridge.receipt().encoder_id == "vjepa2",
             "vjepa2_position_injections": self.position_injections,

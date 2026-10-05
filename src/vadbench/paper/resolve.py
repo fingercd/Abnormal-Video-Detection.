@@ -9,7 +9,7 @@ from typing import Any
 
 from vadbench.config import ConfigError, load_yaml
 from vadbench.hashing import sha256_file
-from vadbench.paper.profile import PaperProject, fields, project_path
+from vadbench.paper.profile import PaperProject, fields, output_path, project_path
 
 
 def digest(value: Any) -> str:
@@ -196,7 +196,7 @@ def resolve_probe(project: PaperProject, suite_path: str | Path) -> dict[str, An
             "forward_windows": suite["max_videos"] * sampling["windows_per_video"] * len(ids) * 3,
         },
         "output_template": str(
-            project_path(project.root, project.profile["output_root"]) / "<unique-run-id>"
+            output_path(project.root, project.profile["output_root"]) / "<unique-run-id>"
         ),
         "blockers": blockers,
         "validation": "Paths/configuration only; actual weights, architecture and data verified at execution.",

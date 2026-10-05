@@ -28,6 +28,25 @@ def project_path(root: Path, value: str, *, external: bool = False) -> Path:
     return path
 
 
+def output_path(root: Path, value: str) -> Path:
+    """Resolve run output; only the assets/experiments mount may leave the checkout."""
+    if not isinstance(value, str) or not value.strip():
+        raise ConfigError("path must be a non-empty string")
+    relative = Path(value)
+    if ".." in relative.parts:
+        raise ConfigError(f"output path must not contain '..': {value}")
+    if relative.is_absolute():
+        return project_path(root, value)
+    path = (root / relative).resolve()
+    if path.is_relative_to(root):
+        return path
+    if relative.parts[:2] == ("assets", "experiments"):
+        experiments = (root / "assets" / "experiments").resolve()
+        if path.is_relative_to(experiments):
+            return path
+    raise ConfigError(f"project output path escapes project root: {value}")
+
+
 @dataclass(frozen=True)
 class PaperProject:
     path: Path
@@ -125,8 +144,8 @@ def load_project(path: str | Path, *, root: str | Path | None = None) -> PaperPr
         or not 0 <= tolerance <= 1
     ):
         raise ConfigError("quality_tolerance must be null or a fraction in [0, 1]")
-    for name in ("output_root", "paper_root"):
-        project_path(root, profile[name])
+    output_path(root, profile["output_root"])
+    project_path(root, profile["paper_root"])
     assets_path = path.with_name("assets.local.yaml")
     assets = load_yaml(assets_path) if assets_path.is_file() else {}
     fields(assets, required=set(), optional={"dataset_roots", "checkpoint_paths"}, context="assets")

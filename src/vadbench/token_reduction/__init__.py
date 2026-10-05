@@ -7,6 +7,7 @@ from .contracts import (
     TokenReducer,
     TokenReductionContractError,
 )
+from .deployment_contracts import ReductionDeployment, ReductionExecutionContext
 from .identity import IdentityReducer
 from .pair_merge import (
     PairLinearGate,
@@ -25,6 +26,8 @@ __all__ = [
     "PairMergeSpec",
     "PairWeightedMerge",
     "ReductionContext",
+    "ReductionDeployment",
+    "ReductionExecutionContext",
     "ReductionResult",
     "TokenLayout",
     "TokenReducer",

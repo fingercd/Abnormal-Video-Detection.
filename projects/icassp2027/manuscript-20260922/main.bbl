@@ -18,12 +18,34 @@ Hang Zhou, Junqing Yu, and Wei Yang,
   video anomaly detection,''
 \newblock in {\em Proc. AAAI}, 2023, vol.~37, pp. 3769--3777.
 
+\bibitem{wu2024vadclip}
+Peng Wu, Xuerong Zhou, Guansong Pang, Lingru Zhou, Qingsen Yan, Peng Wang, and
+  Yanning Zhang,
+\newblock ``{VadCLIP}: Adapting vision-language models for weakly supervised
+  video anomaly detection,''
+\newblock in {\em Proc. AAAI}, 2024.
+
+\bibitem{yin2026learning}
+Wenti Yin, Huaxin Zhang, Xiang Wang, Yuqing Lu, Yicheng Zhang, Bingquan Gong,
+  Jialong Zuo, Li~Yu, Changxin Gao, and Nong Sang,
+\newblock ``Learning to tell apart: Weakly supervised video anomaly detection
+  via disentangled semantic alignment,''
+\newblock in {\em Proceedings of the AAAI Conference on Artificial
+  Intelligence}, 2026, vol.~40, pp. 12027--12035.
+
 \bibitem{tong2022videomae}
 Zhan Tong, Yibing Song, Jue Wang, and Limin Wang,
 \newblock ``{VideoMAE}: Masked autoencoders are data-efficient learners for
   self-supervised video pre-training,''
 \newblock in {\em Advances in Neural Information Processing Systems}, 2022,
   vol.~35.
+
+\bibitem{wang2023videomaev2}
+Limin Wang, Bingkun Huang, Zhiyu Zhao, Zhan Tong, Yinan He, Yi~Wang, Yali Wang,
+  and Yu~Qiao,
+\newblock ``{VideoMAE V2}: Scaling video masked autoencoders with dual
+  masking,''
+\newblock in {\em Proc. IEEE/CVF CVPR}, 2023, pp. 14549--14560.
 
 \bibitem{fayyaz2022ats}
 Mohsen Fayyaz, Soroush {Abbasi Kouhpayegani}, Farnoush {Rezaei Jafari}, Eric
@@ -37,33 +59,12 @@ Daniel Bolya, Cheng-Yang Fu, Xiaoliang Dai, Peizhao Zhang, Christoph
 \newblock ``Token merging: Your {ViT} but faster,''
 \newblock in {\em Proc. ICLR}, 2023.
 
-\bibitem{wu2024vadclip}
-Peng Wu, Xuerong Zhou, Guansong Pang, Lingru Zhou, Qingsen Yan, Peng Wang, and
-  Yanning Zhang,
-\newblock ``{VadCLIP}: Adapting vision-language models for weakly supervised
-  video anomaly detection,''
-\newblock in {\em Proc. AAAI}, 2024.
-
-\bibitem{ristea2024aedae}
-Nicolae-Catalin Ristea, Florinel-Alin Croitoru, Radu~Tudor Ionescu, Marius
-  Popescu, Fahad~Shahbaz Khan, and Mubarak Shah,
-\newblock ``Self-distilled masked auto-encoders are efficient video anomaly
-  detectors,''
-\newblock in {\em Proc. IEEE/CVF CVPR}, 2024.
-
 \bibitem{wu2020xd}
 Peng Wu, Jing Liu, Yujia Shi, Yujia Sun, Fangtao Shao, Zhaoyang Wu, and Zhiwei
   Yang,
 \newblock ``Not only look, but also listen: Learning multimodal violence
   detection under weak supervision,''
 \newblock in {\em Proc. ECCV}, 2020, pp. 322--339.
-
-\bibitem{wang2023videomaev2}
-Limin Wang, Bingkun Huang, Zhiyu Zhao, Zhan Tong, Yinan He, Yi~Wang, Yali Wang,
-  and Yu~Qiao,
-\newblock ``{VideoMAE V2}: Scaling video masked autoencoders with dual
-  masking,''
-\newblock in {\em Proc. IEEE/CVF CVPR}, 2023, pp. 14549--14560.
 
 \bibitem{bertasius2021timesformer}
 Gedas Bertasius, Heng Wang, and Lorenzo Torresani,

@@ -23,15 +23,15 @@ from vadbench.data.manifest import DatasetSplit, VideoManifestRecord, load_manif
 from vadbench.data.video import build_clip_batch
 from vadbench.engine.coverage import validate_frame_coverage
 from vadbench.features import FeatureStore, atomic_write_json
-from vadbench.paper.compatibility import (
+from vadbench.data.feature_contracts import (
     CompatibilityDeclaration,
     RepresentationIdentity,
     SamplingIdentity,
     TrainingIdentity,
     feature_cache_key,
 )
-from vadbench.paper.detection import DetectionConfig, evaluate_detector, predict_detector
-from vadbench.paper.extraction import (
+from vadbench.workflows.detection import DetectionConfig, evaluate_detector, predict_detector
+from vadbench.workflows.extraction import (
     PooledExtractionSpec,
     extract_pooled_features,
     make_sampling_identity,
@@ -883,44 +883,7 @@ def _make_adapter(request: FrozenEvaluationRequest) -> tuple[Any, Mapping[str, A
     return ENCODER_REGISTRY.create(request.encoder, **constructor), definition
 
 
-def _coverage(
-    manifest: tuple[VideoManifestRecord, ...], feature_root: Path, fingerprint: str
-) -> dict[str, Any]:
-    store = FeatureStore(feature_root)
-    by_video: dict[str, list[tuple[int, int | None, int | None]]] = {
-        item.video_id: [] for item in manifest
-    }
-    for row in store.iter_records():
-        if row.video_id in by_video and row.encoder_fingerprint == fingerprint:
-            by_video[row.video_id].append((row.clip_index, row.frame_start, row.frame_end))
-    receipt = []
-    for item in manifest:
-        rows = sorted(by_video[item.video_id])
-        if not rows:
-            raise ValueError("official dense sampling has no FeatureStore rows for a test video")
-        result = validate_frame_coverage(
-            video_id=item.video_id,
-            clip_indices=__import__("numpy").asarray([row[0] for row in rows]),
-            frame_starts=__import__("numpy").asarray([row[1] for row in rows]),
-            frame_ends=__import__("numpy").asarray([row[2] for row in rows]),
-            num_frames=item.num_frames,
-            fps=item.fps,
-            require_fps=True,
-            require_complete=False,
-        )
-        if result["gap_frames"]:
-            raise ValueError(
-                f"{item.video_id}: official dense sampling has uncovered decoded frames"
-            )
-        receipt.append(result)
-    return {
-        "videos": len(receipt),
-        "input_union_complete": all(item["gap_frames"] == 0 for item in receipt),
-        "overlap_is_expected_before_prediction_aggregation": any(
-            item["overlap_frames"] > 0 for item in receipt
-        ),
-        "per_video": receipt,
-    }
+from vadbench.engine.coverage import feature_store_coverage as _coverage
 
 
 def _source_receipt(source: FrozenDetectorSource) -> dict[str, Any]:

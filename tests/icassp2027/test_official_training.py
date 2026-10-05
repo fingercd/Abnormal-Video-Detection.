@@ -221,6 +221,141 @@ def test_xd_ready_metadata_remains_bound_to_independent_authority(xd_inputs, tmp
     assert not (tmp_path / "blocked/contract.json").exists()
 
 
+QUARANTINE_SCHEMA = "icassp2027.xd-official-quarantine/v1"
+
+
+def _quarantine_file(root: Path, video_ids) -> Path:
+    evidence_dir = root / "quarantine-evidence"
+    evidence_dir.mkdir(exist_ok=True)
+    items = []
+    for video_id in video_ids:
+        evidence = evidence_dir / f"{video_id}.json"
+        dump(evidence, {"audit": f"two independent audits: official source corrupted: {video_id}"})
+        items.append({
+            "video_id": video_id,
+            "reason": "official_source_corrupted",
+            "evidence": {"path": f"quarantine-evidence/{video_id}.json", "sha256": sha256_file(evidence)},
+        })
+    return dump(root / "quarantine.json", {
+        "schema": QUARANTINE_SCHEMA,
+        "dataset": "xd_violence",
+        "declared_members": 3954,
+        "quarantined": items,
+        "disclosure_note": "paper must report XD training as 3950/3954 accepted/quarantined",
+    })
+
+
+def _remove_raw(inputs, video_ids):
+    held = []
+    for video_id in video_ids:
+        raw = inputs["kwargs"]["dataset_root"] / next(r.path for r in inputs["rows"] if r.video_id == video_id)
+        backup = raw.with_suffix(".held")
+        raw.rename(backup)
+        held.append((raw, backup))
+    return held
+
+
+def _restore_raw(held):
+    for raw, backup in held:
+        backup.rename(raw)
+
+
+def test_xd_quarantine_exemption_materializes_and_consumes(xd_inputs, tmp_path):
+    quarantined_ids = [xd_inputs["rows"][index].video_id for index in range(4)]
+    quarantine = _quarantine_file(xd_inputs["root"], quarantined_ids)
+    held = _remove_raw(xd_inputs, quarantined_ids)
+    try:
+        result = official.materialize(
+            **xd_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "view"
+        )
+        assert result["state"] == "ready", result
+        contract = json.loads(Path(result["contract_path"]).read_text())
+        exemption = contract["quarantine_exemption"]
+        assert exemption["declared_members"] == 3954
+        assert exemption["accepted_members"] == 3950
+        assert exemption["quarantined"] == sorted(quarantined_ids)
+        assert "3950/3954" in exemption["disclosure_note"]
+        assert contract["accepted_counts"]["videos"] == 3950
+        assert contract["official_counts"]["videos"] == 3954  # declared, unchanged
+        rows, receipt = official.load_official_training_view(result["contract_path"], result["contract_sha256"])
+        assert len(rows) == 3950
+        assert {row.video_id for row in rows}.isdisjoint(quarantined_ids)
+        assert receipt["quarantine_exemption"]["accepted_members"] == 3950
+    finally:
+        _restore_raw(held)
+
+
+def test_xd_quarantine_sha_mismatch_and_schema_drift_stay_blocked(xd_inputs, tmp_path):
+    quarantined_ids = [xd_inputs["rows"][index].video_id for index in range(4)]
+    quarantine = _quarantine_file(xd_inputs["root"], quarantined_ids)
+    held = _remove_raw(xd_inputs, quarantined_ids)
+    try:
+        document = json.loads(quarantine.read_text())
+        document["quarantined"][0]["evidence"]["sha256"] = "0" * 64
+        dump(quarantine, document)
+        blocked = official.materialize(
+            **xd_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "blocked-sha"
+        )
+        assert blocked["state"] == "blocked"
+        assert not (tmp_path / "blocked-sha/contract.json").exists()
+        # schema drift is equally fail-closed
+        _quarantine_file(xd_inputs["root"], quarantined_ids)
+        document = json.loads(quarantine.read_text())
+        document["schema"] = "icassp2027.xd-official-quarantine/v2"
+        dump(quarantine, document)
+        blocked = official.materialize(
+            **xd_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "blocked-schema"
+        )
+        assert blocked["state"] == "blocked"
+    finally:
+        _restore_raw(held)
+
+
+def test_xd_quarantine_cannot_cover_healthy_or_unknown_members(xd_inputs, tmp_path):
+    healthy_id = xd_inputs["rows"][10].video_id  # raw file exists: not missing
+    quarantine = _quarantine_file(xd_inputs["root"], [healthy_id])
+    blocked = official.materialize(
+        **xd_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "blocked-healthy"
+    )
+    assert blocked["state"] == "blocked"
+    quarantined_ids = [xd_inputs["rows"][index].video_id for index in range(4)]
+    quarantine = _quarantine_file(xd_inputs["root"], [*quarantined_ids, "unknown-member"])
+    held = _remove_raw(xd_inputs, quarantined_ids)
+    try:
+        blocked = official.materialize(
+            **xd_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "blocked-unknown"
+        )
+        assert blocked["state"] == "blocked"
+    finally:
+        _restore_raw(held)
+
+
+def test_xd_quarantine_consumer_rejects_tampered_snapshot(xd_inputs, tmp_path):
+    quarantined_ids = [xd_inputs["rows"][index].video_id for index in range(4)]
+    quarantine = _quarantine_file(xd_inputs["root"], quarantined_ids)
+    held = _remove_raw(xd_inputs, quarantined_ids)
+    try:
+        result = official.materialize(
+            **xd_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "view"
+        )
+        snapshot = Path(result["contract_path"]).parent / "sources" / "quarantine" / "quarantine.json"
+        document = json.loads(snapshot.read_text())
+        document["quarantined"] = document["quarantined"][:-1]  # silently drop one member
+        dump(snapshot, document)
+        with pytest.raises(official.OfficialTrainingError, match="snapshot changed"):
+            official.load_official_training_view(result["contract_path"], result["contract_sha256"])
+    finally:
+        _restore_raw(held)
+
+
+def test_xd_quarantine_exemption_is_xd_only(ucf_inputs, tmp_path):
+    quarantine = _quarantine_file(tmp_path, ["any-member"])
+    with pytest.raises(official.OfficialTrainingError, match="XD-only"):
+        official.materialize(
+            **ucf_inputs["kwargs"], quarantine=quarantine, output=tmp_path / "blocked-ucf"
+        )
+
+
 def test_consumer_rejects_downstream_resigning_and_wrong_contract_pin(ucf_inputs, tmp_path):
     result = official.materialize(**ucf_inputs["kwargs"], output=tmp_path / "view")
     contract = Path(result["contract_path"])

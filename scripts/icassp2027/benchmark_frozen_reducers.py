@@ -40,7 +40,7 @@ from vadbench.environment_registry import resolve_encoder_runtime
 from vadbench.features import atomic_write_json
 from vadbench.integrations.common import select_feature_tensor
 from vadbench.orchestration import encoder_identity
-from vadbench.paper.efficiency import (
+from vadbench.workflows.efficiency import (
     EFFICIENCY_SCHEMA_VERSION,
     CudaTimingRuntime,
     FrozenTimingSettings,
@@ -550,7 +550,7 @@ def main(argv: list[str] | None = None) -> int:
             "source_sha256": {
                 "cli": sha256_file(Path(__file__)),
                 "efficiency": sha256_file(
-                    Path(__import__("vadbench.paper.efficiency", fromlist=["x"]).__file__)
+                    Path(__import__("vadbench.workflows.efficiency", fromlist=["x"]).__file__)
                 ),
             },
         }

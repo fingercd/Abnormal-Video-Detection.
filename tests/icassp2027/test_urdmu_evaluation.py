@@ -414,7 +414,13 @@ def test_official_phase_is_blocked_before_any_test_artifact_is_opened(tmp_path):
             "phase": "official_frame",
             "freeze_path": str(tmp_path / "old-freeze-not-opened.json"),
             "audit_report": str(tmp_path / "audit-not-opened.json"),
+            "method_freeze_contract_path": str(tmp_path / "freeze-contract-not-opened.json"),
+            "method_freeze_contract_sha256": "a" * 64,
+            "feature_contract_path": None,
+            "feature_contract_sha256": None,
         }
     )
-    with pytest.raises(NotImplementedError, match="no official test source or score was read"):
+    # The freeze contract fails before the missing file or any FeatureStore,
+    # checkpoint, audit, or freeze receipt is opened.
+    with pytest.raises(FileNotFoundError, match="method freeze contract"):
         run_urdmu_evaluation(request)

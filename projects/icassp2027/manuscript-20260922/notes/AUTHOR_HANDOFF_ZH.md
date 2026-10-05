@@ -16,9 +16,9 @@ Introduction 按“持续观察的成本—局部冗余带来的机会—冻结�
 
 摘要、Introduction、Related Work、方法公式、实验分析、效率节和结论均已写入 TeX。方法总览图（Fig. 1）在 2026-09-22 本轮换成作者提供的位图 `figures/pairselect_framework.png`：上半部是冻结编码器＋中段插入＋冻结检测头的管线，下半部是「成对分组 → L2 范数取大 → 组内配额 → 三档保留 8/6/4」的四步示意。原先的可编辑 TikZ 版 `figures/overview.tex` 已删除，`main.tex` 随之不再加载 `tikz`。图中文字是规则示意，没有假造视频热图或范数测量；但图中举例写了 CLIP 编码器，而本文实验只覆盖 VideoMAE / VideoMAEv2 / TimeSformer，投稿前需作者确认是否保留该举例。
 
-已把原始 CSV 的六组 PairSelect 完成结果、相应95%配对区间、同预算参照结果填入表格。XD 的梯形 PR-AUC 与非插值 AP 分别解释；VideoMAE 在两种口径下变化方向不同，这一点没有隐藏。
+已把三档 PairSelect 质量结果、相应95%配对区间、同预算参照结果和 batch-32 encoder 效率填入表格。XD 的梯形 PR-AUC 与非插值 AP 分别解释；VideoMAE 在两种口径下变化方向不同，这一点没有隐藏。
 
-三档实际 token 数和主要12层 block 的理论成本由脚本计算，硬件列明确留空。理论用1 MAC = 2 FLOPs，完整 encoder 的实测/执行图统计不得与该解析估算混为一谈。
+三档实际 token 数和主要12层 block 的理论成本由脚本计算，理论用1 MAC = 2 FLOPs。硬件表采用 batch=32 的实测 encoder 吞吐和相对 dense 加速；选择器开销在计时内。解析 GFLOPs 不得与完整 encoder 实测 FLOPs 混为一谈。
 
 ## 3. 本次修正的旧稿问题
 
@@ -30,11 +30,11 @@ TimeSformer 改用完整空间轨迹的描述，轨迹数为154/112/70，含CLS�
 
 不把已有结果改写成“所有配置都在±0.5pp内”，也不预设40%为平衡点。当前主指标点估计区间为−0.16至+0.68pp；最大观察退化约0.16pp。这不是统计等价性结论。
 
-## 4. 需要补的三类证据
+## 4. 结果回填与仍需作者核查的证据
 
-**预算：**仍然只新增3编码器×2数据集×2预算，共12个质量配置。复用 Dense 和原40%结果的前提是选择规则、checkpoint和数值路径未变。新结果全部填入 `data/budget_results.json`；完整区间可在自动导出的 ladder CSV 中保存。
+**预算（2026-09-23 用户决定）：**仍然只新增3编码器×2数据集×2预算，共12个质量配置。复用已有 Dense、原40%删除率结果和本轮新增特征，取消“先证明数值路径等价”这一阻塞条件；选择规则、固定 checkpoint、完整覆盖和时间轴仍须正确。新增 VideoMAE 的 pt/np 差异和 VideoMAEv2 的软件环境差异作为实际运行来源披露，不宣称已证明等价，不改写原指纹。新结果全部填入 `data/budget_results.json`；完整区间可在自动导出的 ladder CSV 中保存，全部12项均报告，不据测试分数筛选预算。
 
-**效率：**3编码器×Dense与三档PairSelect，共12种核心配置。固定代表性非测试输入即可，不需要重跑完整测试集。补齐完整encoder GFLOPs、batch-1 latency、指定batch吞吐、该工作负载峰值allocated/reserved显存。原协议还要求正式配置中的memory fraction与processor设置保持一致，详见原包 `05_核验与审计/efficiency_protocol.md`。CUDA核心时间与含解码、写盘、检测头的端到端时间分开。
+**效率（已回填）：**3编码器×Dense与三档PairSelect共12种配置，以 batch=32、A100、FP32、TF32-off 为固定口径。表格报告每批延迟、clips/s和相对dense加速；动态选择、gather、deployment校验和readout在计时内。输入为一条正常和一条异常训练视频，每配置20次预热和每视频20次正式测量，执行顺序平衡。解码、processor、host-device传输、检测头和写盘不在该encoder benchmark内。
 
 **动机：**取回原包 `04_协议与冻结决策/method-freeze-20260920.md` 引用的F04 finding card及统计表。该记录写有fit128、运动×亮度匹配和局部余弦观察，但本包没有原始效应量。优先恢复 `work/s7-idea-a01/`、NAS `v0-explore/` 和F04观察回执中的原材料，核对抽样单元究竟是真实异常区间还是异常标签视频的片段。当前正文用可核查文献与设计目标铺垫，没有虚构F04数字。`03_method.tex` 已留作者注释位。
 

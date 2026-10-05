@@ -20,7 +20,11 @@ def main(argv: list[str] | None = None) -> int:
         "device",
     ):
         parser.add_argument("--" + name, required=True)
-    parser.add_argument("--run-mode", choices=("formal", "development", "engineering"), default="formal")
+    parser.add_argument(
+        "--run-mode",
+        choices=("formal", "development", "engineering", "v0_partial_cache"),
+        default="formal",
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--steps", type=int, default=3000)
     parser.add_argument("--bags-per-class", type=int, default=64)

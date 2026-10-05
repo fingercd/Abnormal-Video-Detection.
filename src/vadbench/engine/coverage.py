@@ -4,9 +4,54 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from vadbench.data.manifest import VideoManifestRecord
+from vadbench.features import FeatureStore
+
+
+def feature_store_coverage(
+    manifest: Sequence[VideoManifestRecord], feature_root: Path, fingerprint: str
+) -> dict[str, Any]:
+    """Check complete frame union for one encoder view, allowing clip overlap."""
+    store = FeatureStore(feature_root)
+    by_video: dict[str, list[tuple[int, int | None, int | None]]] = {
+        item.video_id: [] for item in manifest
+    }
+    for row in store.iter_records():
+        if row.video_id in by_video and row.encoder_fingerprint == fingerprint:
+            by_video[row.video_id].append((row.clip_index, row.frame_start, row.frame_end))
+    receipt = []
+    for item in manifest:
+        rows = sorted(by_video[item.video_id])
+        if not rows:
+            raise ValueError("official dense sampling has no FeatureStore rows for a test video")
+        result = validate_frame_coverage(
+            video_id=item.video_id,
+            clip_indices=np.asarray([row[0] for row in rows]),
+            frame_starts=np.asarray([row[1] for row in rows]),
+            frame_ends=np.asarray([row[2] for row in rows]),
+            num_frames=item.num_frames,
+            fps=item.fps,
+            require_fps=True,
+            require_complete=False,
+        )
+        if result["gap_frames"]:
+            raise ValueError(
+                f"{item.video_id}: official dense sampling has uncovered decoded frames"
+            )
+        receipt.append(result)
+    return {
+        "videos": len(receipt),
+        "input_union_complete": all(item["gap_frames"] == 0 for item in receipt),
+        "overlap_is_expected_before_prediction_aggregation": any(
+            item["overlap_frames"] > 0 for item in receipt
+        ),
+        "per_video": receipt,
+    }
 
 
 def validate_frame_coverage(

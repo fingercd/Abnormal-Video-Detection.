@@ -76,3 +76,30 @@
 **选择性质提示**：0.60 档的结果已解封并参与过方法比较；本次扩展网格后若依据新结果挑选
 最终档位，属测试结果驱动的比较，必须在 `handoff_v2/selection_decision.md` 中
 以 `selection_basis = test-comparison` 如实记录，不得称为独立最终验证。
+
+---
+
+## 7. 补充修订（2026-09-22 晚，实际时间，不倒签）：node2 V100 纳入
+
+**负责人最新口径**：node1/node2/node3 三节点均可连通时，24 张卡（node3 A100×8 +
+node1 V100×8 + node2 V100×8）一次性全开，12 个任务（12 个卡对）一波跑完；
+若某节点不可达则回退到可用节点（原 16 卡方案）。
+
+| 项 | 补充前（上文 §2） | 补充后 |
+|---|---|---|
+| 正式 sealed-test 特征提取可用节点 | node3 A100×8 + node1 V100×8 | 再增 **node2 V100×8**，共 24 卡 = 12 个卡对 |
+| 并行方式 | 8 任务并发、剩余排队 | 12 卡对认领 12 任务，**一波全启**；卡对完成即释放 |
+
+**依据**（在 §3 基础上补充）：
+1. node2 V100 跑提取的历史事实更充分：2026-09-22 08:03 已在 node2 空闲 V100 完成 8 个
+   独立输出的补充 extraction（三 encoder × UCF/XD `pair_select@0.60`，`progress.md:100`），
+   且 §3 引用的 16 卡共享提取即为 node2 V100×8 + node3 A100×8。
+2. 启动时实测 node2 八张 V100 接近全空（仅 GPU0 ~0.7GB / GPU5 ~2GB 他项目小进程）；
+   共享机制沿用 `ordinary_quality` 口径（`--allow-sharing --min-free-memory-mib 4096`）。
+3. 派工改为"一卡对一个进程认领整任务"（`pair_worker.py`，NAS mkdir 原子锁），
+   拆分/合并/兜底规则与上文完全一致；`.failed` 半片永不覆盖。
+4. 跨节点数值一致性：沿用 §5 的抽验安排（同一代码快照 `code-bsw-r01`、
+   确定性环境变量 `NVIDIA_TF32_OVERRIDE=0` 等由 `worker.extraction_env` 统一注入）。
+
+**不受影响**：§4 全部条款（方法/预算冻结、评价协议、检查点选择、审计要求、
+formal_timing 独占口径）继续有效。共享模式下产出的 run 仍不是 formal-timing eligible。

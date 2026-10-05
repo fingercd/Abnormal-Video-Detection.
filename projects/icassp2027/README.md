@@ -1,79 +1,43 @@
 # ICASSP 2027 项目入口
 
-本轮基础重构把论文配置、只读观察和 token 操作契约接到现有 VADBench。
-active 列表仅由 `profile.yaml` 管理；普通 `python -m vadbench encoders list` 继续返回完整 catalog。
-已补充完整中心窗口与 dense 采样、显式检测身份兼容入口，以及不带选择规则的外部索引干预工具。
-当前没有最终 selector、经真实数据验证的压缩方法、XD 专用评测结果或论文数字。
+本项目研究正常与异常视频在编码器内部的 token、时空关系、attention 和读出性质，并验证由此设计的 token 缩减在检测质量、延迟和显存上的实际影响。服务器统一代码入口是 `/users/fotile/VAD`，Python 包与 CLI 仍叫 `vadbench`；大型视频、特征和实验导航从 `/users/fotile/VAD/assets` 进入。当前物理落点、兼容路径与核验范围见[WAVAD 资产说明](../../docs/operations/wavad-assets.md)。
 
-## 运行入口
+## 当前代码与实验入口（2026-09-26）
 
-使用目标模型已经跑通的 Python，示例中的 `python` 需替换为该解释器。
+- 通用数据、encoder、训练和评测能力保留在 `src/vadbench/`。token 缩减和 encoder bridge 在 `src/vadbench/token_reduction/`；`clean_encoder_batch` 位于 `src/vadbench/data/batches.py`，旧导入兼容。[DSANet 三阶段入口](../../src/vadbench/workflows/dsanet/README.md)现已提供 extract、score、quality；原 Python 3.9 环境通过 `scripts/icassp2027/dsanet_legacy.py` 运行 extract/score，Python 3.10+ 可使用模块命令。增量测试 17 项通过，但新入口尚未重跑正式模型实验。旧 run code 保持历史身份。本轮进一步把提取、恢复、合并、通用检测、质量和效率实现迁至 `workflows/`，公共身份与许可分别位于 `data`、`engine`，UR-DMU 后端位于 `integrations/detectors/urdmu/`；旧导入兼容。论文冻结检查和正式阶段编排留在 `paper/`。见[当前架构](../../docs/architecture/current-system.md)。
+- 本目录保存论文 [profile](profile.yaml)、[protocol](protocol.yaml)、[冻结决策](decisions/)、[研究回执](progress.md)、[论文交接](handoff_v2/README_先读我.md) 与 [manuscript](manuscript-20260922/README.md)。旧 [V3 研究计划](RESEARCH_PLAN_V3.md)、[特征提取计划](FEATURE_EXTRACTION_PLAN_20260920.md) 和 [V2 计划](RESEARCH_PLAN_V2.md) 保留各自日期与决策身份，不再用“唯一执行计划”概括当前状态。
+- 2026-09-26 已将经验证的本地源码整合到远端 `/users/fotile/VAD`：456 个文件新增或更新、216 个语义一致文件保留原字节、0 冲突。整合后回归 **191 passed、2 skipped**，`compileall`、encoder catalog、paper status 已通过；跳过项来自当前 Transformers 未导出 `VideoMAEImageProcessorPil`。源码与 dirty patch 备份位于 `assets/provenance/pre-integration-remote-*`。没有改 Git 历史、commit 或 push。
 
-```bash
-python -m vadbench.paper status --project projects/icassp2027/profile.yaml
-python -m vadbench.paper probe --project projects/icassp2027/profile.yaml --suite configs/papers/icassp2027/suites/probe-pilot.yaml --dry-run
-python -m vadbench.paper verify --project projects/icassp2027/profile.yaml --encoder videomaev2 --video data/smoke/mlvu-surveil-8.mp4 --device cpu --dry-run
-```
+## 从哪里开始
 
-上述命令不加载权重、不创建输出。`status` 的 probe-ready 为 null，含义是本命令不核实运行状态；
-真实状态以当前源码对应的验证回执为准。缺失数据和权重在 dry-run 的 blockers 中列出。
-未知字段、inactive encoder、未实现 method 和开发阶段的 test 角色请求会失败。
+| 要做的事 | 入口 |
+|---|---|
+| 看研究进度、冻结与历史运行 | [progress](progress.md)、[决策](decisions/)、[交接材料](handoff_v2/README_先读我.md) |
+| 找 UCF/XD 视频、特征、实验和代码快照 | [资产说明](../../docs/operations/wavad-assets.md)、[正式特征绑定](organization/formal_feature_bindings.jsonl) |
+| 核对数据及评测规则 | [protocol](protocol.yaml)、[实验规则](../../docs/icassp2027/06_EXPERIMENT_RULES_AND_PITFALLS.md) |
+| 看旧框架或服务器操作 | [框架操作流程](../../docs/operations/workflows.md)、[服务器手册](../../docs/operations/server.md) |
+| 阅读论文文件 | [manuscript README](manuscript-20260922/README.md)、[paper workspace](../../paper/icassp2027/README.md) |
 
-去掉 `verify` 的 `--dry-run`，会校验登记权重摘要，复用原 adapter 和预处理，在一个真实 clip
-上分别运行 native、observer、identity 三次前向。输出写到独立的
-`outputs/icassp2027/runs/observer-validation-<时间>-<唯一ID>/`，包括架构回执、统计与 stage-v1 来源。
-失败也保留独立失败回执。这是工程验证，不能用其运行时间宣称加速，也不为输入视频补造标签。
+[整理计划](organization/README.md)保留设计依据与原始盘点；当前完成项见 [执行状态](organization/EXECUTION_STATUS.md)。2026-09-26 已完成六个旧资产根的物理收拢，旧路径改为兼容软链；原视频新副本与归档源副本均保留。`progress.md` 按日期保留执行历史，以最新条目及对应回执为准。
 
-四个桥已实现各自原生几何，真实权重的完整验证优先完成了 VideoMAEv2。其他三模型已用实际库的
-小配置验证结构路径，服务器真权重验证继续进行。TimeSformer 显式区分 temporal/spatial，
-V-JEPA 2 只定位 encoder、保留 wrapper 的 no_grad 限制。未知位置或布局会明确失败。
+## 服务器只读入口
 
-## 路径与数据权限
-
-按需将 `assets.example.yaml` 复制为 `assets.local.yaml`，填写已有视频与权重路径。
-本机文件被 Git 忽略，只接受 `dataset_roots`、`checkpoint_paths`，不放凭据。
-相对路径基于仓库根目录；非标准位置的 profile 使用 `--root` 明确根目录。
-
-默认 `protocol.yaml` 使用 W：开发只用训练视频级标签，正常参考统计只在 fit 拟合。
-用户已在正式测试前将 quality_tolerance 固定为 `0.005`，即最多下降 0.5 个百分点，
-同时报告差值置信区间。
-`paper.compatibility` 提供显式身份及兼容声明校验。`paper.detection` 通过绑定实际 checkpoint
-与目标缓存的 typed permit 执行已声明的采样/表征配对；原 predict 的默认严格指纹检查不变。
-对应工程测试通过不代表已经产生真实 UCF 检测结果。
-
-执行 `probe` 前需要真实训练 manifest，以及只读的 cohort JSONL sidecar。
-suite 中 `manifest` 指向原有 VideoManifestRecord 格式；cohort 每行对应一个固定窗口，例如：
-
-```json
-{"video_id":"actual_manifest_id","clip_id":"actual_manifest_id:segment-00","official_split":"train","partition":"fit","role":"debug","weak_label":0,"label_source":"video_weak","source_id":"actual_source_group"}
-```
-
-示例仅说明格式，不是运行数据。每个入选视频应包含 `segment-00` 至 `segment-07` 共八行，
-与示例 suite 的八个均匀窗口一致。实际弱标签必须与训练 manifest 一致；没有可靠同源信息时
-保留未确定状态，不声称已完成近重复审核。`source_frames` 可进一步冻结每个窗口的真实帧索引。
-同一视频与同源分组不能跨 fit/confirm/select，test 视频和 W 路径的时间真值会被拒绝。
-
-collector 仅接收张量和 token 几何。进入 encoder 的 ClipBatch 会剥离标签、类别、视频路径并使用
-不含类别的临时 ID；统计生成之后才按原始 clip ID join 分析标签。
-每 clip 保留统计和来源，不永久保存完整 attention/token 数组。
-
-## 模块边界与验证
-
-- `src/vadbench/research/`：cohort、标签 join、有限只读采集及一级统计。
-- `src/vadbench/token_reduction/`：布局、质量和 CSR 来源映射、identity 及实例级模型桥；不导入标签模块。
-- `src/vadbench/paper/`：严格 profile/suite 解析、运行、失败回执与身份兼容声明。
-- 原 manifest、视频采样、权重验证、FeatureStore、MIL、predict 和 official evaluator 保持原接口。
-
-VideoMAEv2 几何从真实 Conv3d 输出验证展平顺序，保留每个 tubelet 的原采样帧。
-空间坐标属于预处理后的网格；不宣称已建立原图像素级定位。部分 padding tubelet 排除在统计外。
-P10/P11 使用 native pre-dropout attention 的有界 query 抽样与完整 key 轴，P11 明确标为抽样估计。
-无 CLS 时 P13 为 not_applicable。时间变化按已知 tubelet 位置比较，跨视频解释还需匹配实际时间间隔。
+以下命令已在整合后的远端源码上执行过。沿用现有解释器，不重装环境：
 
 ```bash
-python -m pytest tests/icassp2027
-python -m compileall src tests
-python scripts/icassp2027/check_protection.py --baseline <本轮baseline.json> --allow-changed .gitignore --allow-changed README.md --allow-changed README-CN.md
+cd /users/fotile/VAD
+export PYTHONPATH=/users/fotile/VAD/src
+PY=/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python
+"$PY" -m vadbench encoders list
+"$PY" -m vadbench.paper status --project projects/icassp2027/profile.yaml
 ```
 
-保护检查比较原始字节摘要，不递归读取数据、权重、环境或历史研究目录，不修改文件。
-完整当前测试和真实运行回执见 [progress.md](progress.md)。
+`encoders list` 展示完整 catalog，论文 active 模型以 profile 为准。`status` 仅报告配置和路径可用性，不证明权重加载、GPU 空闲、run 完成或测试质量。node3 公网入口转内部 `ibnode2` 的 SSH 已验证可用，具体命令见[服务器手册](../../docs/operations/server.md)；连接成功本身不代表调度器或 GPU 任务状态。
+
+## 数据、特征与证据边界
+
+UCF-Crime 的默认入口 `data/raw/ucf_crime` 已指向 `assets/datasets/ucf_crime/official_raw_20260918/raw`，1,900 个视频与来源一致；旧 897 子集别名 `ucf_crime_legacy_897` 保留。XD-Violence 的默认入口 `data/raw/xd_violence` 已指向 `assets/datasets/xd_violence/official_raw_accepted3950_20260920/raw`，其中 4,750 个视频及一个辅助文件与来源一致。XD 训练身份仍区分 declared 3,954、accepted 3,950 和 excluded 4，不能把 64+64 筛选池当正式 full-train。原始来源副本在 `archive/datasets` 保留；不能因新默认入口就删掉旧副本。
+
+[正式特征绑定](organization/formal_feature_bindings.jsonl)覆盖 6 个 dense test 和 18 个压缩正式 test 视图。24 个合同 SHA、完整 index SHA 和每个 index 首项 blob 的 SHA/zip CRC 样本已通过；回执位于服务器 `assets/catalog/formal_feature_qa-20260926-r02.jsonl`。未核对全部 blob，也未重跑 encoder 或检测头。正式测试分数不能用于重新选择方法、预算、阈值或 checkpoint；UCF 与 XD 仍按各自时间轴和评测协议解释。
+
+旧基础重构的只读观察资料仍见[观察计划](../../docs/icassp2027/01_NORMAL_ANOMALY_PROBES.md)、[架构说明](../../docs/icassp2027/02_ENCODER_SCOPE_AND_REFACTOR.md)与[执行流程](../../docs/icassp2027/03_EXECUTION_RUNBOOK.md)。观察阶段的 cohort 用训练 manifest 与 JSONL sidecar 固定窗口和角色；训练弱标签不得注入部署 reducer，测试真值只在正式评价阶段使用。原 manifest、视频采样、权重验证、FeatureStore、MIL、predict 和 official evaluator 的具体调用仍以当前源码及相应运行回执为准。

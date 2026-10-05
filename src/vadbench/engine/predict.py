@@ -139,17 +139,17 @@ def _compatibility_target(
     checkpoint_metadata: Mapping[str, Any],
     checkpoint_sha256: str,
 ) -> dict[str, Any]:
-    """Validate the sole paper-scoped exception to exact cache matching.
+    """Validate an explicit checkpoint-bound exception to exact cache matching.
 
-    The import stays local so ordinary prediction neither imports nor depends
-    on the paper package.  A structurally similar object is intentionally not
-    accepted: callers must issue the typed permit from ``vadbench.paper``.
+    The import stays local so ordinary prediction does not load compatibility
+    machinery. A structurally similar object is intentionally not accepted:
+    callers must issue the verified permit from ``vadbench.engine.compatibility``.
     """
 
-    from vadbench.paper.detection import PredictionCompatibilityPermit
+    from vadbench.engine.compatibility import PredictionCompatibilityPermit
 
     if not isinstance(permit, PredictionCompatibilityPermit):
-        raise TypeError("compatibility_permit must be a paper PredictionCompatibilityPermit")
+        raise TypeError("compatibility_permit must be a PredictionCompatibilityPermit")
     authorized = permit.authorize(
         checkpoint_path=checkpoint_path,
         checkpoint_metadata=checkpoint_metadata,

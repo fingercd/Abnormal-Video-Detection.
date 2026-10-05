@@ -1,10 +1,9 @@
-% Full-width framework figure. Queue on page 1 so it is placed at the top of page 2.
-% The supplied PNG keeps its full width and aspect ratio; only the baked-in
-% "Fig. 1. ..." caption strip at the bottom was cropped off (169 of 1024 px)
-% because the LaTeX caption below repeats it. No resampling or stretching.
+% Full-width framework figure, updated from the user-approved draw.io.
+% PNG is a 2x native render (3072 x 1728), cropped at canvas y=864
+% to omit its baked-in caption. The LaTeX caption below is unchanged.
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{figures/pairselect_framework.png}
-\caption{Overview of \method{}. Six dense blocks contextualize all tokens before local, magnitude-guided selection reduces the input to blocks 7--12. Group quotas control pair-member selection; divided attention retains complete spatial trajectories. Clip coverage and the dense-trained detection head remain unchanged.}
+\caption{Overview of \method{}. Six dense blocks contextualize all tokens before local, magnitude-guided selection reduces the input to blocks 7--12. Group quotas control pair-member selection; divided attention retains complete spatial trajectories. The four systems reuse their original temporal sampling and detector weights; CLIP applies pair selection per image and preserves CLS.}
 \label{fig:overview}
 \end{figure*}

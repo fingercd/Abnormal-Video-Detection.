@@ -1,5 +1,7 @@
 # 文档入口与维护边界
 
+当前代码/资产整理状态以 [WAVAD资产与路径](operations/wavad-assets.md) 和 [2026-09-26执行回执](../projects/icassp2027/organization/EXECUTION_STATUS.md) 为准；论文源码与冻结实验入口在 [ICASSP项目](../projects/icassp2027/README.md)。下面的2026-09-11基线保留历史身份。
+
 最初的文档核对以 2026-09-11 读取的 `ibnode3:/users/fotile/VAD` 为事实基线，Git commit 为 `0badc34`。当时本地相同提交且受跟踪源码无修改，因此按模块分工通读相同版本的源码、测试、schema 和配置；服务器实况与历史结果直接从服务器读取。
 
 ## 按任务阅读
@@ -7,7 +9,8 @@
 | 要解决的问题 | 入口 |
 |---|---|
 | 项目目标、安装 | [README-CN](../README-CN.md) |
-| 当前有什么资产、验证到哪里 | [当前状态](progress/current-status.md) |
+| 当前有什么资产、验证到哪里 | [WAVAD资产与路径](operations/wavad-assets.md) |
+| DSANet提取、固定头评分、质量导出 | [框架三阶段入口](../src/vadbench/workflows/dsanet/README.md) |
 | 导入、抽特征、训练、推理与评测 | [操作流程](operations/workflows.md) |
 | 离线环境、资产、overlay、服务器运行 | [服务器操作](operations/server.md) |
 | 模块职责、配置与产物关系 | [当前架构](architecture/current-system.md) |
@@ -26,7 +29,7 @@
 
 - `operations/` 只维护当前操作方法；参数完整定义交给对应 `--help`，模型与环境细项引用 YAML，不在每份文档重复。
 - `architecture/` 解释当前行为与边界；`reviews/` 保留基线建议，实施状态与验证统一到[本轮改造](progress/2026-09-11-implementation.md)。
-- `progress/current-status.md` 是可变状态入口；历史计划不再用“当前 Goal”决定后续任务权限。
+- `progress/current-status.md` 保留早期框架状态；本轮以项目 `progress.md`、WAVAD资产说明和执行回执为当前入口。历史计划不再用“当前 Goal”决定后续任务权限。
 - `research/` 中的学术/外部来源保留原截止日。本轮核对仓内实现，未重查所有论文、模型卡或标注发布状态。
 - `docs/evidence/` 原有 JSON 是不可回填的历史证据。本轮新增[服务器文档核对证据](evidence/server-doc-audit-2026-09-11.json)，记录观察范围与限制；大运行结果仍在服务器 `outputs/`。
 

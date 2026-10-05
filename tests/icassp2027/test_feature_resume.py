@@ -556,6 +556,8 @@ def test_native_reducer_receipts_and_tampering(tmp_path, encoder_id, strategy):
         "vjepa2_original_rope_positions": encoder_id != "vjepa2",
         "vjepa2_position_injections": 99,
         "recorded_position_masks": True,
+        "per_layer_token_counts": {},
+        "plugin_overhead_ms": {"gather_ms": -1.0, "transform_ms": 0.0},
     }
     for name, value in mutations.items():
         changed = copy.deepcopy(rows)
@@ -577,6 +579,8 @@ def test_native_reducer_receipts_and_tampering(tmp_path, encoder_id, strategy):
         ("tail", -1, lambda r: r["gathered_shape"].__setitem__(0, 7)),
         ("suffix_gap", 0, lambda r: r["suffix_shapes"].update({"5": r["gathered_shape"]})),
         ("suffix_hidden", 0, lambda r: r["suffix_shapes"]["1"].__setitem__(2, 999)),
+        ("timing_boolean", 0, lambda r: r["plugin_overhead_ms"].__setitem__("gather_ms", True)),
+        ("timing_missing", 0, lambda r: r.pop("plugin_overhead_ms")),
     ):
         changed = copy.deepcopy(rows)
         mutate(changed[target]["metadata"]["reduction_execution"])

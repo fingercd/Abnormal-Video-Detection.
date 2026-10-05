@@ -32,15 +32,16 @@ from vadbench.engine.evaluate import (
     prediction_records_to_temporal,
 )
 from vadbench.features import FeatureRecord, compute_encoder_fingerprint
-from vadbench.paper import evaluation, repeat_evaluation
-from vadbench.paper.compatibility import (
+from vadbench.paper import evaluation
+from vadbench.paper import repeat_evaluation
+from vadbench.data.feature_contracts import (
     RepresentationIdentity,
     SamplingIdentity,
     feature_cache_key,
     validate_compatibility,
 )
-from vadbench.paper.extraction import _semantic_runtime_identity, _verified_code_digest
-from vadbench.paper.quality_comparison import (
+from vadbench.workflows.extraction import _semantic_runtime_identity, _verified_code_digest
+from vadbench.workflows.quality_comparison import (
     DECISION_TOLERANCE,
     PairedVideoIntervals,
     compare_paired_quality,

@@ -543,6 +543,132 @@ def test_reconciled_policy_rejects_tampered_effective_span(tmp_path: Path) -> No
     assert "official_source_manifest_mismatch" in _error_codes(report)
 
 
+def test_author_clamped_equivalence_accepted_only_with_identical_intervals(
+    tmp_path: Path,
+) -> None:
+    """Arson011_x264 narrow fix: author-side pre-clamp is an equivalent clamp
+    source ONLY when every interval value matches the decoded-side formula.
+    The sealed manifest's sha is immutable, so the audit accepts the
+    equivalent boolean semantics and records the equivalence in the report.
+    """
+
+    def build(frozen_end: int, author_clamped_end: int, *, author_field: str) -> dict:
+        import yaml
+
+        train, test = _official_records_and_files(tmp_path)
+        index = next(i for i, record in enumerate(test) if record.is_anomaly)
+        original = test[index]
+        source_registry = _official_source_registry(tmp_path, train, test)
+        # Patch the frozen source span for this video to raw 1-based
+        # [11, frozen_end] (author raw exceeds the decoded frame count),
+        # then rebind the registry SHA. The manifest record itself keeps a
+        # valid in-range annotation, mirroring the sealed production file.
+        annotation_path = tmp_path / "official" / "Temporal_Anomaly_Annotation.txt"
+        lines = annotation_path.read_text(encoding="utf-8").splitlines()
+        name = Path(original.path).name
+        for position, line in enumerate(lines):
+            if line.startswith(name + " "):
+                parts = line.split()
+                parts[2], parts[3] = "11", str(frozen_end)
+                lines[position] = " ".join(parts)
+        annotation_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        registry_path = tmp_path / "official" / "datasets.yaml"
+        specification = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+        specification["datasets"]["ucf-crime"]["files"]["temporal_test_annotations"]["sha256"] = (
+            hashlib.sha256(annotation_path.read_bytes()).hexdigest()
+        )
+        registry_path.write_text(yaml.safe_dump(specification), encoding="utf-8")
+        decoded_frames = original.num_frames
+        assert decoded_frames is not None
+        effective_end = min(frozen_end, decoded_frames)
+        detail = {
+            "raw_start_1based_inclusive": 11,
+            "raw_end_1based_inclusive": (
+                author_clamped_end if author_field == "raw_end" else frozen_end
+            ),
+            "decoded_frame_count": decoded_frames,
+            "start_effective_1based_inclusive": 11,
+            "end_effective_1based_inclusive": effective_end,
+            "decoded_clamped": False,
+            "empty_after_source_end_reconciliation": False,
+        }
+        if author_field == "end_author":
+            detail["end_author_1based_inclusive"] = author_clamped_end
+        reconciled_annotation = replace(
+            original.annotations[0],
+            span=TemporalSpan(10, effective_end, "frame"),
+            metadata={"raw_start_frame": 11, "raw_end_frame": frozen_end,
+                      "source_end_reconciliation": detail},
+        )
+        reconciled = replace(
+            original,
+            annotations=(reconciled_annotation,),
+            metadata={
+                "source_end_reconciliation_policy": "source_end_reconciled_decoded_v1",
+                "source_end_reconciliation": [detail],
+            },
+        )
+        audited = list(test)
+        audited[index] = reconciled
+        return {
+            "train": train,
+            "test": tuple(audited),
+            "registry": source_registry,
+        }
+
+    def run_case(case: dict) -> dict:
+        return audit_ucf_crime_dataset(
+            tmp_path,
+            case["train"],
+            case["test"],
+            probe_fn=_fake_probe,
+            official_source_registry=case["registry"],
+        )
+
+    # Pattern (a): the author-clamped end occupies the raw_end slot.
+    case = build(frozen_end=1267, author_clamped_end=100, author_field="raw_end")
+    report = run_case(case)
+    assert report["passed"] is True
+    assert "official_source_manifest_mismatch" not in _error_codes(report)
+    equivalences = report["official_source_identity"]["author_clamped_equivalences"]
+    assert len(equivalences) == 1
+    entry = equivalences[0]
+    assert entry["frozen_raw_end_1based_inclusive"] == 1267
+    assert entry["author_clamped_end_1based_inclusive"] == 100
+    assert entry["end_effective_1based_inclusive"] == 100
+    assert entry["effective_span_zero_based_half_open"] == [10, 100]
+    assert entry["author_clamped_field"].startswith("raw_end_1based_inclusive")
+
+    # Pattern (b) — the real sealed byte layout (S0 evidence): the raw_end
+    # slot keeps the FROZEN value (1267); the author-clamped end lives in
+    # ``end_author_1based_inclusive``. Accepted; the report names the field.
+    case = build(frozen_end=1267, author_clamped_end=100, author_field="end_author")
+    report = run_case(case)
+    assert report["passed"] is True
+    assert "official_source_manifest_mismatch" not in _error_codes(report)
+    equivalences = report["official_source_identity"]["author_clamped_equivalences"]
+    assert len(equivalences) == 1
+    entry = equivalences[0]
+    assert entry["author_clamped_field"] == "end_author_1based_inclusive"
+    assert entry["author_clamped_end_1based_inclusive"] == 100
+    assert entry["end_effective_1based_inclusive"] == 100
+    assert entry["effective_span_zero_based_half_open"] == [10, 100]
+
+    # Value drift in the author field (end_author != effective end) is NOT an
+    # equivalence — the audit must still fail closed.
+    drifted = build(frozen_end=1267, author_clamped_end=99, author_field="end_author")
+    report = run_case(drifted)
+    assert report["passed"] is False
+    assert "official_source_manifest_mismatch" in _error_codes(report)
+    assert "author_clamped_equivalences" not in report["official_source_identity"]
+
+    # Value drift in pattern (a) is equally rejected.
+    drifted = build(frozen_end=1267, author_clamped_end=99, author_field="raw_end")
+    report = run_case(drifted)
+    assert report["passed"] is False
+    assert "official_source_manifest_mismatch" in _error_codes(report)
+
+
 def test_malformed_manifest_line_is_retained_as_error_not_exception(tmp_path: Path) -> None:
     train_manifest = tmp_path / "train.jsonl"
     test_manifest = tmp_path / "test.jsonl"

@@ -1,3 +1,273 @@
+## 2026-09-26：经node3内网跳转node2完成6根物理归档
+
+## 2026-09-30｜通用工作流重构完成并同步服务器
+
+通用特征身份/许可归入data/engine，提取/恢复/合并/检测/质量/效率归入workflows，
+UR-DMU后端归入integrations.detectors.urdmu；11个旧paper入口保留同一实现的兼容导入。
+共享ReductionDeployment/ReductionExecutionContext接入实际部署；profile三主线与
+assets/experiments/icassp2027/runs对齐，输出挂载与配置输入的路径约束分开。
+修复恢复回执与每层token/耗时字段不一致，源回执和所有身份检查保留。
+
+本地受影响分组509通过/7跳过；服务器290通过/1跳过，实际Linux软链接边界通过。
+compileall与独立wheel回归通过；71文件增量经预期SHA校验及备份后同步。
+先前中断的大范围运行不计入通过数。正式论文实验与旧资产未改。
+详见[当前架构](../../docs/architecture/current-system.md)与
+[验收、跳过原因和回执](organization/EXECUTION_STATUS.md)。
+
+
+用户指出替代线路后，公网进入node3再`ssh ibnode2`实测成功，原Tailscale故障不再阻塞。完整目录/软链接扫描覆盖四个data2根和两个users根，无外跳相对软链接；60份正式合同/配置/head元数据未见父目录相对路径。node2主特征根含27938202个常规文件条目，合并视图实测大量硬链接。因此采用同盘原子目录交换：四个data2根归入`/data2/localdisk/fotile-wavad/storage/<原名>`；共享users的运行根与旧数据源归入`/users/fotile/VAD/archive/{icassp2027-runs,datasets}`。原六个路径均变兼容软链，常规文件与硬链接不复制不改写。archive已忽略Git。
+
+迁移前已验证中断回滚和独立超时SIGCONT救援；只在维护窗口短暂暂停本项目空队列/hold/monitor守护及非计算子进程，成功窗口node2约16.56秒、node3约19.34秒，均恢复。一次早期保护检查因未识别monitor的tr子进程中止并恢复，未移动目录，回执保留。两节点各96个锚点与314条旧导航均通过，6根inode保持；物理位置映射3455条、missing=0。回执在`assets/catalog/physical-consolidation-20260926.json`、`physical-paths-20260926.jsonl`及provenance的physical-relocation/physical-anchors/maintenance-pause文件。旧raw来源保留为归档备份，未删除历史实验或改科学结果。当前状态见 [执行状态](organization/EXECUTION_STATUS.md)。
+
+## 2026-09-26：WAVAD源码与数据入口实际整合，特征/实验完成分层编目
+
+最终增量验证补充：服务器17项通过；原CLIP Python3.9.23通过薄启动器导入同一extract/score实现和核心CLIP桥，质量模块在原classic Python3.10.20成功导入。回执为 `assets/provenance/organization-final-tests-20260926.log`、`dsanet-legacy-runtime-20260926.json`、`dsanet-quality-runtime-20260926.json`；未加载模型或新增正式实验。两份DSANet作者权重SHA也已复核，加上六个UR-DMU正式head，共8个检测checkpoint校验通过。
+
+用户授权开始整理后，新建共享资产根 `/data2/localdisk/fotile-wavad` 和 `VAD/assets`。两数据集累计189665356641 B复制完成且rsync checksum无差异，默认raw入口切到UCF1900/XD4750完整视频目录，保留旧UCF897历史入口和原始来源。源码候选672文件经SHA核验后提升到远端VAD：456新增/更新、216保持原字节、0并发冲突；原源码、dirty patch与状态已备份，未改Git历史。回归191 passed、2 skipped，compileall及catalog/status通过。token_reduction去掉对paper的反向依赖，新增DSANet extract/score/quality框架入口和9项本地测试，资产完整性3项测试通过；远端增量验证另记回执。
+
+建立139条特征入口和175条实验/来源导航，314条解析检查通过；24份冻结正式测试索引（11.94GB）与合同SHA全部匹配，首blob抽样SHA/CRC通过。运行目录深度编目收集3419个回执目录、174个显式run ID，48目录绑定冻结矩阵，未把目录数写成成功实验数。六个UR-DMU正式checkpoint完整SHA复核通过。本地重复源码ZIP及两份过时接管文档已删除。当前特征/run仍由链接引用旧物理位置，node2今日SSH超时使跨节点活跃writer复核与全量物理迁移尚未完成；没有停止原作业或改写旧实验回执。详见 [执行状态](organization/EXECUTION_STATUS.md) 和 [资产操作说明](../../docs/operations/wavad-assets.md)。
+
+## 2026-09-25：整理计划按明确代码、特征、数据集落点重写
+
+根据用户反馈，重新核对 node2/node3 的物理挂载、数据集入口、dense/压缩/预算扫描/DSANet 特征和正式/开发/失败运行，更新 [organization/README.md](organization/README.md) 及四份配套文档。明确以 `/users/fotile/VAD` 放代码、`/data2/localdisk/fotile-wavad/` 放大型数据/特征/实验并由 `VAD/assets` 导航，按完整 run 分批迁移和保留旧路径兼容链接。综合本地相关 Markdown 与正式结果，新增 [实验与文档重编](organization/04_实验与文档重编.md)。已删除两份过时且无独立证据的本地接管/阶段计划；项目源码 ZIP 删除被执行策略拦截，仍在原位。服务器未迁移、未停作业、未删资产；全量文件级盘点和迁移 QA 待执行。
+
+## 2026-09-25：WAVAD 与 ICASSP 资产整合计划（仅规划）
+
+新增 [organization/README.md](organization/README.md) 及资产清单、目标架构、实施验收三份配套文档。依据本地工作树和 node3 只读目录/进程盘点，记录旧框架与论文运行快照分离、数据和特征散布在 `/users/fotile` 与 `/data2`、部分守护进程仍在等现状。尚未完成全量资产清单，未改远端文件、移动数据、停止作业、读取测试分数或改动框架源码；各阶段均待执行验收。
+
+## 2026-09-24：补齐通讯作者单位上标
+
+按用户确认，将 `manuscript-20260922/author_config.tex` 中 Jianbo Yu 的上标由 `\ddagger` 改为 `\dagger,\ddagger`，对应复旦大学与通讯作者身份。原 `main.pdf` 被占用，首次原路径编译无法写入；改用独立输出目录，两次 pdfLaTeX 编译成功，五页 PDF 保存为 `manuscript-20260922/updated_pdf/author_affiliation/qi.pdf`。首页渲染及文本核对通过，无未定义引用；保留既有约 1.92pt / 0.69pt 纵向警告。旧路径 PDF 未更新，请使用此次新文件。
+
+## 2026-09-24：删除第五页普通致谢
+
+按用户要求删除 `sections/07_declarations.tex` 中的普通资源致谢句及 Acknowledgments 标题，保留伦理声明。两次 pdfLaTeX 编译成功；五页 PDF 的第五页已渲染与文本核对，仅保留伦理声明和参考文献。无未定义引用；纵向轻微警告约 1.92pt / 0.69pt，未见裁切。原路径 `qi.pdf` 被其他程序占用，覆盖与移动均被 Windows 拒绝；新版保存为 `manuscript-20260922/updated_pdf/qi.pdf`，`main.pdf` 同为新版。原目录 `qi.pdf` 仍为旧版，不能误用。旧文件备份在 `outputs/pairselect_drawio/paper_before_remove_acknowledgments_20260924/`。
+
+## 2026-09-24：按第一作者姓氏重命名论文 PDF
+
+按用户要求，将当前五页论文 `manuscript-20260922/main.pdf` 重命名为 `manuscript-20260922/Qi.pdf`，对应第一作者 Zitong Qi 的姓氏。重命名前后 SHA-256 一致，论文内容未变。
+
+## 2026-09-24：新增用户提供的 PairSelect 概念总览图
+
+按用户要求将竖版概念图重建为 `figures/pairselect_graphical_overview.drawio`：第一页包含 205 个可单独修改的对象（文字、曲线、箭头、配对圆点、虚线圈、模型图标及四段原始照片），第二页明确标为原图参考页并完整嵌入原 PNG。可编辑页字体、渐变及抗锯齿仍有细微差异，不宣称逐像素一致。为保证论文图细节保真，论文 PNG 使用参考页对应的原始像素，仅裁外侧空白；嵌入原图字节、论文裁剪像素和两个 draw.io 副本均核对一致。
+
+新概念图位于第一页右栏 Fig. 1，原流程图仍在第二页并顺延为 Fig. 2；更新引言图引用及浮动体声明位置。图注明确分数曲线为 schematic，未作为新实验结果。保留已有正文、讨论结论、表格和实验数据。两轮排版各运行两次 `pdflatex -interaction=nonstopmode -halt-on-error main.tex`；PDF 五页、技术正文结束于第四页，五页均已渲染检查，无未定义引用或横向溢出，保留约 1.92pt 纵向警告但未见遮挡或裁切。draw.io 结构检查 0 错误，原生文字溢出 0；有意叠放的图元仍产生重叠告警。旧 PDF 与改动前源文件保存在 `outputs/pairselect_drawio/paper_before_graphical_overview_20260924_182304/`，回执与编辑说明在同级目录。未运行模型实验，未提交或发布。
+
+## 2026-09-24：第 5、6 节按用户确认文本替换
+
+仅替换讨论与结论正文，使用用户逐句确认的两段英文；仅作 LaTeX 百分号、乘号、连接号和表格引用转换。其余正文、方法、数据、表格和现有图不改。论文目录内两次 pdfLaTeX 编译成功，PDF 五页，技术正文结束于第四页；逐页渲染检查未见重叠或裁切，无未定义引用。balance 留有约 1.36pt 纵向警告。更新工程包为 `PairSelect_sections56_20260924.zip`。
+
+## 2026-09-24：按用户要求覆盖论文流程图（补 DSANet）
+
+将当前确认的原布局 draw.io（仅修复 Patch Embedding，并在三处 encoder 列表追加 DSANet）覆盖到 `manuscript-20260922/figures/pairselect_framework.png`，同时放入同名 `.drawio` 源文件。新图由 draw.io 渲染器 2× 导出，裁去内嵌图注，保留现有 LaTeX caption 和论文正文。两次 `pdflatex -interaction=nonstopmode -halt-on-error main.tex` 成功，`main.pdf` 仍为五页；已检查第二页图及全篇渲染。无未定义引用或横向溢出，balance 仍有 1.36pt 纵向警告。旧 PDF、图及框架 tex 已备份到 `outputs/pairselect_drawio/paper_before_dsanet_figure_20260924/`。未改动模型、表格或实验数据。
+
+## 2026-09-24：按用户附件替换论文叙述
+
+摘要、四系统 token 表、实验协议、效率段和结论按用户提供问答的英文替换稿更新；同步投稿摘要和表格生成器。主文删除 DSANet 独立完整视频测速段落及相关引用，缓存差异和未验证数值等价说明移到 `notes/REBUILD_HANDOFF.md`，原始证据与质量数值保留。运行两次 `pdflatex -interaction=nonstopmode -halt-on-error main.tex`，五页 PDF 逐页渲染检查完成；无未定义引用或横向溢出，balance 留有 1.14pt 纵向警告但未见文字重叠或裁切。`python -m compileall -q src tests` 通过，表格生成器语法及四行计数核对通过，四段替换文案与附件逐字核对通过。未运行模型实验。
+
+## 2026-09-24：论文共同一作标识
+
+在 `manuscript-20260922/author_config.tex` 中为 Zitong Qi 与 Yu Ji 添加同一上标 `1`，作者栏注明两人对本文贡献相同；单位及通讯作者标识未改。用本机 pdfLaTeX 重新生成五页 `main.pdf`，首页渲染核对通过。
+
+## 2026-09-24：四系统论文 Table 3 证据复核与合表
+
+只读核对 `manuscript-20260922/evidence_snapshot/evidence/dsanet/`：UCF/XD 各有 dense、删除 20/40/60% 的 CLIP–DSANet 正式质量回执，同数据集四档的 checkpoint 与测试 manifest 一致；原始 batch-32 编码器计时及完整视频独占计时均保留。Table 3 用同一张表按预算列示四系统的编码器效率，CLIP 主表只选 XD 训练输入的一组，与三视频编码器的数据集来源一致；已删去 B1、显存及完整视频两列，完整视频结果只在正文中说明。每列只在同一系统的四档内标粗最优。导出脚本保留 20 条原始编码器记录，主表展示 16 行；未运行模型、未修改原始证据或质量数据。
+
+## 2026-09-23：DSANet 发布权重四档评分与质量/效率完成（用户范围覆盖）
+
+用户改为不训练检测头、每数据集只用一份作者发布权重。node3 的八卡评分在本机时间23:06:08约5ms窗口同时开始并完成：UCF四档各290视频，XD四档各800视频；各数据集四档权重SHA和测试manifest一致，评分时不读取真值。旧本地full-train head尝试原位保留但不用于本轮结果；旧等待本地head评分的守护PID31830按归属核对后SIGTERM，其他项目进程未改。
+
+正式质量：UCF新raw dense帧AUC 88.868%，删除20/40/60%为88.542/87.966/87.065%；XD新raw dense step AP 85.597%，三档为85.490/85.353/84.379%。10,000次视频级bootstrap的主指标抽样全部有效，预设CI下界≥−0.5pp仅XD删除20%得到支持；其余档保留“未证实”。原生定位五阈值mAP、两分支所有质量指标和原始回执见 [`RESULTS_PUBLISHED_20260923.md`](../../work/dsanet-extension-20260923-r01/RESULTS_PUBLISHED_20260923.md)。UCF此前作者预提特征+发布权重89.4446%是独立身份，不能与本轮新raw特征算压缩差值。
+
+编码器batch32三档倍率UCF为1.096/1.222/1.381×、XD为1.093/1.221/1.383×；batch1三档均略慢。检测头GPU分数计时、完整视频到CPU分数同卡三独立进程计时均已完成。端到端倍率UCF三档为0.968/0.991/0.978×、XD为1.008/1.008/1.014×，完整流程峰值显存未随压缩下降；不得把编码器收益写成完整视频收益。所有正式端到端配置各用对应数据集相同16条完整训练视频，覆盖、帧数、checkpoint SHA已复核。条件能耗/F1与不完整算子覆盖的总GFLOPs按缺项原因标注，不填伪数。
+
+## 2026-09-23 node3本机18:23：UCF尾部接力清单工具就绪但未执行迁移
+
+UCF轻片还未完成，所有八卡仍有本轮提取PID。为可能的UCF尾部负载均衡备好一次性 `work/dsanet-extension-20260923-r01/plan_ucf_tail_rebalance.py`：仅在旧四片writer均退出、轻片2/3有完整completion且回执覆盖预定成员时，才会按已完成回执排除视频、把尚未提取的整视频按原文件字节量贪心分成四份新的唯一manifest；不移动/覆盖旧特征。当前对真实在跑的shard0做安全门试验，脚本按预期拒绝 `old UCF shard0 writer is still alive`，目标目录不存在，四个UCF提取PID均未被改变。**没有启动新任务、没有重分配任何视频。** 轻片完成后的接力需再次根据现场CPU/存储和剩余回执决定，不能把计划清单当作已执行结果。
+
+## 2026-09-23 node3本机18:20：第二条超长UCF训练视频完成
+
+UCF shard1 从258推进至261/403，`Normal_Videos308_x264` 完成回执已核实：原始976503帧，冻结16帧组产生61032行，10个crop文件全部存在，总计1,249,936,640字节；本地复制回执为 `work/dsanet-extension-20260923-r01/qa/normal308-receipt.json`。这说明此前长时间无video计数增长确为一个完整9小时源视频的提取耗时，不是作业失败。UCF四片同期296/261/354/336，XD465/411/424/534；八路进程仍在执行后续完整训练视频，head尚未启动、无正式检测分数。
+
+两条超长视频完成后的第二次只读剩余量快照已保存到 `work/dsanet-extension-20260923-r01/qa/remaining-train-bytes-r02.json`：UCF四片约14.92/15.00/1.87/2.47GB待处理原视频，XD四片约9.80/10.43/10.63/8.47GB。前者失衡仍显著；继续保留当前八路、等较轻片真正完成后才决定是否有必要按**未开始的整视频**接力到空卡。
+
+## 2026-09-23 node3本机18:14前后：剩余原视频字节量确认UCF尾部失衡
+
+只读剩余字节盘点 `work/dsanet-extension-20260923-r01/qa/remaining-train-bytes-r01.json` 按固定manifest和现有完成回执计算：当时UCF四片剩余112/145/60/84视频，原视频字节约15.94/23.70/3.41/4.22GB；XD四片约10.78/11.56/10.63/9.65GB。UCF前两片的剩余大头包括 `Normal_Videos308` 8.67GB与其他较大正常视频。原视频字节仅是工作量proxy，编码复杂度/帧数不同，不能换算确定ETA。当前不停止运行中的完整视频；若后两片先完成且前两片仍有大量**未开始**视频，再以CPU/存储负载与完整回执判断是否对空闲GPU做无覆盖、无重复的整视频接力。没有据此缩减全训练集或改test配置。
+
+## 2026-09-23 node3本机18:12：首条超长UCF训练视频完成并核对十crop
+
+UCF shard0 从258推进至272/403，`Normal_Videos307_x264` 已正式写完：原始628020帧，按冻结16帧组生成39252行；10个crop特征文件全部存在，总计803,882,240字节。该视频完成回执是单独结果，不读取test分数。GPU1的更长 `Normal_Videos308_x264`仍在运行；UCF shard1暂维持258/403且进程/GPU活动存在。同期UCF shard2/3为326/317，XD四片393/345/404/472。训练head仍未满足1610/3950全量门槛。
+
+## 2026-09-23 node3本机17:55前后：完整训练视频字节量与静态分片失衡已核实
+
+当前八路提取均有存活进程和GPU/CPU活动；UCF shard0/1短时不增视频数不是卡死，它们正在处理正常长视频307/308：分别5.48GB/8.67GB、628020/976503帧，代表帧加十crop计算量远大于普通视频。只读全训练集stat清单见 `work/dsanet-extension-20260923-r01/qa/train-size-inventory-r01.json`：UCF1610原视频合计95.81GB，4个分片按视频数均分却按字节为31.05/31.69/16.26/16.81GB；XD accepted3950合计74.64GB，4片18.86/18.65/18.82/18.31GB。UCF前两片未来可能成为尾部瓶颈，当前不能按已完成视频比例线性推ETA。保持现有视频身份和8路生产运行；等轻片真实完成、GPU释放后再以剩余完整视频和CPU/存储负载决定是否值得有界接力，不覆盖旧特征或重复写同一视频。
+
+## 2026-09-23 node3本机17:49：UCF refiner调度总预算在训练前对齐作者源码
+
+复核DSANet原始 `ucf_train.py` 发现refiner的WarmCosine总预算为 `epochs × (len(normal_loader)+len(anomaly_loader))`，而本轮待启动新入口原先写为 `epochs × 实际每epoch优化步数`；两者学习率轨迹不同。已在四head尚未启动时修正：UCF保留作者的调度总预算，实际迭代仍取覆盖完整数据的两loader较长者并循环较短loader，XD调度与实际loader长度原本一致。resolved训练回执将并列记录`optimizer_steps_per_epoch`和`refiner_schedule_batches_per_epoch/total_iters`，不把调整后的训练称作者checkpoint的精确复现。远端新训练脚本已同步并通过Python语法检查；8个特征提取作业未受影响，未读取正式测试分数。
+
+## 2026-09-23 node3本机17:47：训练继续，四head独立完整性门已补验证
+
+八路训练提取继续推进：UCF分片219/220/228/219，XD208/184/218/254，PID全部存活。head入口尚未启动。新增 `verify_four_heads.py` 在四份final完成后核对本轮训练CSV**实际**行数16100/39500、唯一路径、CSV SHA、seed234/235数据集和固定epoch身份、参数总数/可训练数、最终权重SHA与文件大小；四份head QA未通过则八路评分不会派发。合成损坏权重测试1项通过，并核验损坏时不会写出ready回执。node3等待守护PID `16331/1318/31830`均仍存活，测试分数未读取。
+
+## 2026-09-23 node3本机17:45前后：head参数与检查点身份纳入正式回执
+
+在四个正式DSANet head尚未启动前，训练入口 `train_dsanet_final.py` 增加实际加载模型的总/可训练/冻结参数量到resolved config和完成回执；最终固定epoch权重写完后回执记录文件字节数与SHA-256。评分守护新增 `verify_four_heads.py` 强制对四head逐一核对：UCF16100/XD39500十crop CSV行数和SHA、训练seed及数据集、10个固定epoch、无test选模标志、参数量一致、final文件SHA/大小一致、两seed文件身份独立。只有四head QA写出`head-qa.json`后才会释放主8卡同步评分。旧评分等待守护PID `31739`已按归属核对SIGTERM，替换为PID `1318`，训练作业和另外两名守护未中断。
+
+接力后八个训练分片仍有新增回执：UCF216/219/219/207，XD194/184/204/243；四head/评分尚未启动。此前发布检查点的文件大小只作参考，本轮参数/存储主表应以新固定final回执为准。
+
+## 2026-09-23 node3本机17:40前后：训练特征早期QA通过
+
+训练进行中只读抽样QA `work/dsanet-extension-20260923-r01/qa/partial-train-20260923-r01.json` 已通过：UCF四片累计760个唯一视频、XD累计656个唯一视频；每一片已产出的video ID均属于该片固定的全训练集来源，无跨片重复或额外成员。每片选首末各3个视频回执、十crop全核对：48个回执的帧组数/原帧索引/512维FP32特征形状正确，480个 `.npy` 文件SHA与回执一致。该检查不读测试分数；它是运行中的抽样QA，不替代所有1610/3950视频的最终全量CSV验收。
+
+本地四份冻结来源JSONL按`video_id`只读交叉核对：UCF train/test集合交集0，XD accepted train/test集合交集0。这是视频ID层面的检查，不推断官方数据中是否存在同源电影或近重复片段。
+
+## 2026-09-23 node3本机17:38前后：按数据集独立接力完整训练，保留八卡评分屏障
+
+发现旧训练守护错误地把UCF与XD四片的完成合成全局8片屏障，会在UCF先ready时闲置其GPU并推迟两套head。现改成每个数据集独立审核4份分片completion/对应PID退出→生成该数据集16,100或39,500条十crop CSV→立刻在该数据集对应两张GPU启动seed234/235 full-train head；另一数据集未ready不阻塞此阶段。正式八路主score仍等待四head均完成后统一释放，满足用户的八张A100同时推理要求。旧训练守护PID `31738`核对后SIGTERM，换新版PID `16331`；8个在跑提取PID未被中断，head/score守护 `31739/31830`保持原状态。
+
+更换后只读复核8路提取均在进展：UCF各分片161/184/188/161、XD各分片165/132/131/176，全部尚未完成。训练CSV、正式head与评分都尚未启动，未读test分数。
+
+## 2026-09-23 node3本机17:33：八路训练继续，四head与复核评分门槛已核实
+
+当前训练提取八PID全部存活且持续前进：UCF分片126/163/164/140，XD分片143/107/102/145；8卡仍一项本轮提取任务/卡。改进后的后续守护PID `31738/31739/31830` 已远端`bash -n`并实测存活。四head的seed234/235训练均只能在对应完整CSV之后发起；八路主评分须四head全退出并有final后同时释放，seed235四格复核须主评分PID全部退出后才能在GPU0/1/4/5发起。此时CSV、正式head、score均未出现，前期八路测试特征仍是sealed且尚未读分。
+
+本轮将step AP质量导出扩成显式 `--seed` 和 `--tiers`，并要求同一dense/压缩比较的score run全部为completed、视频数正确、测试manifest SHA一致、head checkpoint SHA一致；score原始文件与变换后区间文件都保留SHA。两项导出辅助测试通过。头部计时入口新增16条固定训练视频的独占特征→DSANet GPU测量；完整视频基准把CPU解码/裁剪、H2D、视觉encoder、D2H、时序聚合与head分别计时，尚缺final checkpoint而未执行。
+
+## 2026-09-23 node3本机17:30前后：独立DSANet head种子已接入后续调度
+
+当前八路训练特征提取PID仍存活且各自推进，UCF分片最新约87/145/130/107，XD约119/101/94/126（各分母见下节）。为满足关键配置独立head种子，本轮在完整训练特征及CSV通过后并行启动UCF seed234/235（GPU0/1）、XD seed234/235（GPU4/5）；每个head仍对应自己的完整数据集，不跨数据集或压缩档共享参数，压缩档均使用本数据集对应的dense-trained固定final head。主八格只绑定预设seed234。四份final均完成后才同时释放八路主评分，避免GPU1/5与seed235训练同卡重叠；主八格完成后另外四路seed235 dense/删除40%测试头推理，用于训练变异，不能从两seed挑更高分写主表。
+
+三个未运行到下游阶段的旧守护进程已核对PID后SIGTERM并用新版脚本重启，当前守护PID为 `31738/31739/31830`；其中map/复核守护再补上主八路评分PID全部退出后才释放GPU的检查，旧PID `31740`已按归属核对停止。8个训练作业未中断。新增 `score-seed235-r01` 只做四个复核格。远端 `code/status.sh` 已纳入两个seed及复核评分状态。此时四个正式head和八路评分均**尚未启动**，没有新检测质量数值。
+
+## 2026-09-23 node3本机17:26：八路完整训练提取仍在产出
+
+`status.sh`再查8个训练分片均有存活PID和新增视频回执：UCF shard0–3分别58/107/87/72，XD shard0–3分别82/84/70/93；服务器watch-head、watch-score、watch-map三个等待进程均存活。八路test特征仍为封存完成，不存在当前正式head训练或评分。完整训练集门槛没有跳过。实时节点时钟偏差见下节。
+
+为避免最终“端到端加速”缺口，新增仅在训练视频上使用的 `benchmark_dsanet_head.py` 和完整视频 `benchmark_dsanet_pipeline.py`：分别准备记录DSANet特征到分数GPU时延、从打开视频到分数的wall时延，并对后者分开记录解码/裁剪、H2D、encoder含选择、D2H、聚合与head时间。两个入口已通过Python语法检查，尚缺固定final权重和独占GPU，**未运行、没有数值**。
+
+## 2026-09-23 node3 时钟勘误：旧远端时间戳是服务器本机时间
+
+本轮17:22:00（node3远端显示）同步比对宿主时钟09:31:31 UTC，node3约慢9分半；`timedatectl`显示node3 NTP未启用/未同步。下方所有由node3 `date -Is/-Ins`写出的16:26:39、17:12:45等启动时间，以及远端作业日志时间，都应读作**node3本机时间**，不能当作已与宿主校准的香港时间。并发屏障内的相对窗口（约39ms/100ms）和各脚本`time.perf_counter()`测得的持续时间仍有意义。本轮不修改共享服务器时间、不追溯改写原始回执；跨主机绝对时间汇总必须附时钟偏差。
+
+## 2026-09-23 17:20 DSANet 完整训练特征持续进行，解码优化已做训练侧核验
+
+本轮接力复核 node3：8个训练提取PID `8563/8566/8596/8597/8598/8599/8600/8601` 均实测存活、各绑GPU0–7，约7分钟后UCF各分片26/47/57/49视频，XD各分片36/57/35/51视频；GPU/存储无错误，`/data2`可用约4.8TB。此前8路test特征已封存，不重复读取分数。后续守护PID32047/32049/23101仍在，训练全量CSV、固定final检查点和质量尚未出现。当前CPU负载约45（32核），运行稳定。
+
+为了核对CPU解码是否值得中途切换，仅在UCF/XD各一条**训练视频**比较现有逐帧`read()`与`grab()+retrieve()`取代表帧：两条视频171/196组的选中图像逐像素完全一致，局部解码wall倍率分别`1.382×`/`1.090×`。但十crop预处理与视觉编码仍占全流程时间，收益有限且仅覆盖两条视频；保留已经冻结并运行的提取代码，不中断、不混用新实现。证据在服务器 `smoke/decode-comparison-r01.json`，不是正式端到端效率。
+
+本轮进一步检查将来完整pipeline基准脚本的计时边界，确保视频打开与元信息读取落在wall计时内；脚本尚待head完成后才运行。Goal继续active，不将测试特征完成等同于八项质量实验完成。
+
+## 2026-09-23 17:13 DSANet 测试特征八格封存，训练特征八卡同时开工
+
+`test-campaign-r02` 八档raw CLIP特征均已完成并通过 `check_eight_features.py` 封存，回执同步本地 `work/dsanet-extension-20260923-r01/sealed_test_features.json`：UCF四档各290视频/69,634图像，XD四档各800视频/146,449图像；同数据集dense/compressed逐视频帧索引、crop及特征shape匹配。UCF290/290原始帧数与官方帧真值精确相同；XD800/800原始帧完整覆盖已封存的canonical前缀。封存标记 `test_scores_read=false`，迄今未读取或导出正式分数。
+
+完整训练集特征campaign在17:12:45.941 HKT释放8卡屏障，8个PID实际开始落在约100ms内。GPU0–3各处理UCF1610的一个分片（403/403/402/402视频），GPU4–7各处理XD accepted3950的一个分片（988/988/987/987视频），每个视频十crop。启动后8/8进程实测存活，已出现早期完成回执；输出为 `/data2/localdisk/fotile-icassp2027-dsanet-extension-20260923-r01/train-features-r01/`。两数据集标签和训练列表完整核验，UCF800正常、XD2046正常。训练分片全齐后才生成10crop CSV、训练两套DSANet固定final检查点并同时启动8路评分；守护进程已就位，任何缺失停下游。
+
+两数据集3进程的encoder独占计时完成，新增AP引擎及受影响旧评测回归测试 `55+23` 项通过，`compileall src tests`通过。完整质量、定位mAP、DSANet head及视频端到端效率仍待正式运行；无需把现有旧作者权重分数当本轮dense。
+
+## 2026-09-23 17:06 DSANet CLIP 视觉编码器独占计时双数据集三重复完成
+
+node3 GPU0（UCF）和GPU1（XD）在本轮对应测试特征任务结束后分别独占该卡做短计时；每个数据集3个独立模型加载进程，16条固定训练视频（8正常+8异常）、FP32/TF32-off、batch1/32/128，dense与三个压缩档各20次预热、40次CUDA同步计时。源数据和3份原始回执位于 `work/dsanet-extension-20260923-r01/benchmark/{ucf,xd}-r00/r01/r02.json`；摘要为 `{ucf,xd}-summary.json`。计时边界只含准备好的GPU图像→CLIP视觉塔pooled输出，**包含动态选择和gather**，不含解码/传输/DSANet head。三次中位效率如下：
+
+| dataset | batch | del20 | del40 | del60 |
+|---|---:|---:|---:|---:|
+| UCF | 1 | 0.953× | 0.956× | 0.932× |
+| UCF | 32 | 1.096× | 1.222× | 1.381× |
+| UCF | 128 | 1.101× | 1.238× | 1.403× |
+| XD | 1 | 0.919× | 0.962× | 0.924× |
+| XD | 32 | 1.093× | 1.221× | 1.383× |
+| XD | 128 | 1.105× | 1.231× | 1.402× |
+
+batch1变慢已保留；选择器单独测量约0.45–0.57ms。显存allocated/reserved峰值在40%/60%档未稳定下降，受前六层dense和静态权重限制，不建立显存节约主张。每一档另保留实际每层token、principal-block解析GFLOPs、p50/p95、原始40样本与3进程倍率。完整视频端到端测量待固定DSANet head就绪。
+
+UCF测试特征与既有官方帧真值长度290/290精确相等；XD目前已完成的639视频均满足官方canonical前缀可由原视频完整覆盖，无短于真值的记录。UCF/XD新固定训练入口分别完成一step训练样本smoke；分片提取和resume smoke通过，正式完整训练仍待XD测试特征封存后自动启动。
+
+## 2026-09-23 16:56 DSANet UCF四档测试特征完成，XD四档仍在跑
+
+正式 `test-campaign-r02` 中UCF dense/keep0.8/0.6/0.4四路均完成：每路290视频、69,634图像，单路记录约1233–1241秒；它们是8卡共享节点上的**生产提取wall时间**，不能冒充独占加速。XD四路约603–614/800，仍在GPU4–7运行。UCF四路保留共同manifest/权重/bridge摘要。8路完成后守护PID2731才做逐视频帧索引和特征shape封存，封存通过后才自动同时启动8卡训练特征分片；守护PID32047在8个完整train分片与CSV齐全后启动UCF/XD固定final DSANet训练；PID32049等两head通过后启动8路正式head评分；PID23101随后跑作者五档定位mAP。所有自动阶段失败时停止下游，保留失败目录。
+
+训练侧工程验证：UCF正常/异常训练样本DSANet前向、反向及188个有限梯度张量通过；UCF和XD各使用训练特征完成新固定final训练入口的单步smoke，均不建立正式checkpoint；使用发布权重在各一条训练视频上完成新评分入口smoke，无test真值访问。训练feature CSV的单视频十crop收据验证通过。这些不构成正式检测成绩。
+
+GPU0从UCF dense完成后转为独占encoder效率测量：已有一轮UCF训练图像的B1/B32/B128四档、20 warmups+40同步测量回执；另两个独立进程重复在运行。B1压缩可能更慢，B32/B128中高档净加速的方向已见，但三重复和XD/端到端尚未完成，不将此写为最终论文结论。batch128与每路worker1继续遵照高CPU负载现场配置。
+
+当前文件改动：新增独立DSANet执行脚本、CLIP动态PairSelect桥及其测试；共享视频级质量比较器新增独立step AP bootstrap模式，保留原梯形PR-AUC定义。相关55项本地测试通过，`python -m compileall -q src tests`通过。论文未修改，未读取正式测试分数。
+
+## 2026-09-23 16:27 DSANet 八卡同时启动测试特征提取，检测头和评分待完成
+
+用户明确要求8张A100同时开始、每卡一个实验。node3 `ibnode3` 上 `test-campaign-r02` 于16:26:39.016 HKT释放屏障，8个PID实际开始时间在约39毫秒内：GPU0–3为UCF dense/keep0.8/0.6/0.4，GPU4–7为XD相同四档。运行根 `/users/fotile/icassp2027-runs/dsanet-extension-20260923-r01/test-campaign-r02/`，启动后8/8进程存活，已各处理约4–5个视频。旧 `test-campaign-r01` 因dense两路启动脚本空数组错误形成失败attempt；其余6路由主控核对PID后SIGTERM，失败日志及部分输出原位保留，不能混入正式结果。
+
+现有来源清单UCF train1610/test290、XD accepted train3950/test800，测试CSV全清单UCF为crop5、XD为crop0。UCF `Anomaly_Train.txt` 本身包含800个normal，准备脚本的首次重复追加被数量门拦住，修正后的4份清单写入 `manifests-r02/`。CLIP逐图像动态PairSelect bridge已补，真实权重训练视频identity最大误差约`1.49e-6`，三档suffix长度158/119/79；UCF/XD各一个训练视频十crop提取冒烟通过。本地3项CLIP桥测试通过。
+
+八路正在执行raw视频解码与CLIP特征推理，**并非完整测试评分**。完整训练集DSANet dense检测头及固定final checkpoint、八格score与质量、独占效率仍待做；未读取正式测试分数。node3启动前32核CPU负载约70，八路先统一batch128、每路1个decode worker，依据生产吞吐再决定是否调整；其它项目进程未停止或修改。计划和实时约束见 [DSANET_CLIP_EXTENSION_PLAN_20260923.md](DSANET_CLIP_EXTENSION_PLAN_20260923.md)。
+
+## 2026-09-23 DSANet 强 WSVAD 扩展计划完成，尚未启动新实验
+
+用户要求新增一个SOTA级CLIP WSVAD模型，并明确具体选择由主控决定。本轮读完当前PairSelect论文、现有CLIP部署/对齐回执及DSANet官方论文和实现，选定DSANet（AAAI 2026）。详细计划见 [DSANET_CLIP_EXTENSION_PLAN_20260923.md](DSANET_CLIP_EXTENSION_PLAN_20260923.md)：UCF/XD各dense、删除20/40/60%共8次完整test；原生DSANet检测器、对应完整训练集dense训练与固定final；质量/定位mAP/视频级CI，以及batch1/32、端到端、显存、FLOPs和插件开销均有验收项。
+
+node3公网只读核验确认DSANet两套权重和CLIP底座SHA与台账一致；历史UCF89.4446为官方特征+官方权重旧回执，不是本轮raw复现。测试CSV首部UCF为crop5、XD为crop0，训练多crop不能误写成test十crop平均；完整CSV分布仍列为执行前审计。XD原生训练脚本使用test AP选模并回载，正式新训练须隔离该路径。原视频16帧组内取样协议仍未完全恢复，计划规定有界对齐后冻结明确raw身份并完整训练。DSANet源码目录没有.git，历史revision未冒充现场Git验证。
+
+本轮只新增计划并更新此进度入口，未修改论文/实验源码、未启动提取/训练/测试、未commit或push。计划中的预算token/GFLOPs为解析预期，所有新质量/效率实测仍待执行。
+
+## 2026-09-23 论文已回填三档质量与 batch=32 效率，PDF 通过布局核查
+
+经用户明确允许，`projects/icassp2027/manuscript-20260922` 已完成结果回填。没有新增或删除结果表：既有质量表填满 dense、删除20/40/60%三档；既有效率表填入 batch=32 的 token、principal-block GFLOPs/降幅、每批延迟、吞吐和相对dense加速。论文正文不展示batch8/16对比，只在效率表标题和实验设置中声明固定batch=32口径。
+
+摘要、Introduction、Experiments、Scope和Conclusion已同步：中等预算batch32吞吐提升为V2 `1.225×`、VMA `1.247×`、TS `1.277×`；激进预算为`1.330×/1.378×/1.470×`。质量表完整保留UCF VMA高压缩下降和XD梯形PR-AUC/step AP方向差异，不据test选择最优预算。硬件结果限定为准备好的GPU输入到pooled encoder输出，包含动态选择/gather/deployment校验，排除解码、processor、传输、检测头和写盘。
+
+`scripts/export_tables.py`已增加batch32数据一致性检查；`data/batch32_efficiency_results.json`绑定实测值和来源；12项新增质量由审核exports导入`data/budget_results.json`。`submissions/abstract.txt`同步为119词。PDF重新编译为5页Letter（4页技术正文+1页声明/参考文献），`lasttechnical`在第4页；17条引用全部解析，无missing/uncited、Overfull、undefined reference或LaTeX warning。Poppler逐页渲染复核表格、正文、图和参考文献，无裁切/重叠；最终文件为`projects/icassp2027/manuscript-20260922/main.pdf`。
+
+本轮验证：`python scripts/export_tables.py`、`scripts/check_refs.py`、`python -m py_compile scripts/export_tables.py`、`python -m compileall -q src tests`、`git diff --check`通过；PDF metadata为5页、Letter、未加密。仍待作者确认伦理/资助/冲突声明和按会议政策实质性作者撰写核查，未commit、push或投稿。
+
+## 2026-09-23 batch=16/32 快速扩展复测完成：三编码器、三预算全部加速
+
+用户确认论文主要 batch 口径为8，并要求最快补测 batch16/32。node3 三张空闲 A100 并行完成：TimeSformer/VMA/V2 分别使用GPU2/3/4，无同卡共驻计算进程。每个encoder固定同一条正常和一条异常XD训练视频；每个视频按batch大小确定性均匀采样16或32 clips；同一模型实例下比较dense与PairSelect keep=.80/.60/.40。FP32、TF32-off、cuDNN-off、输入、权重、原生forward和pooling均匹配；processor/H2D在计时外，动态选择、gather、deployment context和执行校验在计时内。每个配置预热20次，每条视频正式计时20次，合计40样本；执行顺序按视频和batch轮换。
+
+batch16加速（.80/.60/.40）：TS `1.096/1.257/1.438×`，VMA `1.080/1.182/1.311×`，V2 `1.061/1.209/1.311×`。batch32：TS `1.111/1.277/1.470×`，VMA `1.088/1.247/1.378×`，V2 `1.095/1.225/1.330×`。每格两条视频的方向均一致。结合此前batch8结果，中高压缩三encoder均加速；VMA/V2 keep=.80从batch8近似持平变为batch16/32明确加速。独立报告为 `work/batch-scaling-20260923/RESULTS.md`，原始文件在其`results/`。本轮`verify_results.py`核验脚本SHA、输入receipt、40样本和逐视频方向通过；`compileall -q src tests`通过。论文未修改。
+
+## 2026-09-23 本轮计算完成：12/12 预算质量报告、三编码器效率实测，论文等待允许
+
+本轮约定的计算已经完成。VideoMAE×XD keep=0.40 恢复索引后合并，keep=0.80 只补提缺失17视频/3871clips；两个最终视图均覆盖800视频/145703clips，路径为 `compressed-budgetsweep-r01/videomae/xd/{0p40,0p80}/merged/pair_select-{tier}-r05-resumed`。全部12项新增预算预测及质量导出完成，主控 `campaign-state.json` 为 `completed`。原有dense、keep=0.60、六个full-train head保持原身份，没有重训或全量重提。
+
+独立交付目录为 `work/result-review-20260923-r01/`，主报告 `RESULTS.md`、结构化汇总 `results.json`，包含12项新质量结果、原中等预算对照、12种效率配置及来源。远端69份小型证据文件已逐一与本地SHA核对一致。质量导出验证290/800视频、指标/单位和delta一致；计时逐项验证3独立进程×4预算×2batch×16视频×3正式样本，每encoder1152个样本。Luna max只读复算与汇总逐项一致，没有单位或汇总错误。
+
+主要观察：新增12格中11格点估计满足-0.5百分点容忍度，5格配对95%CI下界达标；UCF VideoMAE keep=0.40下降1.053百分点。XD VideoMAE keep=0.40的梯形PR-AUC增加0.776百分点，但step AP下降1.394百分点，两种定义必须分开报告。
+
+效率使用同一A100 GPU6、FP32、固定16个XD训练视频（8正常+8异常），只测准备好的GPU输入到encoder pooled readout，包含选择/gather/部署开销。TimeSformer batch1在keep=.8/.6/.4加速1.019/1.145/1.308倍；VideoMAE与VideoMAEv2的batch1均比dense慢。batch8在keep=.6/.4的吞吐倍率分别为V2 1.116/1.194、VMA 1.141/1.268、TS 1.228/1.422；VMA/V2 keep=.8接近持平。batch1和batch8峰值allocated/reserved均未明显下降。FLOPs仅为已核实的principal-block解析值，不宣称完整encoder实测FLOPs。累计 `plugin_overhead_ms` 未用于任何单次耗时表。
+
+过程中保留了V2首次加载失败（遗漏既有tokenizers shim）和最后补片评分身份失败；前者补上现有依赖路径后在r02完成3次有效重复，后者识别merge已声明的显式pt/默认pt等价后完成预测，未覆盖旧文件、未伪造指纹。VMA/V2新预算与旧路径的数值等价仍未证明，按用户明确决定接受其复用并保留说明。
+
+自用户要求“先讲清楚、再允许改论文”以来，论文目录内容摘要核对完全不变；未回填新指标、未重编PDF。暂停前的四处说明/表结构修改已在独立包 `changes-before-permission.md` 列出。后续论文修改须等待用户明确允许。本轮 `python -m compileall -q src tests`、新增脚本py_compile通过，导入工具4项测试通过。
+
+## 2026-09-23 当前交付边界：完成计算并解释，论文等待后续明确允许
+
+用户在短暂暂停并讨论计划后要求先完成全部剩余计算与独立结果说明，解释清楚后才允许修改论文。现已恢复提取/合并、预算评分和效率调度；本阶段禁止继续写入 `manuscript-20260922/` 或重编 PDF。独立结果包输出至 `work/result-review-20260923-r01/`，其中记录最新指示后的论文文件摘要，并单列暂停前已发生的四处说明/表结构修改。主控负责执行整合，简单只读效率口径核对已委派 Luna max；不恢复先前的非 Luna 执行代理。
+
+## 2026-09-23 用户决定：复用预算扫描特征，完成 12 项评分与小样本效率测试
+
+用户明确要求复用现有 keep=0.40/0.80 特征，取消将运行环境/代码指纹数值等价验收作为评分前置条件；该决定不等于已证明数值等价。保留真实特征身份、旧失败目录、视频覆盖、时间轴、权重、固定 head 与 SHA 来源检查。旧 dense/keep=0.60 主矩阵保持原身份。
+
+现场更正：TimeSformer 四项新预算预测已完成，可复用。VideoMAE×XD keep=0.40 的 800 视频、145703 clips 已落盘，需恢复汇总索引和合同，无需重提；keep=0.80 缺 17 视频、3871 clips，正按原 pt/classic 路径独立补片。两个最终视图计划为 `compressed-budgetsweep-r01/videomae/xd/{0p40,0p80}/merged/pair_select-{tier}-r05-resumed`。
+
+主控已启动专用评分控制器：node3 公网线路，PID 28162，GPU4，日志 `/users/fotile/icassp2027-runs/budget-resume-20260923/campaign.log`。它复用已有 TimeSformer 预测，其余写入新的 `urdmu-official-predictions-budgetsweep-r02-reuse`，12项质量导出写入 `urdmu-quality-exports-budgetsweep-r02-reuse`。仅对此预算扫描进程放行 code_digest 配对差异，真实 representation 不改写，接受差异回执作为 export 来源；不修改通用校验源码或旧行尾等价表。新输出目前仍在运行，不能据此记为完成。
+
+效率短测在 GPU6 独占该卡执行，固定 XD 训练集16视频（8正常+8异常，同三encoder），测试 dense/keep=0.80/0.60/0.40；batch1延迟/显存、batch8吞吐、20次预热和3独立进程。统一 benchmark 环境与历史质量提取环境的区别须披露；只测量实际执行范围，不将 principal-block 解析 FLOPs 冒充完整 encoder 实测 FLOPs。首轮 runner PID 26894，目录 `efficiency-20260923-r01`，等待实际结果。
+
+本地本轮 `python -m py_compile` 两个专用评分脚本、`python -m compileall -q src tests` 已通过。数值结果和论文表格待真实导出后回填。
+
+## 2026-09-22 20:1x 预算扫描派工定稿：8 对卡 16 GPU 并行（负责人最新口径）+ 19:23 全灭事故根因与处置
+
+**负责人最新调度口径**（覆盖 serial 串行方案）：12 个任务（3 encoder × 2 数据集 × pair_select keep 0.80/0.40，sealed test），16 张卡两两成对 → 同时起跑 8 个任务，成对空闲即接剩余 4 个；过程中持续记录效率数据（显存、加速、FLOPs 等）。
+
+**19:23 全灭事故（12/12 rc=2，总耗时 1.6 秒）根因**：`run_when_gpu_free.py` 的 verify_worktree 拒绝启动——`code-kimi-adgs-20260921` 快照有 69 个 tracked 改动（行尾豁免补丁及后续工作），日志原文 "gpu guard refused to start: tracked worktree changes are present"。该串行运行未走 `go.sh` 的快照 fork 步骤（`code-bsw-r01` 从未创建；远端 sweep 目录当时也缺 `do_snapshot.sh`/`update_plan.py`）。
+
+**处置**：①失败现场 24 个半片目录 + merges + progress.json 完整归档至 `state/archive-failed-20260922-1923/`，未删除未覆盖；②新派工 `pair_worker.py`（一对卡一个进程，NAS mkdir 原子锁认领整任务，两半片并行→自动 merge→认领下一任务；`.failed` 半片永不覆盖；`--reclaim-task` 人工确认后回收死 claim）；③配套 `start_pairs.sh`（每节点 4 对：0-1/2-3/4-5/6-7）、`monitor_gpu.sh`（双节点 20 秒级 GPU 显存/利用率/PID 采样，效率证据只覆盖监视窗口）、`status_pairs.sh`（只读进度聚合，不含任何测试分数）；④本地 py_compile / bash -n 通过。
+
+**现场实测**：node3 GPU3/6 全空，0/1/2/4/5/7 有他项目小进程（GPU5 有 4GB/100% 占用）；node1 8×V100 全空；node2 GPU6 被占 15.7GB 不纳入。16 卡 = node3 8×A100 + node1 8×V100（沿用 gpu-scope-revision-v1.md 范围）。跳板机 ibmnode 链路间歇性超时/重置，bringup（同步脚本→fork 快照→更新 plan→node1 可达性核验）改由带重试的后台任务执行。
+
+**效率数据记录口径**：监视器全程采显存/利用率；runner progress 记录每半片 wall-clock；FeatureStore `reduction_execution` 提供实测保留比与 per-layer token 数（FLOPs 解析计算）；正式延迟/吞吐表仍须后续独占 `--formal-timing` 窗口（共享卡不 eligible，质量不受影响）。
+
 ## 2026-09-22 17:00 六格矩阵装配成功并解封（M1/M2 达成）
 
 **执行依据**：`C:\Users\lenovo\Desktop\课件\ICASSP2027_next_steps_v2_20260922.md`（v2 计划）。负责人对三个关口问题的批示：①完整显存证据**不是**解封硬门槛（依据 `reducer-evaluation-freeze-v1.json` 的 `claims_not_established` 明确列 `peak_memory_reduction` 为未建立主张，且 `access_gates` 四项 / `official-detector-protocol-v3` 的 `execution_gates` 七项均不含显存要求）；②**不补开** GPU monitor；③解封与阶段 B **全程自主，做完一次性汇报**。
@@ -76,7 +346,8 @@ node3 正式 18 路仍有 xtract_count=18。当前已写 compressed clip record
 
 ## 2026-09-22 08:50 六格 dense head 训练指标与 QA 复核
 
-已直接读取六个正式 head 的 	raining-steps.jsonl、esult.json 和 	raining_qa.json。六格均正好 3000 steps，所有 loss 分量 finite，每步均为 64 normal + 64 abnormal bags，
+已直接读取六个正式 head 的 	raining-steps.jsonl、
+esult.json 和 	raining_qa.json。六格均正好 3000 steps，所有 loss 分量 finite，每步均为 64 normal + 64 abnormal bags，
 onzero_gradient_parameters=34 且 QA 记录 
 onzero_gradient_steps=3000；六格 	raining_qa.status=passed、strict reload missing/unexpected keys 为空、reload xact_equal=true、max_abs_difference=0.0，六个 official_model_scores_read=false。训练目标从约 1.11 起步并降到各自低位；VideoMAEv2×UCF 的尾部 loss 中位数约 0.0237、最终 0.0205，高于其他 head 且有少量有限尖峰，但没有 NaN/Inf、梯度或 reload 异常，先作为训练侧诊断记录，不据此读取测试或改方法。训练文件不产生正式 UCF/XD AUC/AP；正式质量指标仍只在冻结后的 evaluation 阶段导出。
 

@@ -1,5 +1,16 @@
 # 服务器 v2 编码器运行手册
 
+## 当前 node2 连接路线（2026-09-26 验证）
+
+先从公网登录 node3，再在 node3 内通过 `ibnode2` 登录 node2；这条路线已实测成功，Tailscale 故障不再阻塞 node2 维护。第二跳使用批处理模式和严格主机密钥核对：
+
+```bash
+ssh -p 12345 fotile@121.196.228.153
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes ibnode2
+```
+
+node2 的 `/users` 已核实为来自 `ibnode3:/users` 的 NFS 共享目录；node2 的 `/data2/localdisk` 是本地盘，node3 经 `/data2` 挂载读取。当前六个旧资产根的实际位置与旧路径兼容软链见[WAVAD 资产说明](wavad-assets.md)。连接成功不等于调度器、writer 或 GPU 作业状态已核验。
+
 服务器既有 `.venv` 内仍有早期已安装包。使用源码工作区时先执行 `export PYTHONPATH=/users/fotile/VAD/src`，再运行 `python -m vadbench`；可用 `python -c "import vadbench; print(vadbench.__file__)"` 确认路径。v2服务器脚本和隔离benchmark已通过公共helper显式选择当前源码，无需修改受保护环境。
 
 > 适用工作区：`/users/fotile/VAD`

@@ -10,9 +10,10 @@ from typing import Any
 from vadbench.artifacts import new_run_id, record_stage
 from vadbench.data.manifest import load_manifest_jsonl
 from vadbench.features import atomic_write_json
-from vadbench.paper import evaluation, xd_evaluation
-from vadbench.paper.compatibility import RepresentationIdentity, SamplingIdentity
-from vadbench.paper.detection import predict_detector
+from vadbench.paper import evaluation
+from vadbench.paper import xd_evaluation
+from vadbench.data.feature_contracts import RepresentationIdentity, SamplingIdentity
+from vadbench.workflows.detection import predict_detector
 from vadbench.paper.xd_head_repeats import (
     load_frozen_xd_repeat_head_source,
 )

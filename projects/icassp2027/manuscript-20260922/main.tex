@@ -9,7 +9,7 @@
 \hypersetup{
  pdftitle={PairSelect: Training-Free Token Selection for Efficient Weakly Supervised Video Anomaly Detection},
  pdfauthor={Zitong Qi; Yu Ji; Yihan Zhang; Ruihan Liu; Zhixiang Liu; Yu Pan; Jianbo Yu},
- pdfsubject={Author working draft; unmeasured experiments remain pending},
+ pdfsubject={Author working draft; four-system, three-budget quality and scope-separated efficiency evaluation},
  pdfkeywords={WSVAD, PairSelect, training-free, token selection, ICASSP 2027}}
 \setlength{\emergencystretch}{2em}
 % Moderate positive float-to-text spacing; preserve template margins and body leading.
@@ -17,7 +17,6 @@
 \setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
 \newcommand{\method}{PairSelect}
 \newcommand{\tableinput}[1]{\csname @@input\endcsname{#1}}
-\newcommand{\pending}{\textemdash}
 \newcommand{\draftnote}[1]{\par\noindent\textit{Author working draft: #1}\par}
 \newcommand{\norm}[1]{\left\lVert#1\right\rVert_2}
 \input{author_config}
@@ -27,17 +26,16 @@
 \ninept
 \maketitle
 \begin{abstract}
-Detecting rare events requires sustained observation, but not necessarily full computation for every internal video token. We introduce PairSelect, a training-free token selection operator for frozen weakly supervised video anomaly detectors. After dense contextualization in the first half of a video encoder, PairSelect allocates local quotas and retains activation-magnitude-guided representatives without averaging their vectors. It uses adjacent spatial pairs for joint-attention encoders and complete spatial trajectories for divided space--time attention. Neither input clip coverage nor the dense-trained detection head is changed. Across three encoders and two datasets, the completed middle-budget evaluation removes approximately 40--43\% of subsequent tokens, with primary-metric changes from $-0.16$ to $+0.68$ percentage points. Analytical accounting predicts 21.75--23.04\% fewer operations in the twelve principal transformer blocks. Additional budgets and measurements of full-encoder FLOPs, latency, throughput, and peak GPU memory remain to be completed.
+Detecting rare events requires sustained observation, but not full computation for every internal token. We introduce PairSelect, a training-free operator that retains local, magnitude-guided representatives after six dense transformer blocks, without mixing their vectors or reducing input coverage. To assess generalization, we evaluate four weakly supervised video anomaly detection systems: VideoMAEv2-B, VideoMAE-B, and TimeSformer-B paired with a common UR-DMU detection-head architecture, and CLIP ViT-B/16 paired with DSANet, a recent state-of-the-art detector. Each UR-DMU head is trained separately on its encoder’s full dense-feature training set, and all four systems reuse their detector weights across token budgets. Across UCF-Crime and XD-Violence, 40\% nominal token deletion preserves near-dense performance in most configurations, with batch-32 encoder speedups of 1.22--1.28$\times$. With only mild performance degradation in most configurations, increasing deletion to 60\% delivers up to 1.47$\times$ encoder acceleration. These results demonstrate that PairSelect generalizes across visual representations and detection architectures, improving encoder efficiency without compression-specific retraining.
 \end{abstract}
 \begin{keywords}
 video anomaly detection, weak supervision, token selection, training-free compression, efficient inference
 \end{keywords}
-\draftnote{unmeasured results are marked with dashes; author revision and verification are required before submission.}
 \input{sections/01_introduction}
-\input{figures/framework}
 \input{sections/02_related_work}
 \input{sections/03_method}
 \input{sections/04_experiments}
+\balance
 \input{sections/05_limitations}
 \input{sections/06_conclusion}
 \label{lasttechnical}

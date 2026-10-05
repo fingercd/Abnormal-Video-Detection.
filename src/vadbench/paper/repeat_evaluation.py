@@ -13,12 +13,12 @@ from vadbench.checkpoints import sha256_file
 from vadbench.data.manifest import load_manifest_jsonl
 from vadbench.features import atomic_write_json
 from vadbench.paper import evaluation
-from vadbench.paper.compatibility import (
+from vadbench.data.feature_contracts import (
     CompatibilityDeclaration,
     TrainingIdentity,
     feature_cache_key,
 )
-from vadbench.paper.detection import DetectionConfig, evaluate_detector, predict_detector
+from vadbench.workflows.detection import DetectionConfig, evaluate_detector, predict_detector
 
 
 @dataclass(frozen=True)

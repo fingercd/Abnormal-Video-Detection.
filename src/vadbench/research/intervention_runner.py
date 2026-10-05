@@ -11,7 +11,7 @@ from typing import Any, Literal
 import torch
 
 from vadbench.contracts import ClipBatch
-from vadbench.paper.stages import clean_encoder_batch
+from vadbench.data.batches import clean_encoder_batch
 from vadbench.research.interventions import (
     fixed_budget_indices,
     paired_spatial_indices,

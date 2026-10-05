@@ -1,0 +1,35 @@
+{
+  "schema": "icassp2027.training-side-method-selection/v2",
+  "status": "completed_training_side_selection_frozen_for_official_test",
+  "selected": {
+    "candidate": "pair_select",
+    "controls": ["group_uniform", "group_random"],
+    "keep_ratio": 0.6,
+    "insertion": "ceil(0.5 * verified_native_block_count) - 1",
+    "seed": 0,
+    "head_mode_primary": "direct_insert",
+    "head_mode_optional": "refit_head_budget_matched"
+  },
+  "selection_role": "training_side_only",
+  "test_scores_read": false,
+  "scope": {
+    "contract_path": "projects/icassp2027/decisions/six-cell-scope-contract-v1.json",
+    "contract_sha256": "eac12d9248b4970e1d3528af30efc14a3a9d90ee7c7558965215b1cd9d6d7e25",
+    "cells": ["videomaev2/ucf_crime", "videomae/ucf_crime", "timesformer/ucf_crime", "videomaev2/xd_violence", "videomae/xd_violence", "timesformer/xd_violence"]
+  },
+  "evidence": {
+    "screen_manifest_path": "outputs/icassp2027/control/codex-takeover-20260920/idea/v2-adgs-screen-20260921/screen_manifest.json",
+    "screen_manifest_sha256": "f6f36fd6e35079721700366c537fc3e07bec7430c9eee15245c19fb2458c7ced",
+    "screen_roles": "UCF 32 normal + 32 anomalous; XD 32 normal + 32 anomalous",
+    "screen_limit": "training-side screen only; no formal test claim",
+    "negative_evidence_preserved": ["pair_mean_distribution_shift", "cross_encoder_small_caliber_nonreplication"],
+    "parameter_rule": "same frozen native group budget and middle verified layer across all six cells; actual retained counts must come from per-run receipts"
+  },
+  "official_test_gate": {
+    "requires_method_freeze_v2": true,
+    "requires_all_six_dense_head_qa": true,
+    "requires_ucf_sealed_test_audit": true,
+    "requires_xd_sealed_raw_coordinate_audit": true,
+    "requires_same_input_coverage": true
+  }
+}

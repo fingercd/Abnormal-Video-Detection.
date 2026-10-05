@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from vadbench.paper.profile import load_project
+from vadbench.paper.profile import load_project, output_path
 from vadbench.paper.resolve import resolve_probe, status
 from vadbench.paper.stages import run_probe
 
@@ -42,15 +42,14 @@ def test_profile_reuses_catalog_without_loading_models(project):
     report = status(project)
     assert [row["id"] for row in report["encoders"]] == [
         "videomaev2",
-        "timesformer",
-        "vjepa2",
         "videomae",
+        "timesformer",
     ]
     assert all(
         row["probe_ready"] is None and not row["reduction_ready"] for row in report["encoders"]
     )
     assert tuple(ENCODER_REGISTRY) == before
-    assert len(before) > 4
+    assert len(before) > 3
 
 
 @pytest.mark.parametrize(
@@ -75,7 +74,7 @@ def test_dry_run_reports_blockers_cost_and_label_access_without_outputs(project)
     assert plan["cost_upper_bound"]["forward_windows"] == 192
     assert plan["label_access"]["official_test"] == "denied"
     assert plan["blockers"]
-    assert not (project.root / "outputs").exists()
+    assert not (project.root / "assets/experiments/icassp2027/runs").exists()
     assert plan == resolve_probe(project, "configs/papers/icassp2027/suites/probe-pilot.yaml")
 
 
@@ -100,10 +99,71 @@ def test_failed_attempt_has_its_own_failure_receipt(project):
     plan = resolve_probe(project, "configs/papers/icassp2027/suites/probe-pilot.yaml")
     with pytest.raises(ValueError, match="missing"):
         run_probe(project, plan)
-    receipts = list((project.root / "outputs").rglob("provenance/stages/*.json"))
+    runs = output_path(project.root, project.profile["output_root"])
+    receipts = list(runs.rglob("provenance/stages/*.json"))
     assert len(receipts) == 1
     assert json.loads(receipts[0].read_text())["status"] == "failed"
-    assert not list((project.root / "outputs").rglob("summary.json"))
+    assert not list(runs.rglob("summary.json"))
+
+
+def test_custom_in_repository_output_root_still_works(project):
+    change_yaml(project.path, lambda p: p.update(output_root="outputs/custom-runs"))
+    reloaded = load_project(project.path)
+    plan = resolve_probe(reloaded, "configs/papers/icassp2027/suites/probe-pilot.yaml")
+    assert plan["output_template"] == str(project.root / "outputs/custom-runs/<unique-run-id>")
+    assert not (project.root / "outputs").exists()
+
+
+@pytest.mark.parametrize("value", ["../external-runs", "assets/experiments/../../external-runs"])
+def test_output_root_rejects_parent_escape(project, value):
+    change_yaml(project.path, lambda p: p.update(output_root=value))
+    with pytest.raises(ValueError, match="output path"):
+        load_project(project.path)
+
+
+def _symlink_or_skip(link: Path, target: Path) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"directory symlinks unavailable: {exc}")
+
+
+def test_external_assets_mount_is_accepted_without_output_writes(project):
+    external = project.root.parent / f"{project.root.name}-external-assets"
+    external.mkdir(exist_ok=True)
+    (project.root / "assets").mkdir()
+    _symlink_or_skip(project.root / "assets/experiments", external)
+    reloaded = load_project(project.path)
+    assert status(reloaded)["encoders"]
+    plan = resolve_probe(reloaded, "configs/papers/icassp2027/suites/probe-pilot.yaml")
+    assert plan["output_template"] == str(external / "icassp2027/runs/<unique-run-id>")
+    assert list(external.iterdir()) == []
+
+
+def test_external_protocol_symlink_is_still_rejected(project):
+    protocol = project.root / "projects/icassp2027/protocol.yaml"
+    external = project.root.parent / f"{project.root.name}-external-protocol.yaml"
+    external.write_bytes(protocol.read_bytes())
+    protocol.unlink()
+    _symlink_or_skip(protocol, external)
+    with pytest.raises(ValueError, match="escapes project root"):
+        load_project(project.path)
+
+
+def test_external_assets_root_link_and_nested_escape(project):
+    external = project.root.parent / f"{project.root.name}-mounted-assets"
+    (external / "experiments").mkdir(parents=True)
+    _symlink_or_skip(project.root / "assets", external)
+    reloaded = load_project(project.path)
+    assert output_path(reloaded.root, reloaded.profile["output_root"]) == (
+        external / "experiments/icassp2027/runs"
+    )
+    assert not (external / "experiments/icassp2027").exists()
+    escaped = project.root.parent / f"{project.root.name}-unrelated-data"
+    escaped.mkdir()
+    _symlink_or_skip(external / "experiments/icassp2027", escaped)
+    with pytest.raises(ValueError, match="output path escapes"):
+        load_project(project.path)
 
 
 def test_status_and_dry_run_are_lightweight_in_fresh_process(project):

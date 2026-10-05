@@ -18,15 +18,16 @@ from vadbench.artifacts import PredictionRecord
 from vadbench.data.manifest import VideoManifestRecord
 from vadbench.engine.coverage import validate_frame_coverage
 from vadbench.engine.evaluate import prediction_records_to_temporal
-from vadbench.paper import evaluation, repeat_evaluation
+from vadbench.paper import evaluation
+from vadbench.paper import repeat_evaluation
 from vadbench.paper import quality_export as shared
 from vadbench.paper import xd_evaluation as xd
-from vadbench.paper.compatibility import (
+from vadbench.data.feature_contracts import (
     RepresentationIdentity,
     SamplingIdentity,
     validate_compatibility,
 )
-from vadbench.paper.quality_comparison import (
+from vadbench.workflows.quality_comparison import (
     DECISION_TOLERANCE,
     PairedVideoIntervals,
     compare_paired_quality,

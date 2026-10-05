@@ -31,9 +31,9 @@ from vadbench.data.video import build_clip_batch, probe_video
 from vadbench.engine.train import load_checkpoint
 from vadbench.features import atomic_write_json
 from vadbench.paper.evaluation import load_frozen_detector_source
-from vadbench.paper.extraction import representation_from_verified_encoder
+from vadbench.workflows.extraction import representation_from_verified_encoder
 from vadbench.paper.profile import load_project
-from vadbench.paper.video_efficiency import (
+from vadbench.workflows.video_efficiency import (
     VIDEO_EFFICIENCY_SCHEMA_VERSION,
     VideoTimingSettings,
     measure_full_video_detector,
@@ -225,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
                     "actual_bridge_model": model_receipt, "python_executable": sys.executable, "vadbench_file": vadbench.__file__,
                     "torch": str(torch.__version__), "torch_cuda": torch.version.cuda, "cuda_current_device": torch.cuda.current_device(), "nvidia_smi_host_device_provenance": _nvidia_smi(),
                     "source_sha256": {"cli": sha256_file(Path(__file__)),
-                    "video_efficiency": sha256_file(Path(__import__("vadbench.paper.video_efficiency", fromlist=["x"]).__file__))}}
+                    "video_efficiency": sha256_file(Path(__import__("vadbench.workflows.video_efficiency", fromlist=["x"]).__file__))}}
         atomic_write_json(output / "resolved.json", resolved)
         outcomes: dict[str, Any] = {}
         for method in METHODS:

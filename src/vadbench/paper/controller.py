@@ -20,14 +20,14 @@ from vadbench.data.manifest import (
 )
 from vadbench.data.video import build_clip_batch
 from vadbench.features import atomic_write_json
-from vadbench.paper.compatibility import CompatibilityDeclaration, TrainingIdentity
-from vadbench.paper.detection import (
+from vadbench.data.feature_contracts import CompatibilityDeclaration, TrainingIdentity
+from vadbench.workflows.detection import (
     DetectionConfig,
     evaluate_detector,
     predict_detector,
     train_detector,
 )
-from vadbench.paper.extraction import (
+from vadbench.workflows.extraction import (
     PooledExtractionSpec,
     extract_pooled_features,
     make_sampling_identity,

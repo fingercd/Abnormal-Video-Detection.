@@ -10,12 +10,12 @@ from vadbench.artifacts import new_run_id, record_stage
 from vadbench.checkpoints import sha256_file
 from vadbench.data.manifest import load_manifest_jsonl
 from vadbench.features import atomic_write_json
-from vadbench.paper.compatibility import (
+from vadbench.data.feature_contracts import (
     CompatibilityDeclaration,
     SamplingIdentity,
     TrainingIdentity,
 )
-from vadbench.paper.detection import DetectionConfig, train_detector
+from vadbench.workflows.detection import DetectionConfig, train_detector
 from vadbench.paper.evaluation import _load_freeze, load_frozen_detector_source
 
 

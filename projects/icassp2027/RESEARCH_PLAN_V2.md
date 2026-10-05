@@ -1,4 +1,9 @@
-# ICASSP 2027：ViT encoder 内部插件研究执行计划
+# ⚠️ HISTORICAL / SUPERSEDED：ICASSP 2027 ViT encoder 内部插件研究执行计划 V2
+
+> **Superseded on 2026-09-20.** 当前唯一执行计划是
+> [RESEARCH_PLAN_V3.md](RESEARCH_PLAN_V3.md)。本文件正文作为历史记录保留，包含当时的
+> 四 encoder 范围、暂停安排、旧方法候选和旧排期；不得据此继续派发任务、推断当前范围或覆盖
+> V3 的用户裁决。旧实验身份、结果、失败回执和 SHA 不因本指针而改写。
 
 更新日期：2026-09-19。状态：**按用户最新要求收拢到已有128视频的性质观察与免训练候选；暂停1288视频全量提取及关联开发训练/评分。**
 最新方法约束见[性质先行与两种插件同源](decisions/property-first-method-contract-v3.md)。
