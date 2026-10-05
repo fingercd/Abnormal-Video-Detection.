@@ -1,5 +1,11 @@
 ## 2026-09-26：经node3内网跳转node2完成6根物理归档
 
+## 2026-10-05：框架基线合并准备与验收
+
+按用户明确授权，将 GitHub main 的 `ed9626e` 缓存清理合入 `qzt/vad-framework-pairselect-20261005`，解决唯一 `.gitignore` add/add 冲突：保留框架完整忽略规则，接纳29个历史Python缓存的移除。当前受跟踪Python缓存为0，无未解决冲突。框架重构及PairSelect README/论文证据已在 `e5a0b2a` 提交；两个旧远端分支均无独有提交并已清理，本地历史保留。
+
+本次合并结果在2026-10-05使用 `C:/Users/lenovo/anaconda3/envs/pytorch/python.exe` 验证：`python -m compileall -q src tests` 通过；工作流边界/身份兼容、打包资源、token选择/部署、特征合并、DSANet入口、CLIP桥与UR-DMU质量导出共76项测试全部通过（64.40秒）；基础CLI帮助、encoder目录、paper status及DSANet帮助均退出0。未重跑模型实验，历史结果身份保持。此前当前框架协议回归54 passed、3 skipped（Windows符号链接权限）保留其验证范围。后续通过PR保留提交历史合入main，并以 `vad-framework-baseline-20261005` tag固定最终主分支提交；GitHub最终状态以PR与tag为准。
+
 ## 2026-09-30｜通用工作流重构完成并同步服务器
 
 通用特征身份/许可归入data/engine，提取/恢复/合并/检测/质量/效率归入workflows，
