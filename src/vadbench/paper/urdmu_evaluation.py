@@ -282,7 +282,7 @@ def _fit_manifest_from_training_stage(
         # Metadata binds the path declared at training time. Physical asset
         # consolidation may later turn it into a symlink; compare that original
         # declaration, while the location and actual bytes remain checked here.
-        and sources.get(str(Path(config["train_manifest"]).expanduser())) == binding["sha256"]
+        and sources.get(binding["location"]) == binding["sha256"]
         and sha256_file(manifest_path) == binding["sha256"],
         "UR-DMU checkpoint does not SHA-bind its actual development fit manifest",
     )

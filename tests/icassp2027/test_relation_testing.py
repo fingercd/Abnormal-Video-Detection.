@@ -57,7 +57,7 @@ def test_training_manifest_binding_survives_physical_path_migration(tmp_path,mon
     actual=tmp_path/"physical"/"train.jsonl"
     actual.parent.mkdir()
     actual.write_text(json.dumps({"schema_version":1,"video_id":"train-video","path":"v.mp4",
-        "split":"train","num_frames":32,"fps":30,"is_anomaly":False,"annotations":[]})+"\n",encoding="utf-8")
+        "split":"train","category":"Normal","num_frames":32,"fps":30,"is_anomaly":False,"annotations":[]})+"\n",encoding="utf-8")
     declared=tmp_path/"legacy"/"train.jsonl"
     digest=hashlib.sha256(actual.read_bytes()).hexdigest()
     root=tmp_path/"head"
