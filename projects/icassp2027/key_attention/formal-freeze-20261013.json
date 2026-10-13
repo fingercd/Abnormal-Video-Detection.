@@ -5,7 +5,7 @@
   "frozen_at": "2026-10-13",
   "frozen_by": "user-requested-fixed-grid-before-new-test-scores",
   "markdown_contract": {
-    "path": "/users/fotile/VAD/work/key-attention-formal-20261013-r01/snapshot/projects/icassp2027/key_attention/FORMAL_FREEZE_20261013.md",
+    "path": "/users/fotile/VAD/work/key-attention-formal-20261013-r02/snapshot/projects/icassp2027/key_attention/FORMAL_FREEZE_20261013.md",
     "sha256": "e2df8c6185b0331c713844a14d88f2d278d9f411ef7af4e945917b7710997914"
   },
   "method_scope": {
@@ -44,7 +44,7 @@
     {
       "id": "training-only-engineering-qa-not-anomaly-property-claim",
       "role": "native execution and budget acceptance only; no scientific property claim",
-      "path": "/users/fotile/VAD/work/key-attention-formal-20261013-r01/snapshot/projects/icassp2027/key_attention/qa-result-20261013.json",
+      "path": "/users/fotile/VAD/work/key-attention-formal-20261013-r02/snapshot/projects/icassp2027/key_attention/qa-result-20261013.json",
       "sha256": "cb6b0aec3e63041420a265c7d6e731286cafab245d18d7aed64aa7d6e62560c3"
     }
   ],
