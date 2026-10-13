@@ -9,6 +9,8 @@
 [SwanLab项目](https://swanlab.cn/@ryfrcd693/VAD-Key-Attention-20261013)：四个当前run分别为 qzw8qfyv、vlqduu7k、m79i0tux、3aj98wey，均回读RUNNING及真实进度标量。服务偶发HTTP504，SDK自动重试/恢复，完整本地events和远端日志保留，任务结束回读确认后才派下一项。GPU任务全结束后自动质量导出；配对消费端额外核对实际head SHA和evaluation_sampling_fingerprint相同后才打开真值。当前无新AUC/AP结果。
 
 本地新流程/提取/评分/质量回归首组83 passed；迁移修复后的相关43 passed，最近训练authority相关21 passed、配对质量身份门12 passed；compileall src tests通过。队列依赖本机后台控制器和网络保持运行，远端当前任务由nohup保护；失败停止新派，不盲目重复启动。
+**连接恢复补充：** 后续公网SSH流发生exit255中断，原本机控制器110448安全停止新派，四个远端nohup PID31725/31727/31729/31731经重新连接核实仍在运行并继续生成特征（并非计算失败）。新增只读reattach控制器PID81924接回原PID与原SwanLab run，没有重投GPU任务；云端旧CRASHED保留为通信中断历史，恢复时追加transport/recovered标量。SwanLab API仍间歇504/超时，部分上传恢复，完整事件保存在本地及远端；后续接力等待当前任务计算完成与云端核验。当前状态以`work/key-attn-formal-20261013/controller-r03-recovery1/queue.json`及远端task.json为准，不按断开的SSH会话判断GPU任务已终止。
+
 
 ## 2026-10-13：Key/Attention 单点压缩消融开始实施
 
