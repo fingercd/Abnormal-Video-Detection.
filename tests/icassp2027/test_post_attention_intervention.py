@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import hashlib
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -17,6 +18,8 @@ from vadbench.token_reduction.bridges import create_observation_bridge
 from vadbench.token_reduction.bridges.post_attention import (
     PostAttentionIntervention,
     PostAttentionInterventionError,
+    _canonical_ast_dump,
+    _forward_identity,
 )
 
 
@@ -282,3 +285,43 @@ def test_native_attention_and_mlp_execute_once(native_classes):
         for handle in handles:
             handle.remove()
     assert counts == {"attention": 1, "mlp": 1}
+
+
+@pytest.mark.parametrize("name", ["Block", "Attention", "CosAttention"])
+def test_empty_type_params_schema_difference_is_semantically_canonical(native_classes, name):
+    import inspect
+    import textwrap
+
+    module_type = getattr(native_classes, name)
+    node = ast.parse(textwrap.dedent(inspect.getsource(module_type.forward))).body[0]
+    python310 = copy.deepcopy(node)
+    python312 = copy.deepcopy(node)
+    # Simulate both schemas even when the test interpreter is not Python 3.12.
+    for old, new in zip(ast.walk(python310), ast.walk(python312), strict=True):
+        if isinstance(old, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            old._fields = tuple(field for field in old._fields if field != "type_params")
+            if hasattr(old, "type_params"):
+                del old.type_params
+            if "type_params" not in new._fields:
+                new._fields = (*new._fields, "type_params")
+            new.type_params = []
+    assert ast.dump(python310, include_attributes=False) != ast.dump(python312, include_attributes=False)
+    assert _canonical_ast_dump(python310) == _canonical_ast_dump(python312)
+    module = module_type(8, num_heads=2, init_values=0.0) if name == "Block" else module_type(8, num_heads=2)
+    assert _forward_identity(module) == hashlib.sha256(_canonical_ast_dump(python310).encode()).hexdigest()
+
+
+def test_canonical_ast_preserves_nonempty_type_params_and_string_literals():
+    node = ast.parse('def forward(self, x):\n    return x + ", type_params=[]"').body[0]
+    with_parameters = copy.deepcopy(node)
+    if "type_params" not in with_parameters._fields:
+        with_parameters._fields = (*with_parameters._fields, "type_params")
+    with_parameters.type_params = [ast.Name(id="NonemptyParameter", ctx=ast.Load())]
+    assert _canonical_ast_dump(node) != _canonical_ast_dump(with_parameters)
+    assert ", type_params=[]" in _canonical_ast_dump(node)
+
+
+def test_canonical_ast_preserves_changed_operation():
+    add = ast.parse("def forward(self, x):\n    return x + 1").body[0]
+    multiply = ast.parse("def forward(self, x):\n    return x * 1").body[0]
+    assert _canonical_ast_dump(add) != _canonical_ast_dump(multiply)

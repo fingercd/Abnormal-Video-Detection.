@@ -14,6 +14,7 @@ import inspect
 import textwrap
 import time
 from collections.abc import Callable
+from copy import deepcopy
 from types import MethodType
 from typing import Any
 
@@ -27,11 +28,32 @@ class PostAttentionInterventionError(RuntimeError):
 
 
 # AST identities of forward methods in weights/videomaev2-base-hf/
-# modeling_videomaev2.py. Ignore formatting only, not semantic changes.
-_BLOCK_FORWARD = "10985903796c6b23008db25ddf6eb4b54c9b08d06cde4cb3e5303de94c1a7a63"
-_ATTENTION_FORWARD = "dcabbb3fcf71724be3e82235242c8f91e876257387800f8a71093a5b5775359b"
-_COS_ATTENTION_FORWARD = "0f32c240660da50135beeebd2c7b9905e8e2c2f905c5ba415fd817911eaf538c"
+# modeling_videomaev2.py, using the narrow cross-Python canonicalization below.
+# Ignore formatting and empty Python-3.12 type_params only, not semantic changes.
+_BLOCK_FORWARD = "2286f914d41c4f805e90aeabfb4d0a53c36ccb2982b821670e30f15356b7bb48"
+_ATTENTION_FORWARD = "b7843677787e77de32804fdda0519a7714cd7fcfcd6b5e83c95abb9f549b0968"
+_COS_ATTENTION_FORWARD = "b6ad58d3297103ca42122eb47b3a0e509ba757af502eab0a5c0d5a1d71fc7dd1"
 _OWNER_MARKER = "_vadbench_post_attention_owner"
+
+
+def _canonical_ast_dump(node: ast.AST) -> str:
+    """Keep native semantics while normalizing one known AST schema addition.
+
+    Python 3.12 added an empty ``type_params`` field to ordinary functions and
+    classes. Python 3.10/3.11 represent the same source without that field.
+    Only an explicitly empty field on those exact node types is omitted. All
+    other fields, including nonempty type parameters, remain in the identity.
+    This works on AST nodes, never text replacement inside string constants.
+    """
+    canonical = deepcopy(node)
+    for child in ast.walk(canonical):
+        if (
+            isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and "type_params" in child._fields
+            and getattr(child, "type_params", None) == []
+        ):
+            child._fields = tuple(field for field in child._fields if field != "type_params")
+    return ast.dump(canonical, include_attributes=False)
 
 
 def _forward_identity(module: nn.Module) -> str:
@@ -41,7 +63,7 @@ def _forward_identity(module: nn.Module) -> str:
         node = ast.parse(textwrap.dedent(inspect.getsource(type(module).forward))).body[0]
     except (OSError, TypeError, SyntaxError) as exc:
         raise PostAttentionInterventionError("native forward source identity is unavailable") from exc
-    return hashlib.sha256(ast.dump(node, include_attributes=False).encode()).hexdigest()
+    return hashlib.sha256(_canonical_ast_dump(node).encode()).hexdigest()
 
 
 class PostAttentionIntervention:
