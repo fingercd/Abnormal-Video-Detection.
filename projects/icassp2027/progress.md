@@ -1,3 +1,9 @@
+## 2026-10-13：Key/Attention 单点压缩消融开始实施
+
+用户批准[新方案](key_attention/README.md)：AttentionTopK、VisionZip encoder-internal adaptation与Uniform同预算对照，block 6/9/12各单次，删除50%/70%（keep0.50/0.30）。本轮不使用L2排序、不做动态/静态分组，不改旧冻结合同。已建立qzt/key-attn-ablation-20261013分支并校正仓库局部提交邮箱为用户要求的noreply身份。
+
+首阶段native VideoMAEv2的post-attention/pre-MLP桥、精确预算算法、不可变部署身份、fit-only QA及本机SwanLab在线转发入口已实现；VideoMAE/TimeSformer尚未接入。当前本地相关单元回归79 passed，compileall通过，保留既有numexpr版本提示；尚未据此宣称真实模型质量/速度。node3公网连接已核验，空闲GPU可用于QA；不修改其他项目进程。真实两视频×两窗口QA及云端核验待执行。
+
 ## 2026-09-26：经node3内网跳转node2完成6根物理归档
 
 ## 2026-10-05：框架基线合并准备与验收

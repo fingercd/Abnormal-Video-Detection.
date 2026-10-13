@@ -1,0 +1,76 @@
+{
+  "schema": "vadbench.key-attention-development/v1",
+  "date": "2026-10-13",
+  "status": "development_preregistered_not_formal_test_frozen",
+  "method_names": [
+    "attention_topk",
+    "visionzip_internal",
+    "uniform"
+  ],
+  "block_indices": [
+    5,
+    8,
+    11
+  ],
+  "site": "post_attention_residual_pre_norm2_mlp",
+  "keep_ratios": [
+    0.5,
+    0.3
+  ],
+  "dominant_contextual_weights": [
+    4,
+    1
+  ],
+  "encoders_planned": [
+    "videomaev2",
+    "videomae",
+    "timesformer"
+  ],
+  "datasets_planned": [
+    "ucf_crime",
+    "xd_violence"
+  ],
+  "formal_test_access": false,
+  "qa": {
+    "dataset": "ucf_crime",
+    "video_ids": [
+      "Abuse005_x264",
+      "Normal_Videos022_x264"
+    ],
+    "split": "train",
+    "role": "fit",
+    "seed": 0,
+    "windows": {
+      "uniform_segments": 8,
+      "indices": [
+        1,
+        6
+      ],
+      "frame_stride": 2,
+      "short_policy": "stride1_if_needed"
+    },
+    "role_lock_sha256": "53aacbd89d221ff036625927ff5eccee8286704652bf436b093cd4ea89d1fc59",
+    "source_manifest_sha256": "a1e88767fb53d721a2526da635771f667184b3dd53b9dc43b66594378118895d",
+    "manifest_sha256": "50b15c675622d9cd356694f4dd9079e959023018c7ccdf7f822d888cee467c7b",
+    "identity_rtol": 0.001,
+    "identity_atol": 0.001,
+    "key_rtol": 0.005,
+    "key_atol": 0.005
+  },
+  "reference_files_sha256": {
+    "mllm_comp/compressors/image/visionzip.py": "2013f3ad1bdafd9fcf191a2148a201f61b91bcfb9a766ea3b6be3824a37be96f",
+    "mllm_comp/compressors/encoder_level/attention_topk.py": "73c8d04c9097c003fcd47efca5953957d1d33c68400bea83e869217e11f27345",
+    "LICENSE": "36a31ea4720528e0c2500face258a91277c9cbba5279513c3dcc4de6dde4057c"
+  },
+  "reference_default_weights": [
+    27,
+    5
+  ],
+  "reference_deviations": [
+    "encoder_internal_site",
+    "4_to_1_budget",
+    "batched_gpu_implementation",
+    "fp32_context_sum_then_cast_back",
+    "native_readout_unchanged"
+  ]
+}
