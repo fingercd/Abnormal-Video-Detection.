@@ -91,6 +91,25 @@ def main():
         args.provenance.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
         args.launch_script.write_text(launcher, encoding="utf-8")
     provenance["tracking_controller_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    sharing_path=args.provenance.parents[2]/"gpu-share-allowlist.json"
+    if provenance.get("phase")=="test" and sharing_path.exists():
+        sharing=json.loads(sharing_path.read_text("utf-8"))
+        entry=sharing["gpu_slots"].get(str(provenance["gpu_slot"]))
+        if entry:
+            anchor='for pid in $pids; do [ "$pid" = "" ] || { echo "Unexpected process $pid on assigned GPU; no launch"; exit 22; }; done'
+            if launcher.count(anchor)!=1:
+                raise ValueError("unexpected shared-GPU launch guard")
+            replacement=f'''for pid in $pids; do
+[ "$pid" = "{entry['pid']}" ] || {{ echo "Unknown process on shared GPU; no launch"; exit 22; }}
+[ "$(ps -p "$pid" -o user=)" = {shlex.quote(entry['owner'])} ]
+command=$(tr '\\0' ' ' < "/proc/$pid/cmdline")
+case "$command" in *{shlex.quote(entry['command_marker'])}*) ;; *) echo "Shared PID identity changed"; exit 22;; esac
+done'''
+            launcher=launcher.replace(anchor,replacement)
+            provenance["shared_gpu_authorization"]={"entry":entry,"basis":sharing["authorized_basis"],
+                "allowlist_sha256":hashlib.sha256(sharing_path.read_bytes()).hexdigest(),
+                "minimum_free_mib":12288,"cuda_allocator_fraction":.25}
+            args.provenance.write_text(json.dumps(provenance,indent=2),encoding="utf-8")
     if provenance.get("phase") == "quality":
         launcher = paired_quality_gate(provenance) + launcher
     polling = provenance.get("phase") == "test"

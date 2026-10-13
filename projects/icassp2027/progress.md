@@ -1,3 +1,31 @@
+## 2026-10-13 20:23 定时汇报：共享占用与两项UCF完成
+
+本轮检查期间UCFb09remove70和b12remove50均完成完整预测及云端核验，自动补位正常，总9/38=23.68%；累计最新已接回clip计数1074257/4086273=26.29%。当前GPU0 XDb09remove70为669/800（100805clips），GPU1 XDb09remove50 655/800（95366clips），GPU2新XDb12remove50 239/800（23499clips），GPU3新UCFb12remove70 6/290（1294clips）。主控26992健康，未重复启动GPU任务。
+
+发现19:59起CVPR-JY2新增GPU1/2/3进程29600/29602/29603及GPU5进程29604。只读核对owner=fotile、完整CVPR-JY2 runtime.cli train/config/输出身份；未停止或修改它们。GPU1/2/3空闲约22–23GB，沿用用户AGENTS 9/21明确共享空余显存授权，后续tracker用gpu-share-allowlist.json极窄已验证PID/owner/命令标记名单，仍禁止未知PID、要求至少12GiB free、本任务allocator0.25，GPU0旧1827规则不变。提取/模型/方法/精度/数据/head冻结未改。新GPU3补位已通过名单正常启动；共享训练可能降低速度，正式独占效率仍不可据此宣称。相关3项记录门单测和compileall通过，只做必要执行修复、不扩展benchmark。
+
+新UCFb09remove70 ROC-AUC=82.130803%，delta=1.498845个百分点，CI[-0.220130,3.322102]个百分点，supported非劣但不显著优于dense；SwanLab mmhqtpr1 FINISHED/quality_completed核验。新UCFb12remove50 ROC-AUC=80.678065%，delta=0.046107个百分点，CI[-1.166994,1.204065]个百分点，非劣inconclusive；SwanLab450rbdbh FINISHED/quality_completed核验。均独立preview、原比较器和实际head/采样/真值SHA门，不占GPU，不覆盖最终quality.json，不据分数改格子。
+
+ETA HKT GPU0 21:30–22:15、GPU1 21:40–22:30、GPU2 23:20–10/14 00:30、GPU3 22:00–22:45。因新共享计算占用及最后层条件较慢，整套38+报告范围暂放宽到10/14 12:00–22:00（原10:00–19:00不再当最新承诺），下轮用实际剩余clip速率修订；未跑VZ/uniform的开销仍未知。
+
+## 2026-10-13 19:43 定时汇报
+
+主控26992和四个在线logger均存活，短连接轮询正常、无新报错，四原PID1965/27889/31858/653继续推进，不重启、不扩展验收。7/38任务完成=18.42%，远端19:41:07累计932178/4086273clips=22.81%；相比19:00快照新增145141clips（约40分48秒四卡合计59.3clips/s，只作现场提取统计，非正式纯encoder效率）。没有新prediction_completed，不重复指标CPU评测。GPU0 XD b09remove70为422/800（55506clips），GPU1 XD b09remove50 440/800（59278clips），GPU2 UCF b09remove70 275/290（65389clips），GPU3 UCF b12remove50 188/290（37440clips）。GPU2瞬时Dl仅表示读写等待；新进度持续增长，不按单次状态判挂或停止。
+
+既有指标不变：UCF主frameROC-AUC dense80.631958、b6r50 80.553156、b6r70 80.184568、b9r50 81.403313（%）；XD主作者梯形PR-AUC dense76.181075、b6r50 76.640234、b6r70 75.980119（%），stepAP70.333010/71.073361/71.009466（%）。已预定的UCFb9r50和XDb6r50支持非劣但CI跨0，不称稳定提升，其余压缩非劣未定。没有用正式分数改方法/预算/检查点。
+
+ETA HKT GPU0 21:30–22:10，1 21:20–22:00，2 19:50–20:10，3 20:20–20:55；整套38+报告仍初步10/14 10:00–19:00，未知后续VZ/uniform/depth和云端延迟继续保留。保持每卡一个任务自动接力。
+
+**19:03新增XD50指标已完成：** 主作者梯形PR-AUC=76.640234%，dense76.181075%，delta=0.459159个百分点；95%CI[-0.060628,1.061184]个百分点，按-0.5pp界supported非劣，区间跨0不宣称显著优于dense。stepAP=71.073361%（dense70.333010%），口径单列。SwanLab sv0oa6fq已核验FINISHED及quality/completed=1，独立preview/本地completed-metrics-r05/quality-result.json，不改冻结方法，不占GPU。
+
+## 2026-10-13 19:03 定时汇报
+
+短连接轮询后本机主控26992及四个在线记录进程均正常，未再发现本轮通信失败。新增XD b06 remove50完整预测+云端完成，总7/38=18.42%；实际远端19:00:19累计787037/4086273clips=19.26%。四张卡已全部进入r05优化版：GPU0 XD b09remove70 224/800（21217clips）；GPU1 XD b09remove50 244/800（24611clips）；GPU2 UCF b09remove70 116/290（25350clips）；GPU3新补UCF b12remove50 6/290（1294clips）。真实PID1965/27889/31858/653均Rl或等待态正常，其他项目1827未动。原四项第一波现已全部完成；各卡按各自队列自动补位。
+
+新完成XD50已启动单次CPU在线指标对照completed-metrics-r05（本机83828、远端13362），复用原compare_prediction_runs及head/采样/真值SHA门，独立preview不覆盖最终quality.json，尚在计算/等待最终CI与云端核验，不重复GPU。此前UCF dense80.631958%、b6r50 80.553156%、b6r70 80.184568%、b9r50 81.403313%；XD主作者梯形PR-AUC dense76.181075%、b6r70 75.980119%，stepAP70.333010%/71.009466%，保持两口径区分。没有依据正式分数调整任何冻结格子。
+
+当前四项ETA HKT：GPU0 21:30–22:30、GPU1 21:20–22:20、GPU2 19:50–20:20、GPU3 20:20–21:10（新启动，尚不能按初始低吞吐线性外推）；整套及报告仍初步10/14 10:00–19:00，依据实际clip吞吐更新，剩余VZ/uniform/depth组合与云端延迟不确定。此次未扩展验收、未修改源码。
+
 ## 2026-10-13 18:40 定时汇报及短连接恢复
 
 再次发现长SSH日志连接中断，本机97040 held_after_failure，但四GPU计算均正常。改为每20秒短SSH只读轮询原日志，保留源行游标、原PID和SwanLab身份，最多3次传输重试，认证/指纹失败立即停止；新formal launcher只启动一次nohup后退出SSH，再短轮询原日志，不重复启动GPU。r03恢复尝试补路径时缺tracking_directory，取消其本机记录进程并保留目录，未动GPU；r04补齐原路径/实际snapshot，主控26992、最新controller-r03-recovery4/queue.json。11项局部测试及compileall通过；不加工程benchmark、不改提取/评分算法或模型。
