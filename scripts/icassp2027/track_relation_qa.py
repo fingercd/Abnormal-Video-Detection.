@@ -7,11 +7,30 @@ Its EVENT JSON lines are uploaded live; raw logs remain local on every failure.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shlex
 import subprocess
 import time
 from pathlib import Path
+
+
+def paired_quality_gate(provenance):
+    """Check actual paired prediction identities before opening frame truth."""
+    c, task = provenance["campaign"], provenance["task"]
+    root = Path(c["output_root"])
+    dense = (root / (task["dataset"] + "-dense") / "scoring/predictions/resolved.json").as_posix()
+    method = (root / task["id"] / "scoring/predictions/resolved.json").as_posix()
+    expected = c["datasets"][task["dataset"]]["head_checkpoint"]["sha256"]
+    # Standard-library-only remote validation; no model or metric execution.
+    code = ("import json\nfrom pathlib import Path\n"
+            f"a=json.loads(Path({dense!r}).read_text())\n"
+            f"b=json.loads(Path({method!r}).read_text())\n"
+            f"assert a['checkpoint_sha256']==b['checkpoint_sha256']=={expected!r}, 'paired head SHA differs'\n"
+            "assert a['evaluation_sampling_fingerprint']==b['evaluation_sampling_fingerprint'], 'paired input/sampling SHA differs'\n"
+            "print('PAIRED_QUALITY_IDENTITY_GATE_PASSED',flush=True)\n")
+    return ("set -e\n/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python - <<'QUALITY_GATE'\n"
+            + code + "QUALITY_GATE\n")
 
 
 def main():
@@ -33,6 +52,9 @@ def main():
     if launcher.count("__SWANLAB_URL__") != 1:
         raise ValueError("launcher must contain exactly one tracking URL placeholder")
     provenance = json.loads(args.provenance.read_text(encoding="utf-8-sig"))
+    provenance["tracking_controller_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    if provenance.get("phase") == "quality":
+        launcher = paired_quality_gate(provenance) + launcher
     args.output.mkdir(parents=True, exist_ok=False)
     import swanlab
     from swanlab.sdk.internal.settings import Settings
@@ -50,7 +72,7 @@ def main():
     link = {"url": run.url, "path": run.path.strip("/"), "run_id": run.id, "name": run.name}
     (args.output / "swanlab.json").write_text(json.dumps(link, indent=2), encoding="utf-8")
     print("SWANLAB " + json.dumps(link), flush=True)
-    for artifact in (args.provenance, args.source_archive):
+    for artifact in (args.provenance, args.source_archive, Path(__file__)):
         run.save(artifact.resolve(), base_path=artifact.resolve().parent, policy="now")
     command = ["ssh", "-T", "-p", str(args.port), "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
                "-o", "ConnectTimeout=15", args.host, "bash", "-s"]
