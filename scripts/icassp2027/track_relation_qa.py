@@ -26,8 +26,8 @@ def paired_quality_gate(provenance):
     code = ("import json\nfrom pathlib import Path\n"
             f"a=json.loads(Path({dense!r}).read_text())\n"
             f"b=json.loads(Path({method!r}).read_text())\n"
-            f"assert a['checkpoint_sha256']==b['checkpoint_sha256']=={expected!r}, 'paired head SHA differs'\n"
-            "assert a['evaluation_sampling_fingerprint']==b['evaluation_sampling_fingerprint'], 'paired input/sampling SHA differs'\n"
+            f"if not a['checkpoint_sha256']==b['checkpoint_sha256']=={expected!r}: raise ValueError('paired head SHA differs')\n"
+            "if a['evaluation_sampling_fingerprint']!=b['evaluation_sampling_fingerprint']: raise ValueError('paired input/sampling SHA differs')\n"
             "print('PAIRED_QUALITY_IDENTITY_GATE_PASSED',flush=True)\n")
     return ("set -e\n/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python - <<'QUALITY_GATE'\n"
             + code + "QUALITY_GATE\n")
