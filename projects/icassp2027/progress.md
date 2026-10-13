@@ -1,3 +1,9 @@
+## 2026-10-13 用户最新执行要求：简查、加速、持续接力
+
+不再扩展或重复工程验收；已通过r05供数优化用于后续任务，原正常任务继续。每次简查四个PID、进度和末尾报错，真实故障才处理。远端15:43:12：本轮UCF dense及UCF b06 remove50已全部完成预测；原XD dense586/800（82316/145703 clips）、XD b06 remove50为561/800（77266/145703 clips）仍运行。下一项新版GPU0 UCF b06 remove70为19/290（5682 clips），GPU2 XD同条件40/800（4577 clips），新两PID16462/16460均Rl，约运行5:45。两旧XD31729/31727未重启，四卡各一项生产；38项为2完成、4在跑、32待接力。新两项从实际启动起含加载粗计约16.5/13.3 clips/s，仅现场进度口径，不是正式效率数字。
+
+应用在更新原20分钟heartbeat时返回该automation已不存在，未擅自重建；本机后台队列119980仍独立接力，不影响已在跑的任务。最新queue在controller-r03-optimized2，GPU0/2行内waiting_execution_acceptance是启动时留下的调度状态，实际已通过门禁并运行，以远端PID和新EVENT为准；GPU1/3原在线logger由新调度器直接观察，不重复初始化。定时检查项是否被用户删除未知，不猜测原因。
+
 ## 2026-10-13：按GPU 0/1/2/3启动VideoMAEv2正式关系压缩矩阵
 
 用户明确要求每GPU一个任务依次完成。新[正式冻结](key_attention/FORMAL_FREEZE_20261013.md)锁定VideoMAEv2×UCF/XD：每集dense加18个attention_topk/visionzip_internal/uniform×block6/9/12×删除50/70%条件，共38个GPU提取+评分任务；不重训head，不按test分数改配置。使用完整UCF290与XD800、原sealed manifest/审计/作者时间轴真值；UR-DMU full-sequence exact query-chunk256，后续自动CPU质量导出及10000配对视频bootstrap。
@@ -23,6 +29,22 @@
 后续任务的本机tracker新增pending-execution门禁；当前controller/PID及四个原GPU进程未重启，原任务继续跑。`work/key-attn-formal-20261013/pending-execution.json`目前preparing，新任务在门禁处等待，不重复计算。用户明确要求单GPU实验及四进程加速核验：工程验收先做四路CPU供数，GPU2原PID31725释放后才做单卡native/optimized完整提取写入对照；验收/云端成功后才放行后续，真实四卡聚合收益另核验，单卡不冒充四卡结论。
 
 工程r01因历史fit manifest的num_frames为空在CPU阶段退出，未分配CUDA；保留失败目录及SwanLab CRASHED云端回执。r02改用实际OpenCV probe，remote `/users/fotile/VAD/work/key-attention-optimization-20261013-r02`，本机tracker PID50780，SwanLab run n99346d2。复用原role-locked两份fit视频及SHA；RGB/帧索引/处理器pixels逐元素相同。四路CPU测试旧42.18–42.89 clips/s，新workers1为70.95–72.47、workers2为64.06–78.01；按两次中位耗时选择workers1/prefetch2，CPU聚合约1.69x，不是GPU正式效率。r02现等待GPU2原任务自然结束，GPU吞吐/pooled一致性及云端验收尚未完成。
+
+**14:40 HKT优化候选更新：** 为继续减少重复CPU工作，r04加入单worker限定的32帧已处理像素尾部缓存，视频切换清空。63项单测与compileall通过；新候选commit90f2a04、tag key-attn-cpu-pipeline-v2-candidate-20261013，source SHA `5d0ba4209df5578b0bed9836f77b110ea63ec791171043d26ef315c4ded26543`，原冻结及native adapter/sampler/video源码未改。r02等待GPU的本工程PID5092经命令与GPU归属核实后以user_scope_upgrade SIGTERM（未分配CUDA），CPU证据/CRASHED云端回执保留；四个正式原PID未动。
+
+r04本机tracker76924、远端benchmark19076、SwanLab run29ryhefg，新增缓存RGB/源帧/处理器pixels逐元素一致，max_abs=0。四CPU并发中位聚合旧42.58、新worker1无缓存73.52、worker2无缓存79.57、新worker1带像素尾缓存85.68 clips/s；选择worker1/prefetch2/deduplicate+temporal_cache，约2.01x CPU侧，不是GPU端到端。GPU2仍由原任务31725运行；r04等待其自然释放再做四方法单GPUnative/optimized完整提取写入/pooled对照。pending-execution仍preparing，下一任务等待验收，不盲目放行。
+
+本机只读验收放行watcher85160（日志在optimization-r03/promoter.log/err，读取最新pending字段已指向r04）将等待r04云端成功回执后下载两个小JSON，核对像素/pooled/吞吐/配置/云端/快照SHA，原子设ready；不启动GPU。当前真实四GPU新版聚合吞吐尚未验证。最近远端时钟14:35:30，原UCF dense284/290（68309clips），UCF AttnTopK267/290（64252clips），两XD原任务仍在跑，未读正式分数。
+
+## 2026-10-13 15:44 HKT：优化验收通过并恢复四卡生产
+
+UCF dense、UCF AttentionTopK b06 remove50均完成完整290/69364clips提取和预测，原SwanLab云端完成通过。原XD dense PID31729、XD b06 remove50 PID31727及原在线记录进程103016/84860未停止/重启。GPU0/2曾因本轮严格验收等待较久，是执行层门禁导致空卡，不是原计算失败。
+
+r04的dense/AttentionTopK输出bitwise相同，VisionZip初次bitwise gate失败max_abs1.43e-6，失败目录和云端CRASHED保留。补做独立固定输入native/native对照：diagnostic-r01被原B1布局契约拒绝（脚本用错B8，未放宽契约），diagnostic-r02 separate B1 setup通过；SwanLab5xr8gik1 FINISHED且qa/completed=1核验成功。Abuse旧/旧max1.907e-6、旧/新2.146e-6；Normal旧/旧1.550e-6、旧/新1.669e-6，relativeL2<=4.453e-7、RGB/pixels exact。源码原VisionZip FP32 scatter_add_未改，CUDA归并本身非bitwise稳定。仅VisionZip采用独立原生重复波动界：native_noise>0且<=1e-5、cross<=min(1e-5,2*native_noise+1e-7)、relativeL2<=1e-6；另三方法仍bitwise exact，不是一律放宽，不使用正式分数。
+
+r05正式工程验收SwanLab pk85cmf7已云端FINISHED、qa/completed=1。同GPU2完整两fit视频83clips、原提取/FeatureStore写入/校验、两次反向顺序对照：dense2.030x、AttentionTopK1.806x、VisionZip1.617x、Uniform1.794x，中位1.800x；四CPU供数聚合1.688x。最终选择workers2/prefetch2/deduplicate=true/temporal_cache=false（按这次实测选择，不预设cache必更快）。RGB/pixels exact，dense/AttentionTopK/Uniform pooled exact；VisionZip native/native及native/new同为max1.669e-6、relativeL2 4.370e-7，通过上述窄界。独立数值回执及config/acceptance/cloud/source各SHA绑定，源码/采样/精度/reducer/head未改。
+
+pending-execution已ready；采用r05快照`/users/fotile/VAD/work/key-attention-optimization-20261013-r05/snapshot`，source SHA32dabf9b51d98d0b2f97e12e576c6144fce1b9a96f234e7ed471bdab84e89683。本机调度器升级为119980，最新队列`work/key-attn-formal-20261013/controller-r03-optimized2/queue.json`：直接接管原XD在线进程，仅刷新两项尚未初始化SwanLab/尚未发GPU的等待tracker；源GPU进程没有被重放。新GPU0 UCF b06 remove70 PID16462，新GPU2 XD同条件PID16460均真实运行、native19720d4e身份门通过并生成视频完成事件。远端15:39:19为UCF6/290（1294clips）、XD8/800（908clips）；GPU0其他项目1827保留。当前四卡生产为两旧XD+两新任务，真实四个全部新版的聚合收益仍待后续接力验证。最新GPU/像素/头/帧采样与原冻结保持一致；不读取正式AUC/AP。
 
 ## 2026-10-13：Key/Attention 单点压缩消融开始实施
 

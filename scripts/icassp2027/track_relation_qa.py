@@ -68,11 +68,8 @@ def main():
         if hashlib.sha256(receipt.read_bytes()).hexdigest() != override["acceptance_sha256"]:
             raise ValueError("execution acceptance receipt SHA mismatch")
         accepted = json.loads(receipt.read_text(encoding="utf-8"))
-        if (accepted["status"] != "accepted" or not accepted["pixel_exact"]
-                or accepted["cpu_four_stream_speedup"] <= 1.05
-                or accepted["gpu_median_speedup"] <= 1.05
-                or not all(case["pooled_exact"] for case in accepted["cases"])):
-            raise ValueError("execution acceptance gates did not pass")
+        from vadbench.workflows.pipeline_acceptance import validate_acceptance
+        validate_acceptance(accepted)
         cloud = Path(override["cloud_verification"])
         if hashlib.sha256(cloud.read_bytes()).hexdigest() != override["cloud_verification_sha256"]:
             raise ValueError("benchmark cloud verification SHA differs")

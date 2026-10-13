@@ -31,6 +31,7 @@ from vadbench.token_reduction.relation_deployment import RelationDeployment
 from vadbench.workflows.extraction import (PooledExtractionSpec, extract_pooled_features,
     make_sampling_identity, representation_from_verified_encoder)
 from vadbench.workflows.extraction_pipeline import VideoMAEv2CPUPipeline
+from vadbench.workflows.pipeline_acceptance import case_equivalent
 
 
 def emit(kind, **values):
@@ -44,8 +45,19 @@ def main():
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--tracking-url', required=True)
     p.add_argument('--gpu-uuid', required=True)
+    p.add_argument('--repeatability-receipt', required=True)
+    p.add_argument('--repeatability-sha256', required=True)
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
+    repeat_path=Path(a.repeatability_receipt)
+    if sha256_file(repeat_path) != a.repeatability_sha256:
+        raise ValueError('independent repeatability receipt SHA differs')
+    repeatability=json.loads(repeat_path.read_text())
+    for row in repeatability['cases']:
+        if (not row['pixel_exact'] or not 0 < row['native_repeat_max_abs'] <= 1e-5
+                or row['native_vs_optimized_max_abs'] > 2*row['native_repeat_max_abs']+1e-7
+                or row['relative_l2_max'] > 1e-6):
+            raise ValueError('independent fixed-input native repeatability gate did not pass')
     old = json.loads(a.previous_qa.read_text())['provenance']
     for key in ('manifest', 'role_lock'):
         if sha256_file(Path(old[key]['path'])) != old[key]['sha256']:
@@ -159,6 +171,7 @@ def main():
         spec = PooledExtractionSpec(runtime_id='videomaev2',verified_encoder_identity=definition['identity'],
             representation=representation,sampling=sampling,micro_batch_size=8,**args)
         native_values = None
+        arrays = {'native':[], 'optimized':[]}
         timings = {'native':[],'optimized':[]}
         for repeat in range(2):
             # Reverse order on repeat 2 to reduce cache/order bias.
@@ -175,21 +188,33 @@ def main():
                 store = FeatureStore(result.feature_root)
                 values = np.stack([store.load_array(r,'pooled') for r in store.records()])
                 if native_values is None: native_values=values
-                np.testing.assert_array_equal(values,native_values)
+                arrays[variant].append(values)
+                difference = float(np.max(np.abs(values-native_values)))
+                if method != 'visionzip_internal':
+                    np.testing.assert_array_equal(values,native_values)
                 timings[variant].append(seconds)
                 emit('gpu_case', method=method,variant=variant,repeat=repeat,
                     metrics={f'pipeline/{method}_{variant}_clips_per_second':total/seconds,
                              f'pipeline/{method}_{variant}_seconds':seconds,
-                             'pipeline/pooled_max_abs':float(np.max(np.abs(values-native_values))),
+                             'pipeline/pooled_max_abs':difference,
                              'pipeline/peak_allocated_mib':torch.cuda.max_memory_allocated()/2**20})
         speedup = statistics.median(timings['native'])/statistics.median(timings['optimized'])
-        cases.append({'method':method,'timings':timings,'speedup':speedup,'pooled_exact':True})
+        noise=max(float(np.max(np.abs(x-y))) for x in arrays['native'] for y in arrays['native'])
+        cross=max(float(np.max(np.abs(x-y))) for x in arrays['native'] for y in arrays['optimized'])
+        relative=max(float(np.linalg.norm(x-y)/np.linalg.norm(x)) for x in arrays['native'] for y in arrays['optimized'])
+        case={'method':method,'timings':timings,'speedup':speedup,'pooled_exact':noise==0 and cross==0,
+              'native_repeat_max_abs':noise,'native_optimized_max_abs':cross,'relative_l2_max':relative,
+              'numerical_policy':'native_repeatability_bound_v1' if method=='visionzip_internal' else 'bitwise_exact'}
+        if not case_equivalent(case):
+            raise ValueError(f'output equivalence failed: {case}')
+        cases.append(case)
     cpu_speedup = measurements['native']['median_seconds']/measurements[selected]['median_seconds']
     median_speedup = statistics.median(c['speedup'] for c in cases)
     accepted = cpu_speedup>1.05 and median_speedup>1.05 and min(c['speedup'] for c in cases)>.95
     final = {'status':'accepted' if accepted else 'held_no_proven_speedup','scope':'fit_engineering_only',
         'single_gpu':a.gpu_uuid,'cpu_four_stream_speedup':cpu_speedup,'gpu_median_speedup':median_speedup,
         'cases':cases,'configuration':config,'pixel_exact':True,'tracking_url':a.tracking_url,
+        'independent_repeatability':{'path':str(repeat_path),'sha256':a.repeatability_sha256},
         'formal_four_gpu_speedup_verified':False}
     atomic_write_json(a.output/'acceptance.json',final)
     if not accepted: raise RuntimeError('pipeline did not pass throughput acceptance; preserve results')

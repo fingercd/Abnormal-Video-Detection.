@@ -23,6 +23,29 @@ GPU_UUIDS = [
 ]
 
 
+class ExistingTracker:
+    """Observe an already-online logger without restarting its remote work."""
+    def __init__(self, pid, tracking):
+        import psutil
+        self.pid = pid
+        self.tracking = tracking
+        self.process = psutil.Process(pid)
+        self.created = self.process.create_time()
+
+    def poll(self):
+        import psutil
+        try:
+            if self.process.is_running() and self.process.create_time() == self.created:
+                return None
+        except psutil.NoSuchProcess:
+            pass
+        receipt = self.tracking / "cloud-verification.json"
+        if not receipt.exists():
+            return 1
+        verified = json.loads(receipt.read_text("utf-8"))
+        return 0 if verified.get("verified") and verified.get("state") == "FINISHED" else 1
+
+
 def launcher(c, task, slot, phase, campaign_sha):
     base = c["control_root"]
     name = task["id"] + "-" + phase
@@ -69,6 +92,7 @@ def main():
     p.add_argument("--source-archive", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--resume-controller", type=Path)
+    p.add_argument("--adopt-controller", type=Path)
     a = p.parse_args()
     c = json.loads(a.campaign.read_text("utf-8"))
     a.output.mkdir(parents=True, exist_ok=False)
@@ -82,6 +106,43 @@ def main():
     stopped = False
     save()
     recovered=set()
+    if a.adopt_controller is not None:
+        import psutil
+        previous=json.loads((a.adopt_controller / "queue.json").read_text("utf-8"))
+        if previous["campaign_sha256"] != a.campaign_sha256 or previous["phase"] != "test":
+            raise ValueError("only matching active test controller can be adopted")
+        state["tasks"] = previous["tasks"]
+        state["adopted_from"] = str(a.adopt_controller)
+        for name,row in state["tasks"].items():
+            recovered.add(name.removesuffix("-test"))
+            row["tracking_directory"] = str(Path(row.get("tracking_directory", a.adopt_controller/name/"tracking")))
+            if row["status"] == "completed":
+                continue
+            slot=row["slot"]
+            tracking=Path(row["tracking_directory"])
+            directory=tracking.parent
+            if row["status"] == "reattaching_existing_remote_task":
+                process=ExistingTracker(row["local_pid"],tracking)
+                row["logger_adopted_without_restart"] = True
+                log=(a.output/(name+"-adopted.log")).open("w",encoding="utf-8")
+                active[slot]=(process,log,name)
+                continue
+            # A pending tracker has not initialized online or launched GPU.
+            # Verify that exact local process and absent tracking directory
+            # before replacing only its waiting Python controller.
+            if row["status"] not in {"running", "waiting_execution_acceptance"} or tracking.exists():
+                raise ValueError("task is not an unlaunched waiting tracker")
+            old=psutil.Process(row["local_pid"])
+            command=old.cmdline()
+            if "scripts/icassp2027/track_relation_qa.py" not in command or str(directory/"provenance.json") not in command:
+                raise ValueError("waiting tracker process identity differs")
+            old.terminate(); old.wait(timeout=15)
+            log=(a.output/(name+"-refreshed.log")).open("w",encoding="utf-8")
+            process=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,
+                env={**os.environ,"PYTHONUTF8":"1","PYTHONPATH":str(Path(__file__).resolve().parents[2]/"src")})
+            row.update(local_pid=process.pid,status="waiting_execution_acceptance",tracking_directory=str(tracking))
+            active[slot]=(process,log,name)
+        save()
     if a.resume_controller is not None:
         previous=json.loads((a.resume_controller / "queue.json").read_text("utf-8"))
         for name,row in previous["tasks"].items():
@@ -124,7 +185,7 @@ def main():
                      "--failure-key","test/failed","--formal-quality"]
                 log=(run / "controller.log").open("w",encoding="utf-8")
                 process=subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT,
-                    env={**os.environ,"PYTHONUTF8":"1"})
+                    env={**os.environ,"PYTHONUTF8":"1","PYTHONPATH":str(Path(__file__).resolve().parents[2]/"src")})
                 active[slot]=(process,log,name)
                 state["tasks"][name]={"status":"running","slot":slot,"local_pid":process.pid}
                 print(f"START {name} slot={slot} local_pid={process.pid}",flush=True)

@@ -31,3 +31,11 @@
 ## 后续候选：跨批处理器像素尾部缓存
 
 在上述已验收CPU路径上进一步减少跨批重复预处理：保留32个源帧的已处理像素，视频切换时清空，仅允许单预处理worker，仍调用同一native处理器处理新帧。r04将旧路径、1/2 worker无像素缓存、1 worker带像素缓存四路CPU并发逐一对照，再由选定配置做GPU2对照。r02只读CPU结果保留，原等待GPU阶段以user_scope_upgrade停止，未分配CUDA。此项新增真实视频/GPU验收尚未通过，不能据单测宣称加速。63项相关单测及compileall通过；自动放行watcher只在验收和云端均成功后发布ready，不启动任何GPU任务。
+
+## 已通过的r05与生产接力
+
+r04严格bitwise门揭示VisionZip原FP32 CUDA scatter_add_的原生重复波动，并非输入像素变化。独立native/native四次对照已云端验收：Abuse旧/旧1.907e-6、旧/新2.146e-6；Normal旧/旧1.550e-6、旧/新1.669e-6，relative L2<=4.453e-7。仅VisionZip用原生重复波动界（noise>0且<=1e-5；cross<=min(1e-5,2*noise+1e-7)；relativeL2<=1e-6），其他方法仍逐元素一致；不改算法、预算、head或原冻结。独立诊断SwanLab5xr8gik1 FINISHED；诊断-r01用错B8 setup被原B1契约拒绝，修正脚本而未弱化契约，失败均保留。
+
+r05完整单GPU2提取/FeatureStore写入对照：dense2.030x、AttentionTopK1.806x、VisionZip1.617x、Uniform1.794x，GPU中位1.800x；四CPU供数1.688x。最终按本次CPU四路中位选择workers2、prefetch2、deduplicate=true、temporal_cache=false，候选像素缓存未默认启用。VisionZip完整83clip旧/旧和旧/新均max_abs1.669e-6，relativeL2 4.370e-7；其他三方法pooled bitwise exact，RGB/pixels全部exact。SwanLab pk85cmf7云端FINISHED且qa/completed=1已核验。source32dabf9b51d98d0b2f97e12e576c6144fce1b9a96f234e7ed471bdab84e89683及acceptance/config/cloud/独立数值回执各SHA绑定。
+
+当前新版GPU0/2已经生产，原GPU1/3仍正常旧代码；不重启原任务。本机调度器119980仅接管旧logger，刷新未发GPU的等待tracker；本机新tracker显式PYTHONPATH=repo/src以读取标准库门禁模块，不安装或更改共享环境。用户最新要求检查保持简单，后续只简查PID、进度、错误与接力，不重复或扩展benchmark。当前四个全部新版的聚合收益尚未实测；不能把单卡/CPU并发结果说成四GPU成功。

@@ -30,3 +30,24 @@ def test_promotion_refuses_failed_gate(failure):
     if failure=='summary':c['completion_summary']={}
     if failure=='config':config['workers']=2
     with pytest.raises(ValueError):validate(a,c,config)
+
+
+def numerical_fixture():
+    a,c,config=fixture()
+    vision=a['cases'][2]
+    vision.update(pooled_exact=False,native_repeat_max_abs=2e-6,native_optimized_max_abs=3e-6,
+        relative_l2_max=4e-7,numerical_policy='native_repeatability_bound_v1')
+    return a,c,config
+
+
+def test_native_repeat_bounded_visionzip_only():
+    validate(*numerical_fixture())
+
+
+@pytest.mark.parametrize('field,value',[
+    ('native_repeat_max_abs',0),('native_repeat_max_abs',2e-5),
+    ('native_optimized_max_abs',5e-6),('relative_l2_max',2e-6),
+    ('numerical_policy','unchecked')])
+def test_visionzip_repeatability_cannot_relax_arbitrary_difference(field,value):
+    a,c,config=numerical_fixture();a['cases'][2][field]=value
+    with pytest.raises(ValueError):validate(a,c,config)

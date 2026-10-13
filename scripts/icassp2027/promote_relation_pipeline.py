@@ -10,15 +10,13 @@ import json
 from pathlib import Path
 import subprocess
 import time
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
+from vadbench.workflows.pipeline_acceptance import validate_acceptance
 
 
 def validate(acceptance, cloud, config):
-    if (acceptance['status'] != 'accepted' or not acceptance['pixel_exact']
-            or acceptance['cpu_four_stream_speedup'] <= 1.05
-            or acceptance['gpu_median_speedup'] <= 1.05
-            or {c['method'] for c in acceptance['cases']} != {'identity','attention_topk','visionzip_internal','uniform'}
-            or not all(c['pooled_exact'] and c['speedup'] > .95 for c in acceptance['cases'])):
-        raise ValueError('fit pixel/output/throughput acceptance not passed')
+    validate_acceptance(acceptance)
     if (not cloud['verified'] or cloud['state'].upper() not in {'FINISHED','SUCCESS'}
             or cloud['completion_summary'].get('qa/completed',{}).get('value') != 1):
         raise ValueError('benchmark cloud success not verified')
@@ -65,7 +63,7 @@ def main():
         raise ValueError('candidate archive SHA differs')
     override.update(status='ready',acceptance_sha256=sha(acceptance_path),
         cloud_verification_sha256=sha(cloud_path),execution_config_sha256=sha(config_path),
-        promoter_sha256=sha(__file__),reason='fit RGB/pixels/pooled exact, CPU4 and GPU2 speedup accepted, cloud success verified')
+        promoter_sha256=sha(__file__),reason='fit RGB/pixels exact; pooled bitwise exact or VisionZip native-repeat bounded; CPU4/GPU2 speedup and cloud success verified')
     temporary=a.pending.with_suffix('.tmp')
     temporary.write_text(json.dumps(override,indent=2),encoding='utf-8');temporary.replace(a.pending)
     print('EXECUTION_OPTIMIZATION_READY '+json.dumps(override),flush=True)
