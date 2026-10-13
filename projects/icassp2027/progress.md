@@ -1,3 +1,15 @@
+## 2026-10-13：按GPU 0/1/2/3启动VideoMAEv2正式关系压缩矩阵
+
+用户明确要求每GPU一个任务依次完成。新[正式冻结](key_attention/FORMAL_FREEZE_20261013.md)锁定VideoMAEv2×UCF/XD：每集dense加18个attention_topk/visionzip_internal/uniform×block6/9/12×删除50/70%条件，共38个GPU提取+评分任务；不重训head，不按test分数改配置。使用完整UCF290与XD800、原sealed manifest/审计/作者时间轴真值；UR-DMU full-sequence exact query-chunk256，后续自动CPU质量导出及10000配对视频bootstrap。
+
+已验证两份现有head的原生backbone身份与当前encoder精确相同（code_digest 19720d4e…），full-train源清单1610/3950仍由final.pt与训练stage原SHA绑定。修复资产迁移后原声明路径与当前物理路径的匹配，并解除对已清理UCF训练缓存/view目录的不必要依赖；未修改检查点、旧SHA或历史协议。新轮次目录保留全部失败记录，只核实后SIGTERM本轮早期XD PID28946/28948；未动其他项目进程。
+
+当前成功执行轮为`/users/fotile/VAD/work/key-attention-formal-20261013-r03`，输出在`/data2/localdisk/fotile-wavad/experiments/icassp2027/key-attention-20261013-r03`。代码快照`f6fa8ca`，tag `key-attn-formal-v4-20261013`，campaign SHA `0709def30dc2d5d66be164079eac6564442ac337e89500d9ffda534cd953c80d`。本机后台队列PID110448；远端GPU0 UCF dense PID31731、GPU1 XD dense PID31729、GPU2 UCF AttnTopK block6 remove50 PID31725、GPU3 XD对应条件PID31727，均有真实视频完成事件。GPU0按既有共享授权保留其他用户服务PID1827（约12GB），本轮各进程allocator限制0.25约10GiB；1/2/3每卡一任务，不占其他卡。共享运行不入正式速度表。
+
+[SwanLab项目](https://swanlab.cn/@ryfrcd693/VAD-Key-Attention-20261013)：四个当前run分别为 qzw8qfyv、vlqduu7k、m79i0tux、3aj98wey，均回读RUNNING及真实进度标量。服务偶发HTTP504，SDK自动重试/恢复，完整本地events和远端日志保留，任务结束回读确认后才派下一项。GPU任务全结束后自动质量导出；配对消费端额外核对实际head SHA和evaluation_sampling_fingerprint相同后才打开真值。当前无新AUC/AP结果。
+
+本地新流程/提取/评分/质量回归首组83 passed；迁移修复后的相关43 passed，最近训练authority相关21 passed、配对质量身份门12 passed；compileall src tests通过。队列依赖本机后台控制器和网络保持运行，远端当前任务由nohup保护；失败停止新派，不盲目重复启动。
+
 ## 2026-10-13：Key/Attention 单点压缩消融开始实施
 
 用户批准[新方案](key_attention/README.md)：AttentionTopK、VisionZip encoder-internal adaptation与Uniform同预算对照，block 6/9/12各单次，删除50%/70%（keep0.50/0.30）。本轮不使用L2排序、不做动态/静态分组，不改旧冻结合同。已建立qzt/key-attn-ablation-20261013分支并校正仓库局部提交邮箱为用户要求的noreply身份。
