@@ -50,3 +50,27 @@ def test_input_hash_change_rejected(tmp_path):
     b={"path":str(p),"sha256":hashlib.sha256(p.read_bytes()).hexdigest()}
     p.write_text("new")
     with pytest.raises(ValueError):bound(b)
+
+
+def test_training_manifest_binding_survives_physical_path_migration(tmp_path,monkeypatch):
+    from vadbench.paper.urdmu_evaluation import _fit_manifest_from_training_stage
+    actual=tmp_path/"physical"/"train.jsonl"
+    actual.parent.mkdir()
+    actual.write_text(json.dumps({"schema_version":1,"video_id":"train-video","path":"v.mp4",
+        "split":"train","num_frames":32,"fps":30,"is_anomaly":False,"annotations":[]})+"\n",encoding="utf-8")
+    declared=tmp_path/"legacy"/"train.jsonl"
+    digest=hashlib.sha256(actual.read_bytes()).hexdigest()
+    root=tmp_path/"head"
+    stages=root/"provenance/stages"
+    stages.mkdir(parents=True)
+    (stages/"training.json").write_text(json.dumps({"stage":"urdmu_training","status":"completed",
+        "config":{"run_mode":"formal","train_manifest":str(declared)},
+        "inputs":{"train_manifest":{"location":str(declared),"sha256":digest}}}),encoding="utf-8")
+    original=Path.resolve
+    def resolve(p,*args,**kwargs):
+        return actual if p==declared else original(p,*args,**kwargs)
+    monkeypatch.setattr(Path,"resolve",resolve)
+    path,_,records=_fit_manifest_from_training_stage(root,{"source_sha256":{str(declared):digest}},("formal",))
+    assert path==actual and len(records)==1
+    with pytest.raises(ValueError):
+        _fit_manifest_from_training_stage(root,{"source_sha256":{str(declared):"0"*64}},("formal",))
