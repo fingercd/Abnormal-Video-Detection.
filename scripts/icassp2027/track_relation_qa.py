@@ -113,7 +113,7 @@ def main():
     for artifact in (args.provenance, args.source_archive, Path(__file__)):
         run.save(artifact.resolve(), base_path=artifact.resolve().parent, policy="now")
     command = ["ssh", "-T", "-p", str(args.port), "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-               "-o", "ConnectTimeout=15", args.host, "bash", "-s"]
+               "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", args.host, "bash", "-s"]
     completed = False
     returncode = None
     step = 0

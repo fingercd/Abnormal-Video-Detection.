@@ -1,3 +1,19 @@
+## 2026-10-13：17点连接恢复与接力
+
+用户简查进度时发现本机记录连接全部退出，旧调度器119980 held_after_failure；实际远端三XD原PID31729/31727/16460持续运行，UCF b06 remove70已自然完成完整提取与预测，GPU计算并未失败。SSH exit255及代理超时历史保留，不按本机断连重投GPU。
+
+修复记录恢复的实际路径：跳过已完成任务；按queue行内tracking_directory读取原事件；保存并复用原SwanLab身份，用最后一条真实事件定位重接游标；接回新版时校验其实际r05 snapshot及task-id，不误按旧snapshot拒绝。新增后续SSH keepalive，未改环境或认证。恢复本机controller97040，最新queue `work/key-attn-formal-20261013/controller-r03-recovery2/queue.json`，原四个SwanLab run保持同ID。UCF b06 remove70已补齐记录并云端完成，三XD已接回持续上传，GPU0自动启动下一冻结项UCF AttentionTopK block9 remove50、真实PID12608。原XD三个GPU进程和其他项目均未停止。
+
+远端17:19:20最新发布：UCF block9 remove50 6/290（1294clips）；XD dense727/800（121326clips）；XD block6 remove50 705/800（114945clips）；XD block6 remove70 653/800（94901clips）。38项为3完成、4在跑、31未派。已完成三项为UCF dense/b06remove50/b06remove70，均完整290视频并完成预测。此次只恢复通信及接力，不扩展验收，不读取新正式质量分数。相关7项控制/记录门单测通过，compileall src tests及改动脚本通过；GPU提取快照、采样、精度、方法、head不变。
+
+## 2026-10-13：按用户要求读取已完成UCF两项正式指标
+
+用户明确要求“之前提取特征结束的直接测试一下指标”，允许本次消费已完成预测；原冻结配置/方法/head仍不依据test调参。单次CPU运行复用原`compare_prediction_runs`，预先核对两实际head SHA及evaluation_sampling_fingerprint相同、两prediction_completed与真值原SHA；不重跑GPU、不改主队列。输出独立`quality-preview-20261013-r01.json`，不覆盖最终quality.json。共享评测使用压缩视频pair矩阵，一次已完成原10000配对bootstrap，不需另开实验。
+
+UCF完整290视频、1111808帧（正84338、负1027470）：dense frame ROC-AUC=0.806319575743（80.631958%），AttentionTopK block6 remove50=0.805531563091（80.553156%），delta=method-dense=-0.000788012651（-0.078801个百分点）。95% CI=[-0.014189957200,0.012303887799]，noninferiority=inconclusive；点差满足-0.005预算，但CI下界未达门槛，不能宣称已证明非劣。bootstrap_seed=20260918，10000/10000有效，0无效。附属frame stepAP dense=0.192917278299、method=0.199852912015；video AUC不是UCF主指标。
+
+SwanLab run3i3rdyam已核验FINISHED及quality/completed=1，指标与完整事件/源SHA在线保存；本机`work/key-attn-formal-20261013/completed-metrics-r01/quality-result.json`。这是本聊天首次读取这两项正式帧级成绩，后续只报告预先冻结格子，不由这些分数改层/预算/checkpoint。四卡生产未中断。
+
 ## 2026-10-13 用户最新执行要求：简查、加速、持续接力
 
 不再扩展或重复工程验收；已通过r05供数优化用于后续任务，原正常任务继续。每次简查四个PID、进度和末尾报错，真实故障才处理。远端15:43:12：本轮UCF dense及UCF b06 remove50已全部完成预测；原XD dense586/800（82316/145703 clips）、XD b06 remove50为561/800（77266/145703 clips）仍运行。下一项新版GPU0 UCF b06 remove70为19/290（5682 clips），GPU2 XD同条件40/800（4577 clips），新两PID16462/16460均Rl，约运行5:45。两旧XD31729/31727未重启，四卡各一项生产；38项为2完成、4在跑、32待接力。新两项从实际启动起含加载粗计约16.5/13.3 clips/s，仅现场进度口径，不是正式效率数字。

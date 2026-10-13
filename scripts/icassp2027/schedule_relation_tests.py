@@ -147,17 +147,26 @@ def main():
         previous=json.loads((a.resume_controller / "queue.json").read_text("utf-8"))
         for name,row in previous["tasks"].items():
             task_id=name.removesuffix("-test")
+            recovered.add(task_id)
+            if row["status"] == "completed":
+                state["tasks"][name]=row
+                continue
             slot=row["slot"]
             recovery=a.output/name
             recovery.mkdir()
             cmd=[sys.executable,"scripts/icassp2027/attach_relation_run.py","--campaign",str(a.campaign),
-                 "--task-id",task_id,"--previous-tracking",str(a.resume_controller/name/"tracking"),
+                 "--task-id",task_id,"--previous-tracking",str(row.get("tracking_directory",a.resume_controller/name/"tracking")),
                  "--output",str(recovery/"tracking")]
+            if row.get("swanlab_source"):
+                cmd.extend(["--swanlab-source",row["swanlab_source"]])
+            if row.get("expected_snapshot"):
+                cmd.extend(["--expected-snapshot",row["expected_snapshot"]])
             log=(recovery/"controller.log").open("w",encoding="utf-8")
             process=subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT,env={**os.environ,"PYTHONUTF8":"1"})
             active[slot]=(process,log,name)
             recovered.add(task_id)
-            state["tasks"][name]={"status":"reattaching_existing_remote_task","slot":slot,"local_pid":process.pid}
+            state["tasks"][name]={"status":"reattaching_existing_remote_task","slot":slot,"local_pid":process.pid,
+                "tracking_directory":str(recovery/"tracking"),"expected_snapshot":row.get("expected_snapshot",c["snapshot_root"])}
         state["recovered_from"]=str(a.resume_controller)
         save()
     for phase in ("test", "quality"):

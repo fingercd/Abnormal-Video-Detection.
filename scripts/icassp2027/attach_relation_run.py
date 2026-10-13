@@ -14,23 +14,30 @@ def main():
     p.add_argument("--task-id",required=True)
     p.add_argument("--previous-tracking",type=Path,required=True)
     p.add_argument("--output",type=Path,required=True)
+    p.add_argument("--swanlab-source",type=Path)
+    p.add_argument("--expected-snapshot")
     a=p.parse_args()
     c=json.loads(a.campaign.read_text("utf-8"))
-    info=json.loads((a.previous_tracking/"swanlab.json").read_text("utf-8"))
+    info=json.loads(((a.swanlab_source or a.previous_tracking)/"swanlab.json").read_text("utf-8"))
     events=a.previous_tracking/"events.jsonl"
-    consumed=sum(1 for l in events.open(encoding="utf-8") if l.strip())
-    verification=json.loads((a.previous_tracking/"cloud-verification.json").read_text("utf-8"))
-    step=verification["completion_summary"]["test/failed"]["step"]
+    previous_events=[json.loads(l) for l in events.read_text("utf-8").splitlines() if l.strip()]
+    last_event=previous_events[-1] if previous_events else None
+    consumed=0
+    seeking=last_event is not None
     a.output.mkdir(parents=True,exist_ok=False)
     import swanlab
     from swanlab.sdk.internal.settings import Settings
     run=swanlab.init(project="VAD-Key-Attention-20261013",id=info["run_id"],resume="must",mode="online",
         log_dir=str(a.output/"swanlog"),settings=Settings(interactive=False,probe=Settings.Probe(monitor=False,hardware=False)))
+    (a.output/"swanlab.json").write_text(json.dumps(info,indent=2),encoding="utf-8")
+    summaries=swanlab.Api().run(info["path"]).summary(keys=["test/videos_completed","test/failed","transport/recovered","test/completed"])
+    step=max(value.get("step",0) for value in summaries.values())
     step+=1
     run.log({"transport/recovered":1,"test/failed":0},step=step)
     run.config.update({"transport_recovery":"reattach original PID and original online run; no GPU task replay"})
     name=a.task_id+"-test"
     base=c["control_root"]
+    snapshot=a.expected_snapshot or c["snapshot_root"]
     script=f'''set -eu
 test "$(hostname)" = ibnode3
 BASE={base}
@@ -40,7 +47,7 @@ if [ -d "/proc/$pid" ]; then
  user=$(ps -p "$pid" -o user=)
  command=$(tr '\\0' ' ' < "/proc/$pid/cmdline")
  [ "$user" = fotile ]
- case "$command" in *"$BASE/snapshot/scripts/icassp2027/run_relation_test.py"*) ;; *) echo "PID identity mismatch";exit 24;; esac
+ case "$command" in *"{snapshot}/scripts/icassp2027/run_relation_test.py"*"--task-id {a.task_id}"*) ;; *) echo "PID identity mismatch";exit 24;; esac
 fi
 tail --pid="$pid" -n +1 -f "$LOG"
 '''
@@ -58,8 +65,17 @@ tail --pid="$pid" -n +1 -f "$LOG"
                     line=raw.decode("utf-8",errors="replace");print(line,end="",flush=True)
                     if not line.startswith("EVENT "):continue
                     ordinal+=1
+                    e=json.loads(line[6:])
+                    if seeking:
+                        if e==last_event:
+                            consumed=ordinal;seeking=False
+                            if e["kind"]=="completed":
+                                completed=True;step+=1
+                                run.log(e.get("metrics",{}),step=step)
+                                saved.write(json.dumps(e,ensure_ascii=False)+"\n");saved.flush()
+                        continue
                     if ordinal<=consumed:continue
-                    e=json.loads(line[6:]);consumed=ordinal;step+=1
+                    consumed=ordinal;step+=1
                     saved.write(json.dumps(e,ensure_ascii=False)+"\n");saved.flush()
                     if e.get("metrics"):run.log(e["metrics"],step=step)
                     run.log_text(key="audit/recovered_events",data=json.dumps(e,ensure_ascii=False),step=step)
