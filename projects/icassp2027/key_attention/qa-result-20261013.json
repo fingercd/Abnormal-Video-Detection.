@@ -1,0 +1,94 @@
+{
+  "schema": "vadbench.key-attention-qa-result/v1",
+  "date": "2026-10-13",
+  "status": "engineering_qa_passed_not_formal_quality",
+  "encoder": "videomaev2",
+  "source_videos": 2,
+  "source_clips": 4,
+  "batch_size": 2,
+  "compressed_configurations": 18,
+  "compressed_batch_forwards": 36,
+  "identity_checks": 6,
+  "identity_pooled_max_abs": 0.0,
+  "key_vs_full_qkv_max_abs": 2.956390380859375e-05,
+  "restored_dense_max_abs": 0.0,
+  "tokens": {
+    "native": 1568,
+    "keep_0.50": 784,
+    "keep_0.30": 470
+  },
+  "membership_checks": 18,
+  "native_weights_sha256": {
+    "model.safetensors": "ebffa1874066ea227330016e58a848e9e2bb1ff5605746459bded1122a42176d"
+  },
+  "native_model_source_sha256": "f821aac219d959254c7189995afd4dd313d98c74a89d4efff05057771bae1079",
+  "code_commit": "91fc9bb67a46d2c22396bd78b6bcbcb92e3207ca",
+  "code_tag": "key-attn-qa-v4-20261013",
+  "source_snapshot_sha256": "552ff8476a4c9e6da7b01b758870177cadab0c06214f5f5d079840f762da5432",
+  "result_archive_sha256": "6d774e97a722b1a643c9ca1df456f7c53536516c86f120c970159671871f83c0",
+  "cloud": {
+    "url": "https://swanlab.cn/@ryfrcd693/VAD-Key-Attention-20261013/runs/c2u9erwg",
+    "path": "ryfrcd693/VAD-Key-Attention-20261013/c2u9erwg",
+    "run_id": "c2u9erwg",
+    "name": "videomaev2-fit2-key-attention-qa-r06",
+    "verified": true,
+    "state": "FINISHED",
+    "completion_summary": {
+      "qa/completed": {
+        "step": 48,
+        "value": 1,
+        "minMax": [
+          1,
+          1
+        ],
+        "min": {
+          "index": 48,
+          "data": 1
+        },
+        "max": {
+          "index": 48,
+          "data": 1
+        },
+        "avg": 1,
+        "median": 1,
+        "stdDev": 0
+      }
+    },
+    "attempts": 1
+  },
+  "remote_run": "/users/fotile/VAD/work/key-attention-20261013-r06/qa",
+  "remote_exit_code": 0,
+  "gpu_released": true,
+  "unit_tests": {
+    "passed": 84,
+    "warning": "existing pandas/numexpr version warning",
+    "python": "3.12.12",
+    "torch": "2.5.1",
+    "compileall_passed": true
+  },
+  "runtime": {
+    "python": "/users/fotile/VAD/.encoder-envs/v2/foundation-video-v2/bin/python",
+    "torch": "2.8.0",
+    "cuda": "12.9",
+    "device": "node3 A100 40GB GPU1",
+    "cuda_numeric_settings": {
+      "cudnn_allow_tf32": false,
+      "cudnn_benchmark": false,
+      "cudnn_enabled": false,
+      "deterministic_algorithms": false,
+      "matmul_allow_tf32": false
+    }
+  },
+  "formal_metrics": {
+    "ucf_frame_auc": null,
+    "xd_pr_auc": null,
+    "net_speedup": null,
+    "peak_memory_saving": null
+  },
+  "next_required": [
+    "VideoMAE/TimeSformer adapter acceptance",
+    "new full feature extraction and direct_insert permission contracts",
+    "frozen official quality grid",
+    "exclusive whole-path timing"
+  ]
+}

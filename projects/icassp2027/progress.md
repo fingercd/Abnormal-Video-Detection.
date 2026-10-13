@@ -4,6 +4,10 @@
 
 首阶段native VideoMAEv2的post-attention/pre-MLP桥、精确预算算法、不可变部署身份、fit-only QA及本机SwanLab在线转发入口已实现；VideoMAE/TimeSformer尚未接入。当前本地相关单元回归79 passed，compileall通过，保留既有numexpr版本提示；尚未据此宣称真实模型质量/速度。node3公网连接已核验，空闲GPU可用于QA；不修改其他项目进程。真实两视频×两窗口QA及云端核验待执行。
 
+**本轮后续实测：** r06在node3空闲A100 GPU1完成2个fit视频×2窗口、全部18压缩条件，共36次B=2压缩前向；6个capture-on identity与退出后dense恢复的pooled最大绝对误差均0。真实token由1568变784/470，当前层MLP和后续层shape正确；独立K投影对full-QKV参考最大误差2.9564e-05。18份membership/mass回读核验通过。本地最终受影响回归84 passed、compileall通过。代码`91fc9bb`，tag `key-attn-qa-v4-20261013`；[SwanLab](https://swanlab.cn/@ryfrcd693/VAD-Key-Attention-20261013/runs/c2u9erwg)已回读FINISHED及完成/计数标量，作业退出0且GPU释放。摘要见[key_attention/qa-result-20261013.json](key_attention/qa-result-20261013.json)。
+
+r01–r05启动/验收失败目录均保留：打包资源、Windows SSH行尾、既有overlay/cuDNN-off环境入口、Python3.12/3.10 AST空字段差异均已定位；有在线启动的失败均保留CRASHED记录。成功轮复用原baseline环境钩子，不重装环境，不修改权重，不读正式test分数。该阶段仅证明V2工程路径通过，不代表AUC/AP或净加速达标；VMA/TS适配、新正式特征/评分许可与正式质量效率矩阵仍未完成。
+
 ## 2026-09-26：经node3内网跳转node2完成6根物理归档
 
 ## 2026-10-05：框架基线合并准备与验收

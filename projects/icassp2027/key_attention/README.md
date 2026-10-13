@@ -3,6 +3,30 @@
 用户已批准开始实施；这是独立于旧 L2 PairSelect 的新开发轮次，旧协议与结果不改写。
 本目录方案不是旧 test 冻结合同的修订，也不自动授予新方法正式 test 访问。
 
+## 本次执行结果
+
+2026-10-13，node3空闲A100 GPU1完成native VideoMAEv2真实权重QA：2个fit视频、4个独立输入clip，
+18个压缩条件分别在每视频B=2前向，共36次压缩batch；6次capture-on identity和2次退出后dense恢复全部通过。
+identity与恢复的pooled最大误差均0；独立K切片投影相对full-QKV参考最大绝对误差2.956390380859375e-05。
+实际1568→784/470，当前层MLP和后续attention的真实shape通过；18份source membership/mass回读一致。
+本地受影响回归84 passed，compileall通过；既有numexpr warning保留。
+
+代码版本 `91fc9bb67a46d2c22396bd78b6bcbcb92e3207ca`，tag `key-attn-qa-v4-20261013`。
+[SwanLab成功记录](https://swanlab.cn/@ryfrcd693/VAD-Key-Attention-20261013/runs/c2u9erwg)
+已回读FINISHED、qa/completed=1、compressed_cases=36、identity_checks=6。
+完整摘要与产物SHA见[qa-result-20261013.json](qa-result-20261013.json)。作业已退出，GPU已释放。
+这不是正式检测质量或净加速结论，其他两encoder与完整六格仍待执行。
+
+启动失败如实保留：r01资源打包缺registry（CLI失败）；r02 Windows SSH stdin行尾错误（未启动GPU）；
+r03漏加载已存在的videomaev2 overlay；r04漏加载旧baseline cuDNN-off钩子；r05同源码AST因Python3.12空type_params字段误判。
+后四次均有独立SwanLab CRASHED记录；r03/r04/r05失败标量已回读核验，r02状态已回读。
+修复没有改权重/共享环境/旧协议；AST只规范化已证明为空的新增字段，保留所有运算语义检查。
+
+实际成功环境复用既有foundation-video-v2解释器＋videomaev2 overlay＋原baseline的
+`env-hooks/vjepa2-cudnn-off/sitecustomize.py`，该钩子SHA为
+`b1370244e0f2933d14f3ecac6de0130e43638d4d8027175f84a5250b61807693`。
+启动时移除LD_LIBRARY_PATH并保持TF32关闭；不是新安装或永久系统修改。具体命令保存在运行回执。
+
 ## 已确认矩阵
 
 - 两种候选：`attention_topk`、`visionzip_internal`；对照：`uniform`。
