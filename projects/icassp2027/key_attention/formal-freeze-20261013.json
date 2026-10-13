@@ -1,0 +1,53 @@
+{
+  "schema": "icassp2027.method-freeze-contract/v1",
+  "contract_version": "relation-v1-20261013",
+  "status": "active",
+  "frozen_at": "2026-10-13",
+  "frozen_by": "user-requested-fixed-grid-before-new-test-scores",
+  "markdown_contract": {
+    "path": "/users/fotile/VAD/work/key-attention-formal-20261013-r01/snapshot/projects/icassp2027/key_attention/FORMAL_FREEZE_20261013.md",
+    "sha256": "e2df8c6185b0331c713844a14d88f2d278d9f411ef7af4e945917b7710997914"
+  },
+  "method_scope": {
+    "encoders": [
+      "videomaev2"
+    ],
+    "backend": {
+      "name": "UR-DMU",
+      "upstream_commit": "40cfdf5f8bebbc3b59373935f9d6ca00e2f32bbc",
+      "checkpoint_selection": "fixed_final_step_no_test_selection",
+      "steps": 3000,
+      "bags_per_class": 64
+    },
+    "methods": [
+      "identity",
+      "attention_topk",
+      "visionzip_internal",
+      "uniform"
+    ],
+    "block_indices": [
+      5,
+      8,
+      11
+    ],
+    "keep_ratios": [
+      0.5,
+      0.3
+    ],
+    "dominant_contextual_weights": [
+      4,
+      1
+    ],
+    "site": "post_attention_residual_pre_norm2_mlp"
+  },
+  "property_evidence": [
+    {
+      "id": "training-only-engineering-qa-not-anomaly-property-claim",
+      "role": "native execution and budget acceptance only; no scientific property claim",
+      "path": "/users/fotile/VAD/work/key-attention-formal-20261013-r01/snapshot/projects/icassp2027/key_attention/qa-result-20261013.json",
+      "sha256": "cb6b0aec3e63041420a265c7d6e731286cafab245d18d7aed64aa7d6e62560c3"
+    }
+  ],
+  "test_usage": "fixed grid evaluation only; no score-based retuning or checkpoint selection",
+  "older_test_exposure": "historical prior experiments exist; no independence or unseen-test claim"
+}

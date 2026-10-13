@@ -21,6 +21,11 @@ def main():
     p.add_argument("--source-archive", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--name", required=True)
+    p.add_argument("--job-type", default="engineering-qa")
+    p.add_argument("--group", default="videomaev2-fit-only")
+    p.add_argument("--completion-key", default="qa/completed")
+    p.add_argument("--failure-key", default="qa/failed")
+    p.add_argument("--formal-quality", action="store_true")
     p.add_argument("--host", default="fotile@121.196.228.153")
     p.add_argument("--port", type=int, default=12345)
     args = p.parse_args()
@@ -35,8 +40,8 @@ def main():
     run = swanlab.init(
         project="VAD-Key-Attention-20261013", name=args.name, public=False,
         mode="online", log_dir=str(args.output / "swanlog"),
-        job_type="engineering-qa", group="videomaev2-fit-only",
-        config={**provenance, "tracking": "local_online_remote_event_stream", "formal_quality": False},
+        job_type=args.job_type, group=args.group,
+        config={**provenance, "tracking": "local_online_remote_event_stream", "formal_quality": args.formal_quality},
         settings=Settings(interactive=False, probe=Settings.Probe(monitor=False, hardware=False)),
     )
     if not run.url or "http" not in run.url:
@@ -95,7 +100,7 @@ def main():
         run.save((args.output / "events.jsonl").resolve(), base_path=args.output.resolve(), policy="now")
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
-        run.log({"qa/failed": 1}, step=step + 1)
+        run.log({args.failure_key: 1}, step=step + 1)
     finally:
         run.finish(state="success" if completed and returncode == 0 and error is None else "crashed", error=error)
 
@@ -104,7 +109,7 @@ def main():
     api = swanlab.Api()
     for attempt in range(3):
         remote = api.run(link["path"])
-        summary_key = "qa/failed" if error else "qa/completed"
+        summary_key = args.failure_key if error else args.completion_key
         summary = remote.summary(keys=[summary_key])
         verification.update(state=remote.state, completion_summary=summary, attempts=attempt + 1)
         if summary.get(summary_key, {}).get("value") == 1 and remote.state.upper() not in {"RUNNING", "PENDING", ""}:

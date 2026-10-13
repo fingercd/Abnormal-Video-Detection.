@@ -12,7 +12,7 @@ import importlib.metadata
 import inspect
 import json
 import math
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import contextmanager, nullcontext
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
@@ -852,6 +852,7 @@ def extract_pooled_features(
     encode_context_factory: ReductionDeployment | None = None,
     resume_source: str | Path | None = None,
     resume_transport: Literal["copy", "hardlink_npz"] = "copy",
+    progress: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> PooledExtractionResult:
     """Run one isolated pooled-only paper extraction attempt.
 
@@ -1057,6 +1058,9 @@ def extract_pooled_features(
                         decoded_clips += shard_store.count - before
                 shard_store.publish(len(samples))
                 shard_dirs.append(shard)
+                if progress is not None:
+                    progress({"video_id": record.video_id, "videos_completed": len(shard_dirs),
+                              "videos_total": len(records), "clips_written": written})
         except Exception as exc:
             failures.append(
                 {"video_id": record.video_id, "type": type(exc).__name__, "message": str(exc)}
