@@ -57,10 +57,13 @@ def main():
         with (args.output / "remote.log").open("w", encoding="utf-8") as log, \
              (args.output / "events.jsonl").open("w", encoding="utf-8") as events:
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
-            process.stdin.write(launcher.replace("__SWANLAB_URL__", shlex.quote(run.url)))
+                                       stderr=subprocess.STDOUT)
+            # Binary stdin prevents Windows TextIOWrapper translating LF to CRLF
+            # in the shell program sent to Linux bash.
+            process.stdin.write(launcher.replace("__SWANLAB_URL__", shlex.quote(run.url)).encode("utf-8"))
             process.stdin.close()
-            for line in process.stdout:
+            for raw_line in process.stdout:
+                line = raw_line.decode("utf-8", errors="replace")
                 log.write(line)
                 log.flush()
                 print(line, end="", flush=True)
@@ -92,6 +95,7 @@ def main():
         run.save((args.output / "events.jsonl").resolve(), base_path=args.output.resolve(), policy="now")
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
+        run.log({"qa/failed": 1}, step=step + 1)
     finally:
         run.finish(state="success" if completed and returncode == 0 and error is None else "crashed", error=error)
 
@@ -101,7 +105,7 @@ def main():
     for attempt in range(3):
         remote = api.run(link["path"])
         summary_key = "qa/failed" if error else "qa/completed"
-        summary = remote.summary(keys=[summary_key]).json()
+        summary = remote.summary(keys=[summary_key])
         verification.update(state=remote.state, completion_summary=summary, attempts=attempt + 1)
         if summary.get(summary_key, {}).get("value") == 1 and remote.state.upper() not in {"RUNNING", "PENDING", ""}:
             verification["verified"] = True
