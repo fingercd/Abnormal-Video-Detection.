@@ -68,6 +68,7 @@ def main():
     p.add_argument("--campaign-sha256", required=True)
     p.add_argument("--source-archive", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--resume-controller", type=Path)
     a = p.parse_args()
     c = json.loads(a.campaign.read_text("utf-8"))
     a.output.mkdir(parents=True, exist_ok=False)
@@ -80,11 +81,29 @@ def main():
     active = {}
     stopped = False
     save()
+    recovered=set()
+    if a.resume_controller is not None:
+        previous=json.loads((a.resume_controller / "queue.json").read_text("utf-8"))
+        for name,row in previous["tasks"].items():
+            task_id=name.removesuffix("-test")
+            slot=row["slot"]
+            recovery=a.output/name
+            recovery.mkdir()
+            cmd=[sys.executable,"scripts/icassp2027/attach_relation_run.py","--campaign",str(a.campaign),
+                 "--task-id",task_id,"--previous-tracking",str(a.resume_controller/name/"tracking"),
+                 "--output",str(recovery/"tracking")]
+            log=(recovery/"controller.log").open("w",encoding="utf-8")
+            process=subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT,env={**os.environ,"PYTHONUTF8":"1"})
+            active[slot]=(process,log,name)
+            recovered.add(task_id)
+            state["tasks"][name]={"status":"reattaching_existing_remote_task","slot":slot,"local_pid":process.pid}
+        state["recovered_from"]=str(a.resume_controller)
+        save()
     for phase in ("test", "quality"):
         if stopped:
             break
         state["phase"] = phase
-        pending = list(c["tasks"])
+        pending = [t for t in c["tasks"] if phase!="test" or t["id"] not in recovered]
         while pending or active:
             for slot in range(4):
                 if slot in active or not pending or stopped:
