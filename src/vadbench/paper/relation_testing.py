@@ -152,7 +152,8 @@ def run_test(c, task, tracking_url, emit):
             from vadbench.workflows.extraction_pipeline import VideoMAEv2CPUPipeline
             settings = c["execution_optimization"]
             pipeline = VideoMAEv2CPUPipeline(adapter.encoder, workers=settings["workers"],
-                prefetch=settings["prefetch"], deduplicate=settings["deduplicate"])
+                prefetch=settings["prefetch"], deduplicate=settings["deduplicate"],
+                temporal_cache=settings.get("temporal_cache", False))
             atomic_write_json(out / "execution-optimization.json", {**settings,
                 "pipeline": pipeline.execution_identity})
             emit("execution_optimization", execution={**settings, "pipeline":pipeline.execution_identity})

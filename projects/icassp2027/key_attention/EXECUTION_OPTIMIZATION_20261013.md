@@ -27,3 +27,7 @@
 本地51项受影响单测通过，compileall src tests及改动脚本通过。工程r01在CPU阶段因历史fit manifest num_frames为空退出，未分配CUDA；失败及SwanLab CRASHED保留。r02使用实际OpenCV probe，SwanLab run n99346d2、remote `/users/fotile/VAD/work/key-attention-optimization-20261013-r02`，完整日志与CPU结果保留；GPU验收尚待完成。
 
 效率测量处于其他任务并行的共享节点，不能进入论文独占速度表。输出一致性或吞吐门失败时保留所有证据，继续诊断，不篡改旧身份或用测试质量选择执行参数。
+
+## 后续候选：跨批处理器像素尾部缓存
+
+在上述已验收CPU路径上进一步减少跨批重复预处理：保留32个源帧的已处理像素，视频切换时清空，仅允许单预处理worker，仍调用同一native处理器处理新帧。r04将旧路径、1/2 worker无像素缓存、1 worker带像素缓存四路CPU并发逐一对照，再由选定配置做GPU2对照。r02只读CPU结果保留，原等待GPU阶段以user_scope_upgrade停止，未分配CUDA。此项新增真实视频/GPU验收尚未通过，不能据单测宣称加速。63项相关单测及compileall通过；自动放行watcher只在验收和云端均成功后发布ready，不启动任何GPU任务。

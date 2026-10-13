@@ -69,7 +69,7 @@ def main():
     pixel_max = 0.
     for record, samples in jobs:
         with OpenCVVideoReader(paths[record.video_id]) as baseline, OpenCVVideoReader(paths[record.video_id]) as reader:
-            pipeline = VideoMAEv2CPUPipeline(cpu)
+            pipeline = VideoMAEv2CPUPipeline(cpu, workers=1, temporal_cache=True)
             with pipeline.batches(reader, record.video_id, samples, 8) as batches:
                 for group, batch, context in batches:
                     native = _batch_from_reader(baseline, record.video_id, [s.clip for s in group])
@@ -83,13 +83,14 @@ def main():
                             raise ValueError('native processor pixels differ')
     emit('pixel_equivalence', metrics={'pipeline/rgb_and_pixels_exact':1,'pipeline/pixel_max_abs':pixel_max})
 
-    def cpu_stream_safe(workers):
+    def cpu_stream_safe(option):
+        workers, temporal_cache = option
         local = SimpleNamespace(cfg=cpu.cfg, processor=cpu.processor)
         local._tensor_from_rgb_lists = VideoMAEv2Encoder._tensor_from_rgb_lists.__get__(local)
         for record, samples in jobs:
             with OpenCVVideoReader(paths[record.video_id]) as reader:
                 if workers:
-                    pipeline = VideoMAEv2CPUPipeline(local, workers=workers)
+                    pipeline = VideoMAEv2CPUPipeline(local, workers=workers, temporal_cache=temporal_cache)
                     with pipeline.batches(reader, record.video_id, samples, 8) as batches:
                         for group, batch, context in batches:
                             with context: local._tensor_from_rgb_lists(None)
@@ -100,21 +101,23 @@ def main():
         return total
 
     measurements = {}
-    for workers in (0, 1, 2):
+    options = {'native':(0,False),'w1':(1,False),'w2':(2,False),'w1cache':(1,True)}
+    for name, option in options.items():
         elapsed = []
         for repeat in range(2):
             start = time.perf_counter()
             with ThreadPoolExecutor(max_workers=4) as pool:
-                counts = list(pool.map(cpu_stream_safe, [workers]*4))
+                counts = list(pool.map(cpu_stream_safe, [option]*4))
             seconds = time.perf_counter() - start
             elapsed.append(seconds)
-            emit('cpu_four_streams', workers=workers, repeat=repeat,
-                metrics={f'pipeline/cpu4_workers{workers}_clips_per_second':sum(counts)/seconds,
-                         f'pipeline/cpu4_workers{workers}_seconds':seconds})
-        measurements[str(workers)] = {'seconds':elapsed,'median_seconds':statistics.median(elapsed),
+            emit('cpu_four_streams', variant=name, option=option, repeat=repeat,
+                metrics={f'pipeline/cpu4_{name}_clips_per_second':sum(counts)/seconds,
+                         f'pipeline/cpu4_{name}_seconds':seconds})
+        measurements[name] = {'seconds':elapsed,'median_seconds':statistics.median(elapsed),
             'aggregate_clips_per_second':4*total/statistics.median(elapsed)}
-    workers = min((1,2), key=lambda w:measurements[str(w)]['median_seconds'])
-    config = {'workers':workers,'prefetch':2,'deduplicate':True,
+    selected = min(('w1','w2','w1cache'), key=lambda name:measurements[name]['median_seconds'])
+    workers, temporal_cache = options[selected]
+    config = {'workers':workers,'prefetch':2,'deduplicate':True,'temporal_cache':temporal_cache,
         'scope':'execution_only_fit_engineering_not_method_selection',
         'benchmark_source':str(a.output), 'tracking_url':a.tracking_url}
     atomic_write_json(a.output/'cpu-result.json', {'pixel_exact':True,'measurements':measurements,
@@ -160,7 +163,7 @@ def main():
         for repeat in range(2):
             # Reverse order on repeat 2 to reduce cache/order bias.
             for variant in (('native','optimized') if repeat==0 else ('optimized','native')):
-                pipeline = None if variant=='native' else VideoMAEv2CPUPipeline(adapter.encoder,workers=workers)
+                pipeline = None if variant=='native' else VideoMAEv2CPUPipeline(adapter.encoder,workers=workers,temporal_cache=temporal_cache)
                 torch.cuda.synchronize(); torch.cuda.reset_peak_memory_stats()
                 start = time.perf_counter()
                 result = extract_pooled_features(spec,adapter=adapter,manifest=records,dataset_root=dataset_root,
@@ -181,7 +184,7 @@ def main():
                              'pipeline/peak_allocated_mib':torch.cuda.max_memory_allocated()/2**20})
         speedup = statistics.median(timings['native'])/statistics.median(timings['optimized'])
         cases.append({'method':method,'timings':timings,'speedup':speedup,'pooled_exact':True})
-    cpu_speedup = measurements['0']['median_seconds']/measurements[str(workers)]['median_seconds']
+    cpu_speedup = measurements['native']['median_seconds']/measurements[selected]['median_seconds']
     median_speedup = statistics.median(c['speedup'] for c in cases)
     accepted = cpu_speedup>1.05 and median_speedup>1.05 and min(c['speedup'] for c in cases)>.95
     final = {'status':'accepted' if accepted else 'held_no_proven_speedup','scope':'fit_engineering_only',

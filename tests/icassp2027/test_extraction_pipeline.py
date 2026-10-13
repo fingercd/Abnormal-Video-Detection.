@@ -100,3 +100,23 @@ def test_pipeline_closes_on_consumer_failure(tmp_path):
     assert '_tensor_from_rgb_lists' not in encoder.__dict__
     assert backend.closed == 2
     assert not any(t.name.startswith('v2-') for t in threading.enumerate())
+
+
+def test_processed_frame_tail_cache_is_exact_and_video_local(tmp_path):
+    path = tmp_path / 'video.mp4'; path.touch()
+    encoder = Encoder()
+    pipeline = VideoMAEv2CPUPipeline(encoder, workers=1, temporal_cache=True)
+    samples = DenseSamplingPlan(16, 2, 16).sample(200)
+    for value in (0, 17):
+        backend = Backend(); backend.frames += value
+        with OpenCVVideoReader(path, backend=backend) as reader:
+            with pipeline.batches(reader, 'v', samples, 2) as batches:
+                for _, batch, context in batches:
+                    expected = pipeline.native_prepare([list(c) for c in batch.frames])
+                    with context: assert torch.equal(encoder._tensor_from_rgb_lists(None), expected)
+                    assert len(pipeline.pixel_tail) <= 32
+
+
+def test_pixel_cache_refuses_concurrent_or_non_deduplicated_preparation():
+    with pytest.raises(ValueError): VideoMAEv2CPUPipeline(Encoder(),workers=2,temporal_cache=True)
+    with pytest.raises(ValueError): VideoMAEv2CPUPipeline(Encoder(),workers=1,temporal_cache=True,deduplicate=False)

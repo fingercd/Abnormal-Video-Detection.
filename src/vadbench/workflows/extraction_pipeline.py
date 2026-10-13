@@ -56,7 +56,7 @@ class VideoMAEv2CPUPipeline:
     before enabling this execution option for a frozen campaign.
     """
 
-    def __init__(self, encoder, *, workers=2, prefetch=2, deduplicate=True):
+    def __init__(self, encoder, *, workers=2, prefetch=2, deduplicate=True, temporal_cache=False):
         if workers < 1 or prefetch < 1:
             raise ValueError("workers and prefetch must be positive")
         self.encoder = encoder
@@ -64,11 +64,16 @@ class VideoMAEv2CPUPipeline:
         self.workers = workers
         self.prefetch = prefetch
         self.deduplicate = deduplicate
+        if temporal_cache and (workers != 1 or not deduplicate):
+            raise ValueError("ordered pixel tail cache requires one preparation worker and deduplication")
+        self.temporal_cache = temporal_cache
+        self.pixel_tail = {}
 
     @property
     def execution_identity(self):
         return {"kind": "v2_ordered_cpu_pipeline", "workers": self.workers,
                 "prefetch": self.prefetch, "deduplicate_frames": self.deduplicate,
+                "processed_frame_tail_cache": self.temporal_cache,
                 "continuous_reader": True,
                 "implementation_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
 
@@ -82,12 +87,24 @@ class VideoMAEv2CPUPipeline:
         indices = batch.frame_indices.reshape(-1)
         flat = frames.reshape((-1,) + frames.shape[2:])
         unique, first, inverse = np.unique(indices, return_index=True, return_inverse=True)
-        count = len(unique)
-        selected = [flat[i] for i in first]
+        missing = [(int(index), int(offset)) for index, offset in zip(unique, first)
+                   if int(index) not in self.pixel_tail]
+        count = len(missing)
+        selected = [flat[offset] for _, offset in missing]
         steps = self.encoder.cfg.num_frames
-        selected.extend([selected[-1]] * ((-count) % steps))
-        pixels = self.native_prepare([selected[i:i + steps] for i in range(0, len(selected), steps)])
-        per_frame = pixels.permute(0, 2, 1, 3, 4).reshape(-1, *pixels.shape[1:2], *pixels.shape[3:])[:count]
+        prepared = {}
+        if selected:
+            selected.extend([selected[-1]] * ((-count) % steps))
+            pixels = self.native_prepare([selected[i:i + steps] for i in range(0, len(selected), steps)])
+            fresh = pixels.permute(0, 2, 1, 3, 4).reshape(-1, *pixels.shape[1:2], *pixels.shape[3:])[:count]
+            prepared = {index:fresh[i] for i, (index, _) in enumerate(missing)}
+        per_frame = (torch.stack([self.pixel_tail[int(index)] if int(index) in self.pixel_tail
+                                 else prepared[int(index)] for index in unique])
+                     if self.temporal_cache else fresh)
+        if self.temporal_cache:
+            # Clone the small tail so it doesn't retain whole native tensors.
+            self.pixel_tail = {int(index):per_frame[i].clone()
+                               for i,index in enumerate(unique) if i >= len(unique)-32}
         restored = per_frame[torch.as_tensor(inverse)].reshape(frames.shape[0], steps, *per_frame.shape[1:])
         return restored.permute(0, 2, 1, 3, 4)
 
@@ -107,6 +124,7 @@ class VideoMAEv2CPUPipeline:
 
     @contextmanager
     def batches(self, reader, video_id, samples, micro_batch_size):
+        self.pixel_tail = {}  # source indices are local to each video
         queue = Queue(maxsize=self.prefetch)
         stop = Event()
         sentinel = object()
