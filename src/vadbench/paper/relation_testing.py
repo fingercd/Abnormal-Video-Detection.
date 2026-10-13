@@ -20,7 +20,6 @@ from vadbench.data.batches import clean_encoder_batch
 from vadbench.data.dense_sampling import DenseSamplingPlan
 from vadbench.data.feature_contracts import CompatibilityDeclaration, TrainingIdentity, validate_compatibility
 from vadbench.data.manifest import load_manifest_jsonl, validate_manifest_pair, write_manifest_jsonl
-from vadbench.data.official_training import load_official_training_view
 from vadbench.data.video import build_clip_batch
 from vadbench.engine.coverage import feature_store_coverage
 from vadbench.features import atomic_write_json
@@ -84,15 +83,23 @@ def run_test(c, task, tracking_url, emit):
     torch.cuda.set_per_process_memory_fraction(c["cuda_memory_fraction"], device=0)
     random.seed(0); np.random.seed(0); torch.manual_seed(0)
     try:
-        training, _ = load_official_training_view(bound(ds["training_contract"]), ds["training_contract"]["sha256"])
+        request = evaluation_request(c, task, out / "features/native", ds["test_manifest"]["path"])
+        bound(ds["head_checkpoint"])
+        source = _load_source(request)
+        # The completed formal head SHA-binds its actual complete training
+        # manifest. That is the authority needed for test disjointness; old
+        # feature-cache/view directories need not survive storage cleanup.
+        training = source.fit_records
+        training_view = source.metadata["source_training_view"]
+        if (source.metadata["run_mode"] != "formal"
+                or len(training) != ds["training_videos"]
+                or training_view["available_videos"] != len(training)):
+            raise ValueError("test requires the matching complete formal-training head")
         manifest = bound(ds["test_manifest"])
         records = tuple(load_manifest_jsonl(manifest))
         validate_manifest_pair(training, records)
         if len(records) != ds["test_videos"]:
             raise ValueError("sealed test membership count differs")
-        bound(ds["head_checkpoint"])
-        request = evaluation_request(c, task, out / "features/native", manifest)
-        source = _load_source(request)
         adapter, definition = _make_adapter(SimpleNamespace(
             encoder="videomaev2", project=c["project"], device="cuda:0", processor_tensor_type=None))
         bridge = create_observation_bridge("videomaev2", adapter)
@@ -126,6 +133,10 @@ def run_test(c, task, tracking_url, emit):
             sampling_change="none")
         compatibility = validate_compatibility(declaration)
         atomic_write_json(out / "preflight.json", {"compatibility": compatibility,
+            "training_authority": "completed_formal_head_and_original_SHA_bound_training_manifest",
+            "training_videos":len(training), "training_manifest":str(source.fit_manifest_path),
+            "historical_view_reference":ds["training_contract"],
+            "historical_view_reference_exists":Path(ds["training_contract"]["path"]).exists(),
             "representation": representation.to_dict(), "head_sha256": source.checkpoint_sha256})
         emit("preflight", task_id=task["id"], representation=representation.to_dict(),
              head_sha256=source.checkpoint_sha256, metrics={"test/compatibility_passed":1})
