@@ -8,6 +8,59 @@ import time
 from pathlib import Path
 
 
+def poll_original_log(base, task_id, snapshot, last_event=None):
+    """Short read-only SSH calls; never launch or signal the original task."""
+    offset=0; failures=0; seeking=last_event is not None; completed=False
+    while True:
+        script=f'''set -eu
+[ "$(hostname)" = ibnode3 ]
+LOG="{base}/logs/{task_id}-test.log"
+pid=$(cat "{base}/logs/{task_id}-test.pid")
+running=0
+if [ -d "/proc/$pid" ]; then
+ [ "$(ps -p "$pid" -o user=)" = fotile ]
+ command=$(tr '\\0' ' ' < "/proc/$pid/cmdline")
+ case "$command" in *"{snapshot}/scripts/icassp2027/run_relation_test.py"*"--task-id {task_id}"*) ;; *) exit 24;; esac
+ running=1
+fi
+end=$(wc -l < "$LOG")
+if [ "$end" -gt {offset} ]; then head -n "$end" "$LOG" | tail -n +{offset+1}; fi
+echo "REMOTE_LOG_STATE $end $running"
+'''
+        cmd=["ssh","-T","-p","12345","-o","BatchMode=yes","-o","StrictHostKeyChecking=yes",
+             "-o","ConnectTimeout=15","fotile@121.196.228.153","bash","-s"]
+        result=subprocess.run(cmd,input=script.encode(),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        if result.returncode==255:
+            output=result.stdout.decode("utf-8",errors="replace")
+            if any(reason in output for reason in ("Permission denied","Host key verification failed","REMOTE HOST IDENTIFICATION HAS CHANGED")):
+                raise RuntimeError(output)
+            failures+=1
+            if failures>=3:raise RuntimeError("three read-only transport attempts failed; original GPU task untouched")
+            time.sleep(6);continue
+        if result.returncode:raise RuntimeError(result.stdout.decode("utf-8",errors="replace"))
+        failures=0
+        lines=result.stdout.decode("utf-8",errors="replace").splitlines()
+        state=lines.pop().split()
+        if state[0]!="REMOTE_LOG_STATE":raise RuntimeError("missing read-only log cursor")
+        offset=int(state[1]);running=state[2]=="1"
+        for line in lines:
+            if line.startswith("EVENT "):
+                event=json.loads(line[6:])
+                if seeking:
+                    if event==last_event:
+                        seeking=False
+                        if event["kind"]=="completed":completed=True;yield line+"\n"
+                    continue
+                completed=completed or event["kind"]=="completed"
+            elif seeking:
+                continue
+            yield line+"\n"
+        if not running:
+            if seeking or not completed:raise RuntimeError("original process ended without a matched completion event")
+            return
+        time.sleep(20)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--campaign",type=Path,required=True)
@@ -38,54 +91,19 @@ def main():
     name=a.task_id+"-test"
     base=c["control_root"]
     snapshot=a.expected_snapshot or c["snapshot_root"]
-    script=f'''set -eu
-test "$(hostname)" = ibnode3
-BASE={base}
-LOG="$BASE/logs/{name}.log"
-pid=$(cat "$BASE/logs/{name}.pid")
-if [ -d "/proc/$pid" ]; then
- user=$(ps -p "$pid" -o user=)
- command=$(tr '\\0' ' ' < "/proc/$pid/cmdline")
- [ "$user" = fotile ]
- case "$command" in *"{snapshot}/scripts/icassp2027/run_relation_test.py"*"--task-id {a.task_id}"*) ;; *) echo "PID identity mismatch";exit 24;; esac
-fi
-tail --pid="$pid" -n +1 -f "$LOG"
-'''
     completed=False;error=None;rc=None
     try:
         with (a.output/"events.jsonl").open("w",encoding="utf-8") as saved:
-            for attempt in range(3):
-                cmd=["ssh","-T","-p","12345","-o","BatchMode=yes","-o","StrictHostKeyChecking=yes",
-                     "-o","ConnectTimeout=15","-o","ServerAliveInterval=30","-o","ServerAliveCountMax=3",
-                     "fotile@121.196.228.153","bash","-s"]
-                process=subprocess.Popen(cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-                process.stdin.write(script.encode("utf-8"));process.stdin.close()
-                ordinal=0
-                for raw in process.stdout:
-                    line=raw.decode("utf-8",errors="replace");print(line,end="",flush=True)
-                    if not line.startswith("EVENT "):continue
-                    ordinal+=1
-                    e=json.loads(line[6:])
-                    if seeking:
-                        if e==last_event:
-                            consumed=ordinal;seeking=False
-                            if e["kind"]=="completed":
-                                completed=True;step+=1
-                                run.log(e.get("metrics",{}),step=step)
-                                saved.write(json.dumps(e,ensure_ascii=False)+"\n");saved.flush()
-                        continue
-                    if ordinal<=consumed:continue
-                    consumed=ordinal;step+=1
-                    saved.write(json.dumps(e,ensure_ascii=False)+"\n");saved.flush()
-                    if e.get("metrics"):run.log(e["metrics"],step=step)
-                    run.log_text(key="audit/recovered_events",data=json.dumps(e,ensure_ascii=False),step=step)
-                    if e["kind"]=="failed":raise RuntimeError(e.get("error","remote computation failed"))
-                    completed=completed or e["kind"]=="completed"
-                rc=process.wait()
-                if completed and rc==0:break
-                if attempt<2:time.sleep(6)
-            if not completed or rc!=0:
-                raise RuntimeError("reattach incomplete; original GPU task was NOT replayed")
+            for line in poll_original_log(base,a.task_id,snapshot,last_event):
+                print(line,end="",flush=True)
+                if not line.startswith("EVENT "):continue
+                e=json.loads(line[6:]);step+=1
+                saved.write(json.dumps(e,ensure_ascii=False)+"\n");saved.flush()
+                if e.get("metrics"):run.log(e["metrics"],step=step)
+                run.log_text(key="audit/recovered_events",data=json.dumps(e,ensure_ascii=False),step=step)
+                if e["kind"]=="failed":raise RuntimeError(e.get("error","remote computation failed"))
+                completed=completed or e["kind"]=="completed"
+            if not completed:raise RuntimeError("reattach incomplete; original GPU task was NOT replayed")
         run.save((a.output/"events.jsonl").resolve(),base_path=a.output.resolve(),policy="now")
     except Exception as exc:
         error=str(exc)

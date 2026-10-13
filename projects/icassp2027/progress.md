@@ -1,3 +1,21 @@
+## 2026-10-13 18:40 定时汇报及短连接恢复
+
+再次发现长SSH日志连接中断，本机97040 held_after_failure，但四GPU计算均正常。改为每20秒短SSH只读轮询原日志，保留源行游标、原PID和SwanLab身份，最多3次传输重试，认证/指纹失败立即停止；新formal launcher只启动一次nohup后退出SSH，再短轮询原日志，不重复启动GPU。r03恢复尝试补路径时缺tracking_directory，取消其本机记录进程并保留目录，未动GPU；r04补齐原路径/实际snapshot，主控26992、最新controller-r03-recovery4/queue.json。11项局部测试及compileall通过；不加工程benchmark、不改提取/评分算法或模型。
+
+本次多项已收尾：完整预测+云端确认6/38=15.79%，累计本地最新计数721764/4086273clips=17.66%。已完成UCF dense/b06remove50/b06remove70/b09remove50及XD dense/b06remove70。自动接力后GPU0 XD b09remove70 16/800（2032clips）；GPU1 XD b09remove50 44/800（5269clips）；GPU2 UCF b09remove70 13/290（3159clips）；GPU3原XD b06remove50 793/800（142442clips）。预测/云端完成后马上补位，不等待全体。上述计数为18:40附近本机已接回原日志，非模型训练采样预算。
+
+新增指标均复用原CPU评测、实际head/采样/真值SHA不变，独立preview、不覆盖最终quality.json、无GPU重跑。UCF block9 remove50 frameROC-AUC=81.403313%，dense80.631958%，delta=0.771355个百分点，95%CI[-0.275440,1.873450]个百分点，按预定-0.5pp非劣界supported；区间跨0，不宣称显著优于dense。SwanLab5hqbxfzx FINISHED/quality_completed核验通过。XD dense主作者梯形PR-AUC=76.181075%，block6remove70=75.980119%，delta=-0.200957个百分点，CI[-0.838616,0.455831]个百分点，非劣inconclusive；stepAP分别70.333010%/71.009466%，不与梯形PR-AUC混称。SwanLab lb2yzg6a FINISHED/quality_completed核验通过。原UCF50/70成绩不变，不按这次正向成绩选择/修改后续冻结格子。
+
+按现有clip速率，新GPU0/1 XD任务预计21:30–22:40/21:20–22:30，GPU2 UCF预计19:45–20:20；原GPU3XD50收尾预计18:55–19:15（HKT）。整套38+最终报告仍初步预计10/14 10:00–19:00；其余method/depth未全实测，通信恢复耗时及指标计算可能推迟，下次继续修订。key-attention-40保持ACTIVE，每40分钟主动报告。
+
+**新增完成指标：** 已按用户定期指标请求计算UCF AttentionTopK block6 remove70，frame ROC-AUC=80.184568%，dense仍80.631958%，delta=-0.447390个百分点；95% CI=[-2.491389,1.546806]个百分点，非劣inconclusive。完整290视频、10000配对bootstrap同原口径，独立preview文件，不改最终quality.json、不重跑GPU。SwanLab zetywh1x FINISHED及quality/completed=1已核验；本地completed-metrics-r02/quality-result.json。保持冻结格子继续，不因这次分数改配置。
+
+## 2026-10-13 用户要求每40分钟汇报
+
+已创建本聊天heartbeat `key-attention-40`（ACTIVE），每40分钟主动汇报，包含任务完成比例、累计clip提取比例、已完成指标、每卡及整套预计结束时间。用户明确要定期汇报，因此不沿用“无变化则静默”；仍保持简查，不扩展验收。新完成且匹配dense ready时复用原评测CPU在线计算，SwanLab完成核验，不据正式分数改方法。
+
+初始快照远端17:41:28：3/38任务完成=7.89%，累计598200/4086273clips=14.64%；GPU0 UCFb09remove50为109/290（22804clips），GPU1XDdense756/800（129860clips），GPU2XDb06remove70为704/800（114405clips），GPU3XDb06remove50为735/800（123039clips）。四PID12608/31729/16460/31727 Rl，当前主控97040继续自动补位。按实际clip速度，当前四项预计分别18:35–18:55、18:25–18:45、18:20–18:45、18:45–19:10（HKT）；完整矩阵及报告初步预计10/14 10:00–19:00，后续每次按实际各方法/层/数据集速率修订。尚未实测全部剩余配置，网络和云端记录可能推迟，不把两fit视频倍率套全体。
+
 ## 2026-10-13：17点连接恢复与接力
 
 用户简查进度时发现本机记录连接全部退出，旧调度器119980 held_after_failure；实际远端三XD原PID31729/31727/16460持续运行，UCF b06 remove70已自然完成完整提取与预测，GPU计算并未失败。SSH exit255及代理超时历史保留，不按本机断连重投GPU。

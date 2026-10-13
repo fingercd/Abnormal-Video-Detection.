@@ -93,6 +93,14 @@ def main():
     provenance["tracking_controller_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     if provenance.get("phase") == "quality":
         launcher = paired_quality_gate(provenance) + launcher
+    polling = provenance.get("phase") == "test"
+    if polling:
+        marker='\ntail --pid="$pid" -n +1 -f'
+        if marker not in launcher:
+            raise ValueError("formal launcher missing known detach boundary")
+        # The original nohup job is persistent. End only its SSH launcher;
+        # receive progress through short read-only connections instead.
+        launcher=launcher.split(marker,1)[0]+"\nexit 0\n"
     args.output.mkdir(parents=True, exist_ok=False)
     import swanlab
     from swanlab.sdk.internal.settings import Settings
@@ -118,6 +126,7 @@ def main():
     returncode = None
     step = 0
     error = None
+    last_event = None
     try:
         with (args.output / "remote.log").open("w", encoding="utf-8") as log, \
              (args.output / "events.jsonl").open("w", encoding="utf-8") as events:
@@ -135,6 +144,7 @@ def main():
                 if not line.startswith("EVENT "):
                     continue
                 event = json.loads(line[6:])
+                last_event = event
                 events.write(json.dumps(event, ensure_ascii=False) + "\n")
                 events.flush()
                 step += 1
@@ -154,6 +164,18 @@ def main():
                 run.log_text(key="audit/events", data=json.dumps(event, ensure_ascii=False), step=step)
                 completed = completed or event.get("kind") == "completed"
             returncode = process.wait()
+            if polling and returncode == 0:
+                from attach_relation_run import poll_original_log
+                c=provenance["campaign"]
+                snapshot=provenance.get("execution_optimization",{}).get("snapshot_root",c["snapshot_root"])
+                for line in poll_original_log(c["control_root"],provenance["task"]["id"],snapshot,last_event):
+                    log.write(line);log.flush();print(line,end="",flush=True)
+                    if not line.startswith("EVENT "):continue
+                    event=json.loads(line[6:]);step+=1
+                    events.write(json.dumps(event,ensure_ascii=False)+"\n");events.flush()
+                    if event.get("metrics"):run.log(event["metrics"],step=step)
+                    run.log_text(key="audit/events",data=json.dumps(event,ensure_ascii=False),step=step)
+                    completed=completed or event.get("kind")=="completed"
             if returncode != 0 or not completed:
                 raise RuntimeError(f"remote QA incomplete: ssh exit={returncode}, completion_event={completed}; inspect PID before retry")
         run.save((args.output / "remote.log").resolve(), base_path=args.output.resolve(), policy="now")
