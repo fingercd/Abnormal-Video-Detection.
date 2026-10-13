@@ -18,10 +18,13 @@ LOG="{base}/logs/{task_id}-test.log"
 pid=$(cat "{base}/logs/{task_id}-test.pid")
 running=0
 if [ -d "/proc/$pid" ]; then
- [ "$(ps -p "$pid" -o user=)" = fotile ]
- command=$(tr '\\0' ' ' < "/proc/$pid/cmdline")
- case "$command" in *"{snapshot}/scripts/icassp2027/run_relation_test.py"*"--task-id {task_id}"*) ;; *) exit 24;; esac
- running=1
+ owner=$(ps -p "$pid" -o user= || true)
+ command=$(cat "/proc/$pid/cmdline" 2>/dev/null | tr '\\0' ' ' || true)
+ if [ -n "$owner" ] && [ -n "$command" ]; then
+  [ "$owner" = fotile ]
+  case "$command" in *"{snapshot}/scripts/icassp2027/run_relation_test.py"*"--task-id {task_id}"*) ;; *) exit 24;; esac
+  running=1
+ fi
 fi
 end=$(wc -l < "$LOG")
 if [ "$end" -gt {offset} ]; then head -n "$end" "$LOG" | tail -n +{offset+1}; fi

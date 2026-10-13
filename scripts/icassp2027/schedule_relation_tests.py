@@ -151,6 +151,15 @@ def main():
             if row["status"] == "completed":
                 state["tasks"][name]=row
                 continue
+            if row["status"] in {"running","reattaching_existing_remote_task"}:
+                import psutil
+                tracking=Path(row.get("tracking_directory",a.resume_controller/name/"tracking"))
+                if psutil.pid_exists(row["local_pid"]) and (tracking/"swanlab.json").exists():
+                    process=ExistingTracker(row["local_pid"],tracking)
+                    log=(a.output/(name+"-adopted.log")).open("w",encoding="utf-8")
+                    active[row["slot"]]=(process,log,name)
+                    state["tasks"][name]={**row,"tracking_directory":str(tracking),"logger_adopted_without_restart":True}
+                    continue
             slot=row["slot"]
             recovery=a.output/name
             recovery.mkdir()
