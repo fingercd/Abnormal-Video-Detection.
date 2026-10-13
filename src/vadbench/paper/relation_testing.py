@@ -147,11 +147,21 @@ def run_test(c, task, tracking_url, emit):
             emit("progress", task_id=task["id"], video_id=row["video_id"],
                  metrics={"test/videos_completed":row["videos_completed"],
                           "test/videos_total":row["videos_total"], "test/clips_written":row["clips_written"]})
+        pipeline = None
+        if "execution_optimization" in c:
+            from vadbench.workflows.extraction_pipeline import VideoMAEv2CPUPipeline
+            settings = c["execution_optimization"]
+            pipeline = VideoMAEv2CPUPipeline(adapter.encoder, workers=settings["workers"],
+                prefetch=settings["prefetch"], deduplicate=settings["deduplicate"])
+            atomic_write_json(out / "execution-optimization.json", {**settings,
+                "pipeline": pipeline.execution_identity})
+            emit("execution_optimization", execution={**settings, "pipeline":pipeline.execution_identity})
         result = extract_pooled_features(
             PooledExtractionSpec(runtime_id="videomaev2", verified_encoder_identity=definition["identity"],
                 representation=representation, sampling=sampling, micro_batch_size=8, **sampling_args),
             adapter=adapter, manifest=records, dataset_root=ds["dataset_root"],
-            output_root=out / "features", run_id="native", encode_context_factory=factory, progress=progress)
+            output_root=out / "features", run_id="native", encode_context_factory=factory, progress=progress,
+            cpu_pipeline=pipeline)
         if not result.completed:
             raise RuntimeError(f"extraction failed: {result.failures}")
         feature_root = Path(result.feature_root)

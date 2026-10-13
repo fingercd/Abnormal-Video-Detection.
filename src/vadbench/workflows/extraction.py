@@ -13,7 +13,7 @@ import inspect
 import json
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from contextlib import contextmanager, nullcontext
+from contextlib import closing, contextmanager, nullcontext
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -623,6 +623,17 @@ def _chunked(values: Sequence[Any], size: int) -> Iterable[Sequence[Any]]:
         yield values[start : start + size]
 
 
+def _prepared_batches(reader, video_id, samples, micro_batch_size, cpu_pipeline):
+    if cpu_pipeline is not None:
+        with cpu_pipeline.batches(reader, video_id, samples, micro_batch_size) as batches:
+            yield from batches
+        return
+    for group in _chunked(samples, micro_batch_size):
+        batch = _batch_from_reader(reader, video_id, [item.clip for item in group],
+            metadata={"source_num_frames": reader.info.num_frames, "source_fps": reader.info.fps})
+        yield group, batch, nullcontext()
+
+
 def _dtype_matches_precision(dtype: str, precision: str) -> bool:
     normalized = precision.strip().lower().replace("torch.", "")
     expected = {
@@ -853,6 +864,7 @@ def extract_pooled_features(
     resume_source: str | Path | None = None,
     resume_transport: Literal["copy", "hardlink_npz"] = "copy",
     progress: Callable[[Mapping[str, Any]], None] | None = None,
+    cpu_pipeline: Any | None = None,
 ) -> PooledExtractionResult:
     """Run one isolated pooled-only paper extraction attempt.
 
@@ -933,6 +945,7 @@ def extract_pooled_features(
                 "window_stride": spec.window_stride,
                 "short_policy": spec.short_policy,
                 "micro_batch_size": spec.micro_batch_size,
+                "cpu_pipeline": None if cpu_pipeline is None else cpu_pipeline.execution_identity,
             },
             "data_content_evidence": data_evidence,
             "runtime": runtime,
@@ -1008,54 +1021,51 @@ def extract_pooled_features(
                         continue
                 decoded_videos += 1
                 shard_store = _VideoShardWriter(shard)
-                for group in _chunked(samples, spec.micro_batch_size):
-                    batch = _batch_from_reader(
-                        reader,
-                        record.video_id,
-                        [item.clip for item in group],
-                        metadata={"source_num_frames": info.num_frames, "source_fps": info.fps},
-                    )
-                    clean = clean_encoder_batch(batch)
-                    validate_clip_for_capabilities(clean, capabilities, train=False)
-                    reduction_execution = None
-                    with _frozen_adapter(adapter):
-                        if encode_context_factory is None:
-                            output = adapter.encode(clean, train=False)
-                        else:
-                            with encode_context_factory(clean) as intervention:
+                with closing(_prepared_batches(
+                    reader, record.video_id, samples, spec.micro_batch_size, cpu_pipeline
+                )) as batches:
+                    for group, batch, prepared_context in batches:
+                        clean = clean_encoder_batch(batch)
+                        validate_clip_for_capabilities(clean, capabilities, train=False)
+                        reduction_execution = None
+                        with prepared_context, _frozen_adapter(adapter):
+                            if encode_context_factory is None:
                                 output = adapter.encode(clean, train=False)
-                                reduction_execution = dict(intervention.validate_execution())
-                    validate_encoder_output(output, clean)
-                    pooled, token_count, token_dtype, pooled_dtype = _checked_pooled_output(
-                        output, spec.representation
-                    )
-                    if reduction_execution is not None and reduction_execution.get("gathered_tokens") != token_count:
-                        raise ValueError("reducer suffix token count differs from the actual adapter output")
-                    items = [
-                        _pooled_record_input(
-                            row=row,
-                            record=record,
-                            sample=sample,
-                            fps=info.fps,
-                            encoder_fingerprint=encoder_fingerprint,
-                            paper_identity=paper_identity,
-                            runtime=runtime,
-                            runtime_reference=runtime_reference,
-                            source_video=source_video,
-                            pooled=pooled,
-                            token_count=token_count,
-                            token_dtype=token_dtype,
-                            pooled_dtype=pooled_dtype,
-                            reduction_execution=reduction_execution,
+                            else:
+                                with encode_context_factory(clean) as intervention:
+                                    output = adapter.encode(clean, train=False)
+                                    reduction_execution = dict(intervention.validate_execution())
+                        validate_encoder_output(output, clean)
+                        pooled, token_count, token_dtype, pooled_dtype = _checked_pooled_output(
+                            output, spec.representation
                         )
-                        for row, sample in enumerate(group)
-                    ]
-                    before = shard_store.count
-                    try:
-                        shard_store.write_many(items)
-                    finally:
-                        written += shard_store.count - before
-                        decoded_clips += shard_store.count - before
+                        if reduction_execution is not None and reduction_execution.get("gathered_tokens") != token_count:
+                            raise ValueError("reducer suffix token count differs from the actual adapter output")
+                        items = [
+                            _pooled_record_input(
+                                row=row,
+                                record=record,
+                                sample=sample,
+                                fps=info.fps,
+                                encoder_fingerprint=encoder_fingerprint,
+                                paper_identity=paper_identity,
+                                runtime=runtime,
+                                runtime_reference=runtime_reference,
+                                source_video=source_video,
+                                pooled=pooled,
+                                token_count=token_count,
+                                token_dtype=token_dtype,
+                                pooled_dtype=pooled_dtype,
+                                reduction_execution=reduction_execution,
+                            )
+                            for row, sample in enumerate(group)
+                        ]
+                        before = shard_store.count
+                        try:
+                            shard_store.write_many(items)
+                        finally:
+                            written += shard_store.count - before
+                            decoded_clips += shard_store.count - before
                 shard_store.publish(len(samples))
                 shard_dirs.append(shard)
                 if progress is not None:

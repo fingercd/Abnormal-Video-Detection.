@@ -15,12 +15,21 @@ def main():
     p.add_argument("--task-id",required=True)
     p.add_argument("--phase",choices=["test","quality"],default="test")
     p.add_argument("--tracking-url",required=True)
+    p.add_argument("--execution-optimization")
+    p.add_argument("--execution-optimization-sha256")
     a=p.parse_args()
     try:
         from vadbench.paper.relation_testing import load_campaign,run_test,run_quality
         c=load_campaign(a.campaign,a.campaign_sha256)
         task=next(t for t in c["tasks"] if t["id"]==a.task_id)
         c={**c,"campaign_path":a.campaign,"campaign_sha256":a.campaign_sha256}
+        if a.execution_optimization:
+            from pathlib import Path
+            from vadbench.checkpoints import sha256_file
+            path = Path(a.execution_optimization)
+            if sha256_file(path) != a.execution_optimization_sha256:
+                raise ValueError("execution configuration SHA differs")
+            c["execution_optimization"] = json.loads(path.read_text("utf-8"))
         emit("provenance",campaign_sha256=a.campaign_sha256,task=task,phase=a.phase,tracking_url=a.tracking_url)
         (run_test if a.phase=="test" else run_quality)(c,task,a.tracking_url,emit)
         return 0

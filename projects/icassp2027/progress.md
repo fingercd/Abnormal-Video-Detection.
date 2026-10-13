@@ -12,6 +12,18 @@
 **连接恢复补充：** 后续公网SSH流发生exit255中断，原本机控制器110448安全停止新派，四个远端nohup PID31725/31727/31729/31731经重新连接核实仍在运行并继续生成特征（并非计算失败）。新增只读reattach控制器PID81924接回原PID与原SwanLab run，没有重投GPU任务；云端旧CRASHED保留为通信中断历史，恢复时追加transport/recovered标量。SwanLab API仍间歇504/超时，部分上传恢复，完整事件保存在本地及远端；后续接力等待当前任务计算完成与云端核验。当前状态以`work/key-attn-formal-20261013/controller-r03-recovery1/queue.json`及远端task.json为准，不按断开的SSH会话判断GPU任务已终止。
 
 
+**13:38 HKT进度及守护：** 四路原计算继续推进，恢复控制器PID81924仍在运行，本地接回事件已更新至UCF dense 170/290（35300 clips）、UCF AttnTopK b06 remove50 155/290（32555 clips）、XD dense 259/800（27216 clips）、XD对应AttnTopK 248/800（25652 clips）。这是特征提取计数，不是质量结果；38个任务尚未全部完成。SwanLab仍偶发上传失败并自动重试，XD dense日志已有Upload recovered；最终云端成功尚需结束后核验。按用户请求已创建本聊天每20分钟heartbeat（automationId=key-attention，ACTIVE），主控检查真实进程、接力冻结队列和补传，实质变化/故障/完成时通知，完成全部任务与云端核验后停止守护。
+
+**13:58 HKT heartbeat：** 公网只读复核四个原PID仍Rl，恢复控制器81924及四个记录进程均存活；GPU0保留1827，无重复本项目任务。远端时钟13:54:42，最新发布计数UCF dense199/290（45639 clips）、UCF AttnTopK188/290（37440 clips）、XD dense312/800（35872 clips）、XD AttnTopK299/800（33823 clips）。尚无任务完成，不派重复任务；SwanLab仍自动重试，三路记录日志出现Upload recovered。方法/线程/batch/采样均未调整，等待原队列接力；本轮未读取正式质量分数。
+
+## 2026-10-13 14:20 HKT：用户授权后续任务优化，原四项不变
+
+新增有界CPU供数：一个连续解码器保留游标/32帧尾部，native处理器按真实帧索引去重并恢复原BCTHW，两批预取与GPU推理重叠；不改原采样、microbatch8、模型精度、reducer或head。默认旧路径不变，新版仅按独立execution配置启用，代码/provenance与原冻结分开绑定。50项相关单测及compileall通过。
+
+后续任务的本机tracker新增pending-execution门禁；当前controller/PID及四个原GPU进程未重启，原任务继续跑。`work/key-attn-formal-20261013/pending-execution.json`目前preparing，新任务在门禁处等待，不重复计算。用户明确要求单GPU实验及四进程加速核验：工程验收先做四路CPU供数，GPU2原PID31725释放后才做单卡native/optimized完整提取写入对照；验收/云端成功后才放行后续，真实四卡聚合收益另核验，单卡不冒充四卡结论。
+
+工程r01因历史fit manifest的num_frames为空在CPU阶段退出，未分配CUDA；保留失败目录及SwanLab CRASHED云端回执。r02改用实际OpenCV probe，remote `/users/fotile/VAD/work/key-attention-optimization-20261013-r02`，本机tracker PID50780，SwanLab run n99346d2。复用原role-locked两份fit视频及SHA；RGB/帧索引/处理器pixels逐元素相同。四路CPU测试旧42.18–42.89 clips/s，新workers1为70.95–72.47、workers2为64.06–78.01；按两次中位耗时选择workers1/prefetch2，CPU聚合约1.69x，不是GPU正式效率。r02现等待GPU2原任务自然结束，GPU吞吐/pooled一致性及云端验收尚未完成。
+
 ## 2026-10-13：Key/Attention 单点压缩消融开始实施
 
 用户批准[新方案](key_attention/README.md)：AttentionTopK、VisionZip encoder-internal adaptation与Uniform同预算对照，block 6/9/12各单次，删除50%/70%（keep0.50/0.30）。本轮不使用L2排序、不做动态/静态分组，不改旧冻结合同。已建立qzt/key-attn-ablation-20261013分支并校正仓库局部提交邮箱为用户要求的noreply身份。
