@@ -172,9 +172,9 @@ class _PRCurve:
         return output
 
 
-def _stratified_weights(labels: np.ndarray) -> np.ndarray:
+def _stratified_weights(labels: np.ndarray, seed: int = BOOTSTRAP_SEED) -> np.ndarray:
     """Exactly 10000 shared video-count draws, preserving weak-label group sizes."""
-    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    rng = np.random.default_rng(seed)
     result = np.zeros((BOOTSTRAP_DRAWS, len(labels)), dtype=np.int32)
     for label in (0, 1):
         indices = np.flatnonzero(labels == label)
@@ -223,6 +223,7 @@ def compare_paired_quality(
     *,
     metric: QualityMetric,
     source_sha256: Mapping[str, str],
+    bootstrap_seed: int = BOOTSTRAP_SEED,
 ) -> dict[str, Any]:
     """Return one head seed's paired quality delta and video bootstrap CI.
 
@@ -267,7 +268,7 @@ def compare_paired_quality(
     positive = np.array([h.positive.sum() for h in histograms[0]])
     negative = np.array([h.negative.sum() for h in histograms[0]])
     labels = np.array([v.weak_label for v in items])
-    weights = _stratified_weights(labels)
+    weights = _stratified_weights(labels, seed=bootstrap_seed)
     positive_draws, negative_draws = weights @ positive, weights @ negative
     class_valid = (positive_draws > 0) & (negative_draws > 0)
     point_valid = bool(positive.sum() > 0 and negative.sum() > 0)
@@ -321,7 +322,7 @@ def compare_paired_quality(
         "negative_frames": int(negative.sum()),
         "weak_label_strata": {"normal": int((labels == 0).sum()), "positive": int((labels == 1).sum())},
         "video_order": [v.video_id for v in items],
-        "bootstrap_seed": BOOTSTRAP_SEED,
+        "bootstrap_seed": bootstrap_seed,
         "bootstrap_draws": BOOTSTRAP_DRAWS,
         "valid_draws": int(valid.sum()),
         "invalid_draws": int((~valid).sum()),

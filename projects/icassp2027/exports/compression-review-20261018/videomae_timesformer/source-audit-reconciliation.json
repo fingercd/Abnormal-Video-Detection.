@@ -1,0 +1,13 @@
+{
+  "original_report_swanlab": {
+    "url": "https://swanlab.cn/@ryfrcd693/VAD-PreBlock-VMA-TS-20261015/runs/s2esfubw",
+    "path": "ryfrcd693/VAD-PreBlock-VMA-TS-20261015/s2esfubw",
+    "run_id": "s2esfubw",
+    "name": "Active52-final-report-Attention-VisionZip"
+  },
+  "first_auditor_source_sha256": "1a885decfb35df34f607b14737f3248a2e4cb3fd6dec8269dc8957d3f57b4251",
+  "first_audit_result": "failed before final assembly: original historical UCF training-contract path absent",
+  "resolution": "existing byte-identical contract located; original declared protocol path and SHA unchanged; resume same original report run only",
+  "existing_copy": "/users/fotile/icassp2027-runs/project/outputs/icassp2027/control/official-fulltrain-20260918-r01/ucf-view/contract.json",
+  "unchanged_sha256": "47467e6c88497fbb8f81bc7e2be59cc9e7ed0b6076cdf1548f0e1fe1be5c6998"
+}

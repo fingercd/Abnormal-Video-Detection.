@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader, IterableDataset, get_worker_info
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-from ._bridge import bridge_symbols
+from ._bridge import bridge_symbols, post_attention_symbols
 
 
 CLIP_MEAN = (0.48145466, 0.4578275, 0.40821073)
@@ -181,6 +181,12 @@ def write_video(root: Path, video: dict, chunks: list[tuple], end: dict, identit
 
 
 def run(options) -> None:
+    relational = options.method != "pairselect"
+    if relational:
+        if options.keep_ratio not in (0.5, 0.3) or options.block is None:
+            raise ValueError("relation methods require block6/9/12 and keep-ratio0.5/0.3")
+    elif options.block is not None or options.keep_ratio not in (None, 0.8, 0.6, 0.4):
+        raise ValueError("legacy PairSelect requires its original budgets and no post-attention block")
     if options.batch_size < 10 or options.workers < 1:
         raise ValueError("batch-size must be >=10 and workers >=1")
     videos = [json.loads(line) for line in options.manifest.read_text(encoding="utf-8").splitlines()]
@@ -201,6 +207,7 @@ def run(options) -> None:
         raise ValueError("duplicate video ID in source manifest")
     output = options.output
     ClipVisionBridge, load_openai_clip, bridge_path = bridge_symbols(options.bridge)
+    intervention_class = None
     identity = {
         "manifest_sha256": sha256(options.manifest),
         "bridge_sha256": sha256(bridge_path),
@@ -214,6 +221,13 @@ def run(options) -> None:
         "crop": "vadclip_resize_340x256_then_224_author_crop",
         "dtype": "float32",
     }
+    if relational:
+        intervention_class, intervention_path = post_attention_symbols(bridge_path)
+        identity.update({"method": options.method, "block_index": options.block - 1,
+                         "site": "post_attention_residual_pre_norm2_mlp",
+                         "signal": "same_ln1_native_qk_patch_only_softmax",
+                         "intervention_sha256": sha256(intervention_path),
+                         "selector_sha256": sha256(bridge_path.parent.parent / "relation_selection.py")})
     if options.resume:
         existing = json.loads((output / "resolved.json").read_text(encoding="utf-8"))
         if existing != identity:
@@ -269,6 +283,7 @@ def run(options) -> None:
     started = time.perf_counter()
     completed = prior_completed
     image_count = prior_images
+    execution_receipt = None
     with torch.no_grad():
         for item in iterator:
             video_id = item["video_id"]
@@ -278,7 +293,14 @@ def run(options) -> None:
                 print(f"completed={completed}/{target_count} video={video_id}", flush=True)
                 continue
             images = item["images"].to(device, non_blocking=True)
-            if options.keep_ratio is None:
+            if relational:
+                with intervention_class(bridge, options.block - 1, options.method, options.keep_ratio) as intervention:
+                    features = bridge.forward(images).pooled
+                    current_receipt = intervention.receipt()
+                if execution_receipt is None:
+                    execution_receipt = current_receipt
+                    (output / "execution-receipt.json").write_text(json.dumps(execution_receipt, indent=2), encoding="utf-8")
+            elif options.keep_ratio is None:
                 features = bridge.forward(images).pooled
             else:
                 features = bridge.forward(images, capture_depth=6, keep_ratio=options.keep_ratio).pooled

@@ -1,1 +1,5 @@
 *.sh text eol=lf
+
+# Immutable experiment exports and execution snapshots: preserve source SHA bytes.
+projects/icassp2027/exports/compression-review-20261018/** -text
+work/preblock-vma-ts-20261015-r01/** -text

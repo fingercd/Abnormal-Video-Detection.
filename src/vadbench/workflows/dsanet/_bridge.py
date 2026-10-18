@@ -23,3 +23,13 @@ def bridge_symbols(path: Path | None):
         del sys.modules[spec.name]
         raise
     return module.ClipVisionBridge, module.load_openai_clip, path
+
+
+def post_attention_symbols(bridge_path: Path):
+    path = bridge_path.parent / "clip_post_attention.py"
+    name = "_vadbench_dsanet_clip_post_attention"
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module.ClipPostAttentionIntervention, path

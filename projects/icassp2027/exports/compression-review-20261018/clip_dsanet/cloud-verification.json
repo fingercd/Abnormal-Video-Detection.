@@ -1,0 +1,104 @@
+{
+  "verified": true,
+  "state": "FINISHED",
+  "summary": {
+    "report/completed": {
+      "step": 36,
+      "value": 1,
+      "minMax": [
+        1,
+        1
+      ],
+      "min": {
+        "index": 36,
+        "data": 1
+      },
+      "max": {
+        "index": 36,
+        "data": 1
+      },
+      "avg": 1,
+      "median": 1,
+      "stdDev": 0
+    },
+    "report/encoder_groups": {
+      "step": 36,
+      "value": 114,
+      "minMax": [
+        114,
+        114
+      ],
+      "min": {
+        "index": 36,
+        "data": 114
+      },
+      "max": {
+        "index": 36,
+        "data": 114
+      },
+      "avg": 114,
+      "median": 114,
+      "stdDev": 0
+    },
+    "report/pipeline_groups": {
+      "step": 36,
+      "value": 114,
+      "minMax": [
+        114,
+        114
+      ],
+      "min": {
+        "index": 36,
+        "data": 114
+      },
+      "max": {
+        "index": 36,
+        "data": 114
+      },
+      "avg": 114,
+      "median": 114,
+      "stdDev": 0
+    },
+    "report/predictions": {
+      "step": 36,
+      "value": 38,
+      "minMax": [
+        38,
+        38
+      ],
+      "min": {
+        "index": 36,
+        "data": 38
+      },
+      "max": {
+        "index": 36,
+        "data": 38
+      },
+      "avg": 38,
+      "median": 38,
+      "stdDev": 0
+    },
+    "report/qualities": {
+      "step": 36,
+      "value": 36,
+      "minMax": [
+        36,
+        36
+      ],
+      "min": {
+        "index": 36,
+        "data": 36
+      },
+      "max": {
+        "index": 36,
+        "data": 36
+      },
+      "avg": 36,
+      "median": 36,
+      "stdDev": 0
+    }
+  },
+  "url": "https://swanlab.cn/@ryfrcd693/VAD-DSANet-Compression-20261015/runs/fgsl8mtg",
+  "path": "ryfrcd693/VAD-DSANet-Compression-20261015/fgsl8mtg",
+  "run_id": "fgsl8mtg"
+}

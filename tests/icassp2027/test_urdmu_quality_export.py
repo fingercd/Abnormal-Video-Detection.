@@ -13,7 +13,8 @@ def _write_jsonl(path: Path, rows: list[dict]) -> Path:
     return path
 
 
-def test_compare_prediction_runs_aligns_intervals_and_reports_both_ap(tmp_path: Path):
+@pytest.mark.parametrize('bootstrap_seed', [None, 0])
+def test_compare_prediction_runs_aligns_intervals_and_reports_both_ap(tmp_path: Path, bootstrap_seed):
     truth = _write_jsonl(
         tmp_path / "truth.jsonl",
         [{
@@ -44,10 +45,16 @@ def test_compare_prediction_runs_aligns_intervals_and_reports_both_ap(tmp_path: 
         method_predictions=method,
         truth_jsonl=truth,
         dataset="xd_violence",
+        **({} if bootstrap_seed is None else {'bootstrap_seed': bootstrap_seed}),
     )
     assert result["metric"]["metric"] == "frame_pr_auc"
+    # A tied threshold contains equal positive/negative frame mass. Linear
+    # PR trapezoids give .75 while step AP gives .5; these are not aliases.
+    assert result["metric"]["dense_value"] == pytest.approx(.75)
+    assert result["frame_ap_step"]["dense"] == pytest.approx(.5)
     assert result["metric"]["n_videos"] == 2
     assert result["metric"]["valid_draws"] >= 9990
+    assert result["metric"]["bootstrap_seed"] == (20260918 if bootstrap_seed is None else bootstrap_seed)
     assert result["frame_ap_step"]["method"] >= result["frame_ap_step"]["dense"]
     assert result["video_level"]["method_video_roc_auc"] >= result["video_level"]["dense_video_roc_auc"]
 

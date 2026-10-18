@@ -1,0 +1,66 @@
+{
+  "verified": true,
+  "state": "FINISHED",
+  "summary": {
+    "report/completed": {
+      "step": 1,
+      "value": 1,
+      "minMax": [
+        1,
+        1
+      ],
+      "min": {
+        "index": 1,
+        "data": 1
+      },
+      "max": {
+        "index": 1,
+        "data": 1
+      },
+      "avg": 1,
+      "median": 1,
+      "stdDev": 0
+    },
+    "report/prediction_tasks_completed": {
+      "step": 1,
+      "value": 38,
+      "minMax": [
+        38,
+        38
+      ],
+      "min": {
+        "index": 1,
+        "data": 38
+      },
+      "max": {
+        "index": 1,
+        "data": 38
+      },
+      "avg": 38,
+      "median": 38,
+      "stdDev": 0
+    },
+    "report/quality_comparisons_completed": {
+      "step": 1,
+      "value": 36,
+      "minMax": [
+        36,
+        36
+      ],
+      "min": {
+        "index": 1,
+        "data": 36
+      },
+      "max": {
+        "index": 1,
+        "data": 36
+      },
+      "avg": 36,
+      "median": 36,
+      "stdDev": 0
+    }
+  },
+  "run_id": "oqyvuz18",
+  "path": "ryfrcd693/VAD-Key-Attention-20261013/oqyvuz18",
+  "url": "https://swanlab.cn/@ryfrcd693/VAD-Key-Attention-20261013/runs/oqyvuz18"
+}

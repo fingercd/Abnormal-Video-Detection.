@@ -40,6 +40,7 @@ def main():
     p.add_argument("--source-archive", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--name", required=True)
+    p.add_argument("--project", default="VAD-Key-Attention-20261013")
     p.add_argument("--job-type", default="engineering-qa")
     p.add_argument("--group", default="videomaev2-fit-only")
     p.add_argument("--completion-key", default="qa/completed")
@@ -125,7 +126,7 @@ done'''
     from swanlab.sdk.internal.settings import Settings
 
     run = swanlab.init(
-        project="VAD-Key-Attention-20261013", name=args.name, public=False,
+        project=args.project, name=args.name, public=False,
         mode="online", log_dir=str(args.output / "swanlog"),
         job_type=args.job_type, group=args.group,
         config={**provenance, "tracking": "local_online_remote_event_stream", "formal_quality": args.formal_quality},

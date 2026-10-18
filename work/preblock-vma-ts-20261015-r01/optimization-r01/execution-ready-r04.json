@@ -1,0 +1,215 @@
+{
+  "status": "ready",
+  "scientific_campaign_sha256": "16cec7a9cba5ca1505d36a1bb8be6815948bbce72864fe93b5285db7002b584e",
+  "configs_by_pair": {
+    "videomae-ucf_crime": {
+      "status": "ready",
+      "scientific_campaign_sha256": "16cec7a9cba5ca1505d36a1bb8be6815948bbce72864fe93b5285db7002b584e",
+      "candidate_sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240",
+      "remote_launcher": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/run_optimized_pending_r04.py",
+      "remote_config": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/videomae-ucf_crime/execution-config.json",
+      "remote_config_sha256": "3dedb79a89ea18e593675b675de5f647118a454987bb0274c1f5db69e084cfba",
+      "local_bindings": {
+        "acceptance": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-ucf_crime\\acceptance.json",
+          "sha256": "e7692ed1742bb4d1a360cead86387fc89ca8189587d77dfb69404f9ccc686ec6"
+        },
+        "cloud_verification": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-ucf_crime\\cloud.json",
+          "sha256": "80d308a7e5431064aa49e4cdb796d47b0de5268f336343ca8cbb31832c5cdaa5"
+        },
+        "gate_events": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-ucf_crime\\events.jsonl",
+          "sha256": "8ce4f244a9dd64eccb075457b82bdb38347649567f1196f7a0a67134fc4f4bde"
+        },
+        "candidate": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\numpy_dedup_candidate_r03.py",
+          "sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240"
+        },
+        "config": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-ucf_crime\\execution-config.json",
+          "sha256": "3dedb79a89ea18e593675b675de5f647118a454987bb0274c1f5db69e084cfba"
+        },
+        "launcher": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\run_optimized_pending_r04.py",
+          "sha256": "4bd8c43f22bae0597bd36856d70bd186e11fc2593e7a3d3f02e565b708d03bbf"
+        },
+        "tracker": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\track_preblock_online.py",
+          "sha256": "3cfc843047752b00f71c85389b951296f1970823bc2e1d56dac733bfb29fdb99"
+        },
+        "poll_helper": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\short_poll_original.py",
+          "sha256": "cfc79493861c497f9ae3ba1e84942f77efd0c2610c32f44b3c476cfcc703b54b"
+        },
+        "read_only_driver": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\transport-recovery-r01\\reattach_stream.py",
+          "sha256": "f91d5f8b30ce8524e413c3a9ed71a11aaee616399c2f3a2c7dd4d6ce0f5c5c6d"
+        },
+        "controller": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\controller-r06.py",
+          "sha256": "0aa38fa2b84029c7215f2de0f1ced64891be37a5742aa866a421214587b22ec5"
+        }
+      },
+      "source_bundle": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-optimization-r04.tar.gz",
+      "source_bundle_sha256": "2a50434ac31d2cb03fb9807843e6d919a01c72bb4622d9705c250832365c9fa5"
+    },
+    "timesformer-ucf_crime": {
+      "status": "ready",
+      "scientific_campaign_sha256": "16cec7a9cba5ca1505d36a1bb8be6815948bbce72864fe93b5285db7002b584e",
+      "candidate_sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240",
+      "remote_launcher": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/run_optimized_pending_r04.py",
+      "remote_config": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/timesformer-ucf_crime/execution-config.json",
+      "remote_config_sha256": "a1556dbac758aad4accb199808f74f9adb4a733b9ffc725779d2f574fefc3a72",
+      "local_bindings": {
+        "acceptance": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-ucf_crime\\acceptance.json",
+          "sha256": "c6a550554d2d3ad028891ecba372a703258770570ec9c1e8d33179446e37f32d"
+        },
+        "cloud_verification": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-ucf_crime\\cloud.json",
+          "sha256": "068e6bc4593a649e156acf64b38b4e86beadf7f5be7dea244f367041ae8f95c8"
+        },
+        "gate_events": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-ucf_crime\\events.jsonl",
+          "sha256": "29740816d505c596107f28befc46992efdf57bccb7a64815feb7d51407a76181"
+        },
+        "candidate": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\numpy_dedup_candidate_r03.py",
+          "sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240"
+        },
+        "config": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-ucf_crime\\execution-config.json",
+          "sha256": "a1556dbac758aad4accb199808f74f9adb4a733b9ffc725779d2f574fefc3a72"
+        },
+        "launcher": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\run_optimized_pending_r04.py",
+          "sha256": "4bd8c43f22bae0597bd36856d70bd186e11fc2593e7a3d3f02e565b708d03bbf"
+        },
+        "tracker": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\track_preblock_online.py",
+          "sha256": "3cfc843047752b00f71c85389b951296f1970823bc2e1d56dac733bfb29fdb99"
+        },
+        "poll_helper": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\short_poll_original.py",
+          "sha256": "cfc79493861c497f9ae3ba1e84942f77efd0c2610c32f44b3c476cfcc703b54b"
+        },
+        "read_only_driver": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\transport-recovery-r01\\reattach_stream.py",
+          "sha256": "f91d5f8b30ce8524e413c3a9ed71a11aaee616399c2f3a2c7dd4d6ce0f5c5c6d"
+        },
+        "controller": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\controller-r06.py",
+          "sha256": "0aa38fa2b84029c7215f2de0f1ced64891be37a5742aa866a421214587b22ec5"
+        }
+      },
+      "source_bundle": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-optimization-r04.tar.gz",
+      "source_bundle_sha256": "2a50434ac31d2cb03fb9807843e6d919a01c72bb4622d9705c250832365c9fa5"
+    },
+    "timesformer-xd_violence": {
+      "status": "ready",
+      "scientific_campaign_sha256": "16cec7a9cba5ca1505d36a1bb8be6815948bbce72864fe93b5285db7002b584e",
+      "candidate_sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240",
+      "remote_launcher": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/run_optimized_pending_r04.py",
+      "remote_config": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/timesformer-xd_violence/execution-config.json",
+      "remote_config_sha256": "62f253fee795d67e4ff3a57df62e595f230f3fc93d12962e5ba5142d672f681c",
+      "local_bindings": {
+        "acceptance": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-xd_violence\\acceptance.json",
+          "sha256": "60864579f4b24807ef601b5159342cb87efff6966cee4ee5108d97d588ee54a6"
+        },
+        "cloud_verification": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-xd_violence\\cloud.json",
+          "sha256": "a4f8c5a47ee4582d79d77f9522102d3b30f6bdcf081c1d219474b3239a95efc5"
+        },
+        "gate_events": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-xd_violence\\events.jsonl",
+          "sha256": "46eb87483ade4cdf3ccbf9718fcced8f07b0ed47450ac67bc3b464029ec38fee"
+        },
+        "candidate": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\numpy_dedup_candidate_r03.py",
+          "sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240"
+        },
+        "config": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\timesformer-xd_violence\\execution-config.json",
+          "sha256": "62f253fee795d67e4ff3a57df62e595f230f3fc93d12962e5ba5142d672f681c"
+        },
+        "launcher": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\run_optimized_pending_r04.py",
+          "sha256": "4bd8c43f22bae0597bd36856d70bd186e11fc2593e7a3d3f02e565b708d03bbf"
+        },
+        "tracker": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\track_preblock_online.py",
+          "sha256": "3cfc843047752b00f71c85389b951296f1970823bc2e1d56dac733bfb29fdb99"
+        },
+        "poll_helper": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\short_poll_original.py",
+          "sha256": "cfc79493861c497f9ae3ba1e84942f77efd0c2610c32f44b3c476cfcc703b54b"
+        },
+        "read_only_driver": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\transport-recovery-r01\\reattach_stream.py",
+          "sha256": "f91d5f8b30ce8524e413c3a9ed71a11aaee616399c2f3a2c7dd4d6ce0f5c5c6d"
+        },
+        "controller": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\controller-r06.py",
+          "sha256": "0aa38fa2b84029c7215f2de0f1ced64891be37a5742aa866a421214587b22ec5"
+        }
+      },
+      "source_bundle": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-optimization-r04.tar.gz",
+      "source_bundle_sha256": "2a50434ac31d2cb03fb9807843e6d919a01c72bb4622d9705c250832365c9fa5"
+    },
+    "videomae-xd_violence": {
+      "status": "ready",
+      "scientific_campaign_sha256": "16cec7a9cba5ca1505d36a1bb8be6815948bbce72864fe93b5285db7002b584e",
+      "candidate_sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240",
+      "remote_launcher": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/run_optimized_pending_r04.py",
+      "remote_config": "/users/fotile/VAD/work/preblock-vma-ts-20261015-r01/execution-optimization-r04/videomae-xd_violence/execution-config.json",
+      "remote_config_sha256": "91258957ed6593ebc18ef341173e1daddf92ac7146b605e0ec13f82707784f37",
+      "local_bindings": {
+        "acceptance": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-xd_violence\\acceptance.json",
+          "sha256": "16703e309f9a477745cf1958990c2d7cccfb6362fe55c3c400459176a80b6260"
+        },
+        "cloud_verification": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-xd_violence\\cloud.json",
+          "sha256": "f7ab99c833f0ba3bac44bc8731797c8631a02ff7540c5d8465f4becb49a9d41c"
+        },
+        "gate_events": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-xd_violence\\events.jsonl",
+          "sha256": "a408b8fa02b5eef6fbfde45c58188335d51680d8b1b7a955f9810fcb1c645daf"
+        },
+        "candidate": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\numpy_dedup_candidate_r03.py",
+          "sha256": "a9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240"
+        },
+        "config": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\videomae-xd_violence\\execution-config.json",
+          "sha256": "91258957ed6593ebc18ef341173e1daddf92ac7146b605e0ec13f82707784f37"
+        },
+        "launcher": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-release-r04\\run_optimized_pending_r04.py",
+          "sha256": "4bd8c43f22bae0597bd36856d70bd186e11fc2593e7a3d3f02e565b708d03bbf"
+        },
+        "tracker": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\track_preblock_online.py",
+          "sha256": "3cfc843047752b00f71c85389b951296f1970823bc2e1d56dac733bfb29fdb99"
+        },
+        "poll_helper": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\short_poll_original.py",
+          "sha256": "cfc79493861c497f9ae3ba1e84942f77efd0c2610c32f44b3c476cfcc703b54b"
+        },
+        "read_only_driver": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\transport-recovery-r01\\reattach_stream.py",
+          "sha256": "f91d5f8b30ce8524e413c3a9ed71a11aaee616399c2f3a2c7dd4d6ce0f5c5c6d"
+        },
+        "controller": {
+          "path": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\controller-r06.py",
+          "sha256": "0aa38fa2b84029c7215f2de0f1ced64891be37a5742aa866a421214587b22ec5"
+        }
+      },
+      "source_bundle": "D:\\PythonProject\\VAD\\work\\preblock-vma-ts-20261015-r01\\optimization-r01\\execution-optimization-r04.tar.gz",
+      "source_bundle_sha256": "2a50434ac31d2cb03fb9807843e6d919a01c72bb4622d9705c250832365c9fa5"
+    }
+  },
+  "source_bundle_sha256": "2a50434ac31d2cb03fb9807843e6d919a01c72bb4622d9705c250832365c9fa5"
+}

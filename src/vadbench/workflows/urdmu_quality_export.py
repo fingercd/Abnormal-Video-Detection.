@@ -18,7 +18,7 @@ from typing import Any
 import numpy as np
 
 from vadbench.metrics import average_precision_score, roc_auc_score
-from vadbench.workflows.quality_comparison import PairedVideoIntervals, compare_paired_quality
+from vadbench.workflows.quality_comparison import BOOTSTRAP_SEED, PairedVideoIntervals, compare_paired_quality
 
 
 def _sha256(path: str | Path) -> str:
@@ -187,6 +187,7 @@ def compare_prediction_runs(
     truth_jsonl: str | Path,
     dataset: str,
     source_paths: Iterable[str | Path] = (),
+    bootstrap_seed: int = BOOTSTRAP_SEED,
 ) -> dict[str, Any]:
     """Return one paired quality export for two complete prediction runs."""
 
@@ -201,7 +202,8 @@ def compare_prediction_runs(
     metric = "frame_roc_auc" if dataset == "ucf_crime" else "frame_pr_auc"
     paths = [Path(dense_predictions), Path(method_predictions), Path(truth_jsonl), *(Path(p) for p in source_paths)]
     source_sha = {str(p.resolve()): _sha256(p) for p in paths}
-    comparison = compare_paired_quality(videos, metric=metric, source_sha256=source_sha)
+    comparison = compare_paired_quality(videos, metric=metric, source_sha256=source_sha,
+                                        bootstrap_seed=bootstrap_seed)
     step_ap = {
         "dense": _weighted_average_precision(videos, method=False),
         "method": _weighted_average_precision(videos, method=True),

@@ -1,0 +1,67 @@
+{
+  "url": "https://swanlab.cn/@ryfrcd693/VAD-PreBlock-VMA-TS-20261015/runs/s2esfubw",
+  "path": "ryfrcd693/VAD-PreBlock-VMA-TS-20261015/s2esfubw",
+  "run_id": "s2esfubw",
+  "name": "Active52-final-report-Attention-VisionZip",
+  "state": "FINISHED",
+  "verified": true,
+  "completion_summary": {
+    "report/completed": {
+      "step": 1,
+      "value": 1,
+      "minMax": [
+        1,
+        1
+      ],
+      "min": {
+        "index": 1,
+        "data": 1
+      },
+      "max": {
+        "index": 1,
+        "data": 1
+      },
+      "avg": 1,
+      "median": 1,
+      "stdDev": 0
+    },
+    "report/formal_completed": {
+      "step": 1,
+      "value": 52,
+      "minMax": [
+        52,
+        52
+      ],
+      "min": {
+        "index": 1,
+        "data": 52
+      },
+      "max": {
+        "index": 1,
+        "data": 52
+      },
+      "avg": 52,
+      "median": 52,
+      "stdDev": 0
+    },
+    "report/quality_completed": {
+      "step": 1,
+      "value": 48,
+      "minMax": [
+        48,
+        48
+      ],
+      "min": {
+        "index": 1,
+        "data": 48
+      },
+      "max": {
+        "index": 1,
+        "data": 48
+      },
+      "avg": 48,
+      "median": 48,
+      "stdDev": 0
+    }
+  }
+}

@@ -1,8 +1,597 @@
+## 2026-10-18 研究交接与Git归档（不启动新实验）
+
+用户明确要求保存代码、文档、完整结果到新Git分支并交付ZIP与中文研究咨询prompt；已另明确授权推送当前公开origin的新分支。分支qzt/encoder-compression-handoff-20261018；范围为V2/CLIP/VMA/TS三轮128个提取预测条件、120项压缩质量比较及相关历史证据。原实验身份、冻结SHA与数值均不改，uniform取消保持，不恢复已完成goal。
+
+公开导出目录projects/icassp2027/exports/compression-review-20261018保留三个最终报告原字节副本（17个核心原SHA核验通过）；聊天与原始运行日志只进入本地交付ZIP，不公开提交。交付根work/handoff-encoder-compression-20261018，包含中文prompt、阅读入口、逐文件SHA/原路径清单、排除/缺档清单及ZIP验收回执。引用ChatGPT对话仅取回用户原问题及助手content-reference占位，完整旧回复缺失如实披露。
+
+本次python -m compileall -q src tests通过；纯结构/资源mock/原报告门10项测试通过（Python3.12.12，2026-10-18），没有执行模型、训练或质量重算。保留其他未跟踪个人材料与临时脚本；Git提交/推送结果以交付GIT_STATE和push-receipt为准。分析需分清post-attention与pre-block、XD stepAP与梯形PR、固定head条件与跨seed结论；prompt要求多agent（可用时）做实际数据处理、近期文献/协议核查和条件式研究规划。
+
+## 2026-10-17T08:44:50.033146+08:00 全部完成：用户调整后52/52预测、48/48质量、156+156效率与MD/CSV/JSON及原云端最终核验
+
+本goal按用户后续明确取消uniform及允许8卡共享的最新范围完成，不把原goal旧文本76/72误报为全部做完。原76行/72质量行与24取消记录完整保留，52活动提取预测全部完成，48配对质量全部只计算一次，活动clips8394113/8394113=100%。24uniform无正式extraction-contract/prediction输出，未重启或重算；取消前已完成的72encoder+72pipeline uniform效率组保留历史。原228+228效率组全部真实计算/审核/云FINISHED，按用户范围活动156+156全部有效，不因正式质量/速度挑格。
+
+最终严格审计通过：278个实际源文件SHA全匹配；52个原远端run exit0、原Swan URL逐一一致且原任务PID不再运行；24取消uniform无正式输出。4个原fulltrain head及training_qa实际SHA匹配，UCF1610/XDaccepted3950；2encoder各36条件classic-native原回执SHA与云端qa/completed=1核验，逐层真实input/MLP shapes、pre6/9/12与signal5/8/11、TimeSformer8帧/空间轨迹/原backend均通过，未重做工程gate或模型实验。全部52+48原云端成功及48主dense/method/delta全精度回读一致，原efficiency会话456计数终态有效。
+
+报告最终目录work/preblock-vma-ts-20261015-r01/reports/final-active52/，包含FINAL_REPORT.md、quality-efficiency.csv（48行）、final-results.json、encoder/pipeline-efficiency-active.csv各52汇总行、artifact-sha256.json、source-audit-reconciliation.json、cloud-verification.json。7个核心文件SHA逐一实际匹配；最终报告原Swan s2esfubw（https://swanlab.cn/@ryfrcd693/VAD-PreBlock-VMA-TS-20261015/runs/s2esfubw）FINISHED且report/completed=1、formal52、quality48均API确认。first最终源审计因UCF历史契约旧路径消失而真实失败；在现存/users/fotile/icassp2027-runs/project/outputs/icassp2027/control/official-fulltrain-20260918-r01/ucf-view/contract.json找到原SHA47467e6c...逐字节一致副本后，原科学路径/契约SHA不改，以build_active_final_report_r02复用同s2esfubw成功，旧失败源和日志保留，未重建契约或重算模型/指标。最终原件路径与实际副本关系完整披露。
+
+主CI结论{'inconclusive': 33, 'supported': 13, 'inferior': 2}：13支持非劣、33证据不足、2确认劣于−0.5pp界限。VideoMAE-UCF12格全部inconclusive；VideoMAE-XD5支持/5不足/2inferior；TS-UCF3支持/9不足；TS-XD5支持/7不足。两inferior均VMA-XD VisionZip pre9，remove50主PR68.544978%（Δ−1.755101pp，CI[−2.551950,−0.967874]pp），remove70主PR67.584105%（Δ−2.715974pp，CI[−3.779466,−1.678597]pp）。同配置两dataset主CI均支持的为TS Attention pre9/r50与TS VisionZip pre9/r50，但XD完整视频倍率各0.899851x/0.913119x，反而更慢；没有同一配置两dataset同时满足主CI非劣且两dataset观测pipeline均>1。三轮速度倍率只是描述性结果，无速度显著性或多配置校正；单head seed0不称泛化。XD stepAP补充下降全部保留，不能因主梯形PR点值接近dense声称全指标保持。
+
+八卡共享阶段未观察到OOM，全部保留原运行日志CUDA OOM/OutOfMemory/reducing batch检索0匹配；其它项目1827、26335、11616、25402/25403、后续32113等不停止、不改。两本项目生产主控163748/CPU143152均自然退出（队列all_predictions_completed/completed），没有重启正常任务；原key-attention-40定时任务实际toml status=PAUSED，不再运行，不归档聊天。未commit/push/公开发布/投稿。最终completion-audit-active52-20261017.json记录完整审计与核心SHA，goal已由工具确认complete（累计执行164697秒，约45小时45分钟）；无剩余必需实验或交付。
+
+## 2026-10-17 01:49 HKT 八卡共享稳定推进36/52、32/48；持续无OOM，已出8项VisionZip质量
+
+上轮用户授权后的8个生产slot0..7均持续真实产出，本轮完成一次实测30分钟窗口及随后2小时对原live主控163748/CPU143152的有界等待。36/52=69.23077%预测、32/48=66.66667%质量已完成；24uniform仍用户取消。32个原quality-preview结果SHA复用/回传，API逐项核dense/method/delta与本地全精度一致；当前6supported、26inconclusive、0确认劣于margin，不据正式质量改方法/head/位置/预算。快照6147178/8394113clips=73.23201%，每task一次。当前8任务均live、两主控stderr空，无OOM或卡重投；主控实际多次自然接力到VisionZip pre9/pre12。其他项目GPU进程32113等共享出现也只记录、不拦启动、不停止，按最新用户授权执行。
+
+八路30分钟完成视频clip吞吐窗口1817.317秒：GPU0 VMA-UCF VisionZip pre6/r70 15.3242clips/s；1 VMA-XD pre6/r50 16.1276；2 TS-UCF pre6/r50 17.9715；3 TS-XD pre6/r50 20.8852；4 VMA-XD pre6/r70 16.7731；5 TS-UCF pre6/r70 27.7475；6 VMA-UCF pre9/r50 16.9216；7 TS-XD pre6/r70 25.1453，合计156.8961clips/s。仅共享生产统计、完成视频边界口径，不冒充独占encoder或方法加速倍率，不把0/1/2/3与其他时段混作严格速度对照。依据实测encoder/dataset/method/budget和原独占encoder位置倍率仅作为未知CPU/GPU占比的规划上下界，再按8slot当前内存偏好模拟剩余队列、包含merge/head/报告云端尾部，eta-eight-shared-20261016-2340.json给出10/17 08:22至17:10 HKT规划范围。该范围不是CI或保证，新OOM/其他项目负载/网络可延后；不能简单把旧四卡ETA除2。
+
+已完成的8个VisionZip配置均主CI未支持非劣。特别保留XD补充反向结果：VMA-XD VisionZip pre6/r50主梯形PR71.522772%、Δ+1.222693pp，但CI[−0.676154,+3.151267]pp，inconclusive；stepAP64.840107%→58.009829%，下降6.830278pp。pre6/r70主PR70.196888%、Δ−0.103191pp、CI[−2.314961,+2.156831]pp，inconclusive；stepAP降至53.622280%，下降11.217827pp。不能因主梯形点值接近dense就省略stepAP下降或声称质量保持。全部保留在预览MD/CSV/JSON，不更换冻结主指标、不重算bootstrap、不利用该结果停掉其他保留配置。
+
+效率组件和最终报告限制补明确：encoder-only仅用固定UCF训练正常视频Normal_Videos001_x264、B1/B8各三进程，XD质量行复用同encoder时序，并非另测XD encoder；pipeline才按两数据集各16完整训练视频独立测量。只补说明并更新派生artifact SHA，原156+156活动效率数值和原456测量/原云身份不变。最终报告门5项纯结构测试通过，尚未执行全量最终源核验/生成正式最终报告；goal active，未commit/push/恢复旧定时任务。
+
+## 2026-10-16 23:09 HKT 用户明确授权直接共享启动：已真实8卡产出、29/52预测与25/48质量，无OOM
+
+最新用户要求“直接启动就行爆显存就换卡 不爆”覆盖此前由主控设置的未知PID/24GB空闲保护门。已绑定user-shared-gpu-policy-20261016.json SHA6c8f5c9ae9357c9571b1cd71308b5d49d04c4f1ec5c9da2085de6c1abfe5e5df：共享其他项目进程是允许的，其他PID及空闲显存只观察记录、不再阻止启动；不杀/修改其他项目、不改方法/head/采样/预算/B8。OOM时仅处理本项目失败项，先核原PID真正退出并保留已完成视频及原Swan，随后换卡，禁止原进程未退出就重投或同卡盲目循环。当前尚无OOM，不宣称已经做过OOM恢复实测。
+
+新controller-r14/PID163748（formal-r02-user-shared-eight-slot-r18），CREATE_BREAKAWAY_FROM_JOB|CREATE_NO_WINDOW，接管四原logger和原Swan、不重启它们；新增GPU4/5/6/7已实开而非只写slots。GPU4 VMA-XD VisionZip pre6/r70、GPU5 TS-UCF VisionZip pre6/r70、GPU6 VMA-UCF VisionZip pre9/r50、GPU7 TS-XD VisionZip pre6/r70。5/7按已测更低显存的TimeSformer先排，以减少OOM机会，不改变任何科学配置或按分数选择。四新增均通过原兼容preflight、持续完成真实clips，8个logger均live、stderr空；最新free MiB为0:4100、1:27475、2:28659、3:28659、4:15263、5:1317、6:15191、7:1317，新增5/7各实际占约2GB并未OOM。其他项目所有PID保留；当前为8个有效本项目任务、每卡一个，不能将共享生产吞吐计为独占效率基准。
+
+此前20:47/20:59/21:34三项VisionZip被旧GPU门exit22拦下，日志没保存瞬时PID，故不能回溯断言是其他项目还是上下文清理；22:35实查1/2/3已空。原三个remote目录只有swanlab-url.txt，无run.sh/PID/output，逐项证明从未GPU执行，精确保留空目录为.preserved-prelaunch-guard-20261016-2238后，新wrapper_r02按固定三身份manifest SHA06490a8176dca70dfcb33a2a0792079a0033f08048db1bce3ad518efd5ee5a23及运行时absence再查，仅复用alplvlm9/3keufwre/qgevlkzm第一次执行，未新建Swan替代或重复提取。恢复后原1/2/3任务持续真实clips。旧门已完全撤去，新版资源探测仅记录；3项新共享策略测试通过，旧资源等待策略测试作为历史不改写。
+
+正式29/52=55.76923%，质量25/48=52.08333%，clip快照4722263/8394113=56.25684%，每task一次。全部24项Attention现已完成提取预测及配对质量，首项VisionZip VMA-UCF pre6/r50也完成：ROC80.256678%、Δ−0.292064pp、CI[−2.034780,+1.683535]pp，inconclusive，原Swan41lhhz1m FINISHED、结果SHA706f78bb615497e6ac4bb4de8977285ad9c92f2a4455b17cf1cbfd31f511f。25份原preview均复用/回传并API核三主点，当前6supported、19inconclusive，未据分数改保留配置。原24uniform仍用户取消、不计完成；48质量分母不变。
+
+CPU主控143152继续；当前8并发刚运行，不将旧4卡ETA简单除2，后续按8并发实测clip吞吐重算。最终报告门代码/源审计尚未最终执行，活动156+156原独占效率结果保持不变；全scope52/48及最终报告云端尚未齐，goal active。未commit/push/恢复旧定时任务，其他项目无修改。
+
+## 2026-10-16 18:33 HKT 跨turn存活与实际接力已验证；24/52预测、20/48质量，完整报告严格门已准备但未提前生成
+
+上轮已启动的detached主控164200、CPU主控143152及4原logger在本轮起点全部以原PID存活，跨turn不再出现上一组无traceback消失现象；不据此宣称已穷尽原外部退出根因。对原live进程做一次有界30分钟等待后，TS-XD Attention pre9/r70自然完成291781clips及固定head、原Swan成功，GPU3真实补到TS-UCF pre12/r70；VMA-UCF pre12/r70也自然完成，GPU0真实补到TS-XD pre12/r70。4slot仍0/1/2/3，GPU5/7其他项目VLLM不动；原nm66pa10在GPU2持续首次提取，没有新建另一个Swan替代旧身份。两主控stderr空，无通信失败/自动GPU重投，24uniform保持取消。
+
+本轮正式24/52=46.15385%，CPU质量20/48=41.66667%，已完成20个都重新以API回读dense/method/delta与本地原SHA核验一致，原18不重算bootstrap；新增两项为原blr299ak/hk0kw3oz。TS-XD pre9/r70主梯形PR76.343447%、相对dense−0.312396pp，95%paired CI[−1.089844,+0.452796]pp，inconclusive；stepAP70.838508%→71.807443%。VMA-UCF pre12/r70主ROC81.563261%、相对dense+1.014519pp，CI[−0.829626,+2.881710]pp，仍inconclusive。当前4supported、16inconclusive，不把正点差或小负点差等同非劣。quality-preview/CSV/JSON已更新20，实际clips快照3881833/8394113=46.24471%，每task一次。四当前任务为TS-XD pre12/r50、VMA-XD pre12/r70、TS-UCF pre12/r70、TS-XD pre12/r70；VisionZip后续原完整24格仍待接力，未据正式分数调位置/预算/head。
+
+已准备build_active_final_report.py及5项纯结构测试，真实--check-only仍明确ready=false；没有提前建立“最终成功”云run或写出最终报告。严格门要求全部活动52预测和48质量、原24uniform全取消；核实际48原quality JSON SHA/seed0/10000/margin、全部52+48 fresh云端状态与主点、原效率456云端和活动156+156审核SHA，再只读核原绑定源文件及四head/两truth的实际SHA，canonical truth符号链接另做resolve一致性，随后才组装MD/CSV/JSON并在线保存。所有数字仅查表复用，代码没有提取、模型、head训练或bootstrap调用；尚未跑最终全量源核验，不能将纯测试/门代码当已经完成验收。Markdown真实换行及不完整/取消任务拒绝门已测试。
+
+研究披露措辞已补准确：uniform排除发生在用户查看旧VideoMAEv2/CLIP正式结果之后，这是明确用户授权的后验范围变更，不应写成原完整三方法预注册矩阵或完全盲选。保留Attention/VisionZip全部原位置/预算、未根据当前新encoder质量调参数；不能凭此推断本轮未测uniform效果。只修说明、活动效率组件artifact SHA清单同步更新，所有实验数值不变，原冻结scope/campaign SHA不改。
+
+本轮5项报告门测试通过，compileall src tests exit0；效率活动156+156组件原始审核/原云FINISHED仍有效。整套全量结果和最终报告尚未完成，goal active。主ETA仍按当前四生产slot、未测VisionZip正式吞吐与网络/共享资源的不确定性保留10/17晚上至10/18上午规划，不宣称精确截止。未commit/push/恢复旧定时任务，其他项目不动。
+
+## 2026-10-16 17:55 HKT 四卡原身份接力稳定、22/52预测与18/48质量；效率活动156+156已全审核并云端核验
+
+本goal turn有实质完成：原efficiency r4ef7f3u经已GET核实的原internal CUID恢复后，原存储标量efficiency/completed=1、encoder228、pipeline228均可API回读；原会话FINISHED。efficiency-original-cloud-final-verification.json保留fresh API三点及raw tail；没有重跑任何模型/计时。audit_pipeline_results.py将228原pipeline JSON逐一绑定原456queue、group_completed EVENT SHA、真实PID、head、原16完整训练视频/采样、原GPU5独占前后、warmup与内存；同时把原228encoder字节重新绑定同一parent/queue/events，全部通过。效率活动scope只过滤用户取消的uniform，156encoder+156pipeline已审核；原72+72uniform组原位保留不重测。reports/efficiency-active-scope-20261016输出MD/两CSV/JSON/SHA清单，是已完成效率组件，不是整套最终质量报告。
+
+真实净效率限制明确：VideoMAE encoder B1范围1.0049–1.5291x、B8 1.0448–1.5960x；TimeSformer B1 1.0048–1.5099x、B8 1.0352–1.6323x。原完整视频pipeline的VideoMAE UCF范围0.8524–1.1818x、XD0.9805–1.0364x；TimeSformer UCF0.9637–1.2495x、XD0.7891–1.0442x。小于1的反例保留，不能把encoder省时或CPU生产打包提速称作整体必然加速。pipeline原native CPU路径、FeatureStore落盘/权重加载/SHA预查排除、共享CPU/存储和页缓存未控制限制完整保留，三次描述性配对中位数不冒充速度显著性。
+
+本地旧observers在换turn后消失且无traceback，原因尚未完全证实；远端原GPU/PID均继续正常，不能以本地PID消失重投GPU。已用支持的CREATE_BREAKAWAY_FROM_JOB|CREATE_NO_WINDOW启动独立观察器171992/178396/179852/25784，原PID/start_ticks/log inode/EVENT前缀和原Swan全部匹配；采用公网12345原线路（新一次hostname/业务检查已恢复ibnode3）。备用node3路由此前banner超时，原失败记录保留，不无限重试。新detached controller-r12/PID164200以scope SHA约束52/48，只管0/1/2/3四slot；quality controller-r02/PID143152走同公网并独立运行，实际完成3项后又完成第18项，没有重复原14个bootstrap。跨turn持久性下一轮继续验证，不假报已穷尽本地退出根因。
+
+GPU5与7在原效率完成后被其他项目新VLLM TP进程25402/25403占用（yangrunze，各35974MiB），已真实映射owner/command并保护，不能继续宣称六卡有效产出。GPU5曾先建立原Swan nm66pa10后SSH失败，fresh原线路明确证实remote run/PID/output全部不存在；失败观察器已自然CRASHED，没有任何GPU提取。对这个唯一已证实未启动项保留原nm66pa10，以独立first-launch wrapper再核原路径不存在、只复用原cloud身份、所有step严格后移并明确原失败已恢复；在GPU2原VMA-XD pre12/r50自然完成后，主控已真实将其首发到GPU2，原nm66pa10、相同科学配置、完整preflight通过并持续新clips，不是重提已计算任务。wrapper两项纯日志步数测试通过，源码已先在线保存；不修改原冻结formal tracker/helper/四pair执行bindings，质量短poll独立_r02版本。恢复中被绑定门拒绝的本地helper变更已从原release精确字节恢复，相关控制器失败均在GPU派发之前，证据保留。
+
+正式完成22/52=42.30769%，质量18/48=37.5%；累计3722920/8394113clips=44.35156%，只统计活动scope，每task一次。四任务继续：TS-XD Attention pre9/r70已291781clips、尚需global merge/固定head；TS-XD pre12/r50；VMA-UCF pre12/r70；VMA-XD pre12/r70首发原nm66pa10。尚未运行VisionZip正式格，未因分数改顺序或跳配置；24uniform保持用户取消，取消不计完成。
+
+18原质量结果均API回读主dense/method/delta与本地全精度一致，collect只复用/回传原quality-preview，不重复bootstrap、不覆盖quality.json；预览MD/CSV/JSON已改52/48活动分母并明确用户排除，当前4supported、14inconclusive、0确认劣于margin。新增VMA-XD pre9/r70主梯形PR68.603887%（dense70.300079%），Δ−1.696191pp、CI[−3.006130,−0.469188]pp；虽CI低于0，但仍跨−0.5pp，判inconclusive，stepAP64.840107%→61.880926%。VMA-UCF pre12/r50 ROC81.194278%、Δ+0.645537pp、CI[−1.244695,+2.593239]pp，inconclusive。TS-UCF pre12/r50 ROC79.426400%、Δ+0.746334pp、CI[−1.195827,+2.882448]pp，inconclusive。VMA-XD pre12/r50主PR71.186301%、Δ+0.886222pp、CI[−0.062788,+1.863315]pp，支持非劣但不证明高于0，补充stepAP反而64.840107%→63.992633%，不能称全面提升。原Swan分别erb3qs34/c5i6qlf4/pe4aoexo/q4wlqlrb均FINISHED，原SHA索引完整；不据这些正式结果调参。
+
+eta-active-scope-20261016-1755.json按26pending与四项实际剩余clips、各encoder/dataset既有耗时区间重算：当前只有四有效生产卡，活动整套含报告/云端规划10/17 17:02至10/18 07:21 HKT，用户表达以10/17晚上至10/18上午为主。VisionZip优化后全test生产吞吐尚未测，CPU/I/O共享与网络仍有不确定性，区间不是CI，不能保证最早边界。28质量调度测试+2日志offset测试通过，compileall src tests exit0。全scope52/48/156+156及最终全量报告仍未齐，goal active；未commit/push/恢复旧定时任务，其他项目和旧资产不动。
+
+## 2026-10-16 17:00 HKT 用户明确取消后续uniform：活动范围52预测/48质量，24项未启动格真实取消
+
+用户明确要求“我觉得可以不用做uniform听我的，之后相关uniform的不用做了”，覆盖此前三方法执行范围。已创建user-scope-20261016-no-uniform.json（SHA ba513144248751835cab0b1bfb65b1a1c1ed2a7870e654abc25d192d4115df0d），引用原scientific campaign-r02 SHA不改；精确排除24个uniform任务，保留原76/72行历史，不把取消伪报完成。活动范围为2encoder×2dataset×2method×3位置×2预算=48压缩，加4dense共52提取预测、48质量。原quality queue24个uniform也全为pending，现已标cancelled_user_scope_change；14个completed原结果完整复用。用户授权范围变化已执行，不能因旧goal文本仍写76而恢复uniform。
+
+仅在核对精确本地controller7532命令后停止该调度器以原子更新队列，没有停止任何GPU/非uniform原logger。新controller-r09.py/PID94240以manifest SHA约束活动范围并接管4个原logger/原Swan，后续只调度Attention/VisionZip；真实观察到TS-UCF pre12/r50原Swan完成后自动补到VMA-UCF pre12/r70。24个uniform均未启动、无GPU进程需要杀。其他项目、旧VideoMAEv2/CLIP uniform历史结果及原协议不删不改。
+
+效率原228encoder+228pipeline已全算完；pipeline-results-r01.tar.gz SHA0357eb4474ad7436ae17d86155cc67ae1457c8141a010a0ea5595a439cb8e2dd、原456queue SHAe25b78a77088144b6a6daa4d369e5cc72855bfa11ffb8685830364c2525943b7回传精确；原228pipeline原始值/成员/输入采样/head/GPU独占/逐组EVENT SHA纯审核通过，76描述性汇总产生但标cloudpending不当最终验收。已算uniform效率72encoder+72pipeline保留历史，不重跑；活动Attention/VisionZip+dense各156encoder/pipeline组可直接审核复用。
+
+原u90yf3ez同云身份补传核验已取得真实新证据：原二进制内test/completed=1/297、failed=0/208、clips69364/294经API可查，fresh API state FINISHED。public slug POST未真正恢复终态，使用已GET核原内部cuid的同run POST后state转RUNNING且此前保存在服务端的点可见；不据此断言所有后端根因，原完成时间/指标未伪造，不重算GPU或bootstrap。u90-cloud-verification.json为新独立回执，旧失败回执原位保留，待主控安全接纳后补GPU7。此前直接PUT RUNNING被400拒绝，未改变状态；脱敏失败证据保留。全局SDK/凭据未修改。
+
+后续只继续Attention/VisionZip，head、位置、比例、采样、原科学SHA不变。goal active，最终交付按用户新活动范围52/48/156+156，历史76/72/228+228及取消记录同时披露；不把明确取消当失败或计入完成。未commit/push/恢复旧定时任务。
+
+## 2026-10-16 16:30 HKT ETA更新：计算实际20格结束、正式入账18格；原身份云端/补位恢复中
+
+本次用户询问预计完成时间，按当前53项pending、3项仍提取和2项计算结束但尚未主控入账重新核算。正式队列18/76、质量14/72；另VMA-XD Attention pre9/r70原Swan rgtsdfdm已FINISHED且test/completed=1，待接管入账；VMA-UCF pre12/r50原计算exit0/完成EVENT存在，但u90yf3ez恢复后云端缺completion标量，暂不计正式完成。累计clips按每logical task一次为3369790/12268319=27.46741%，不叠加copy/resume前缀。原TS-XD pre9/r70、VMA-XD pre12/r50、TS-UCF pre12/r50继续；公网传输故障后已使用可信node3备用线路恢复原PID/原Swan观察，没有重投GPU。主控自动补位当前held，不能描述为五卡均持续产出。
+
+原GPU5效率228 encoder+228完整视频组均已原始计算结束，但原r4ef7f3u云端completion/counter新标量未入库，原始archive审核/最终云端确认未齐；GPU5尚未加入生产。只读诊断确认新scalar已实际写入本地.swanlab且通过SDK step检查，异常位于持久化后上传/后端链，具体根因未定，不能假报已恢复。已有完成结果/身份不变，不重算ML或为了绕云端另开run。
+
+ETA派生记录eta-planning-20261016-1630.json：按各encoder/dataset已有实测范围和剩余clips，五卡补位恢复后的整套规划仍以10/18白天至晚上为主、保守10/19上午；如果GPU5原效率审核/原云端核验结束并获空闲加入，第六卡条件窗口约10/18凌晨至晚上，不能提前承诺10/17结束。包含76格提取预测、72质量、456效率组审核、最终报告/云端；VisionZip/uniform完整优化任务吞吐未测、CPU/I/O共享和通信恢复仍带不确定性，区间不是统计CI。当前goal保持active，未缩小范围/调正式方法/head/预算，未commit/push/恢复旧定时任务。
+
+## 2026-10-16 14:00 HKT 16/76预测、12/72质量；五卡接力已实开，整套规划10/18为主、保守10/19上午
+
+主控已更新controller-r07/PID174560（formal-r02-execution-r07），生产slots0/1/2/3/7，每卡一任务。新GPU7启动VMA-UCF Attention pre12/r50，原GPU6有foreign PID11616/20670MiB，不使用；GPU4 foreign26335、GPU0保护1827保留。依据用户“尽可能优化”及AGENTS既有全16空闲资源授权，只在实查GPU7无任何PID/40326MiB free后加入，启动器再次查UUID/空PID/free>=24576MiB；原四GPU任务/五个既有Swan不变。GPU5仍原效率独占，未提前占用。node3实测CPU约48.98%、iowait0.084%、load13.25/32逻辑核，未因扩1卡过度占满CPU。
+
+Future pending四pair供数都已放行r03动态原生8/16分组，原B1无重复np路径直接复用，避免r02对TS多pad16的倒退。四原真实训练门均exact并FINISHED：mxd81hnh（VMA-UCF）、0vc5htvq（TS-UCF）、l0rfzkj6（TS-XD）、4oveb7dm（VMA-XD）。B8纯prepare倍率1.44175/1.48859/1.47779/5.36050；B1约1.015/1.035/1.008/3.717，不把这些当整任务或encoder加速。r03候选SHAa9675c99aeecd1fe63565da5a3be6f14cf255558d136f9b88be1a8cf542e0240；4pair release bundle2a50434ac31d2cb03fb9807843e6d919a01c72bb4622d9705c250832365c9fa5，原科学campaign/source/head/方法/预算/采样SHA不改。现有两个VMA-XD继续已经上线的r02，不为换小版本再次重启。
+
+新增track_preblock_online.py对新formal先online+单次nohup，截断长tail后只读短SSH poll；初始launcher255只尝试原URL/PID身份探测，不重放launcher，认证/主机指纹错误立即hold。3项fake-poll分块/终态/日志inode测试通过；实际GPU3原TS-XD pre9/r50自然完成后，新TS-XD pre9/r70已经由主控r06以此链真实启动并持续输出，Swan d28eiow2。GPU7新任务u90yf3ez同链有效。旧4个恢复链源SHA/PID/start_ticks/原Swan绑定完整，未因传输故障重提GPU。
+
+原TS-XD pre9/r50至此真正完成global merge、原固定head预测及原Swan c4upi8u3 FINISHED，正式16/76=21.05263%。新增第12个CPU质量结果原Swan toeurlgw FINISHED，原resultSHA33d22444c6441d4f6ebb61044358fe51affb37422aa720dff56c9af6dd505c13回传与原EVENT、云端主三点一致，原其他11结果仅验SHA复用。TS-XD pre9/r50主梯形PR dense76.6558428832%、method77.1697329324%、Δ+0.5138900493pp、95%paired CI[+0.0540231222,+0.9879924836]pp，supported；stepAP70.8385083610%→72.0089727788%，Δ+1.1704644179pp。与既有TS-UCF同pre9/r50 supported组成首个同encoder/同配置两dataset主CI均支持非劣，但仅单head seed0/多配置未校正，UCF CI包含0，不能称两dataset均证实显著提升。总计3supported、9inconclusive、0确认劣于margin；方法/head/预算无依据分数调整，预览MD/CSV/JSON更新12项、不重bootstrap/不覆盖quality.json。
+
+收尾瓶颈更正：此前仅last clip progress时把TS-XD称为“head收尾”过早；只读审计证实其先在CPU global merge，非O(V*N)读全局index。800个video索引共1.226GB，约4202B/clip；video publish和global各一轮NPZ SHA+解压，再进入head读取。原atomic_write_jsonl还全量积累JSON strings/join/bytes。新streaming merger仅候选，真实r01小例3weaofow全index/arrays exact却0.8904x（更慢）；减少冗余resolve的r02在独立copy完整Normal924 6749clips+Shooting032 1355clips共8104上也全index/arrays exact/source unchanged，但总merge29.5015s对原27.8288s，仅0.9433x。global单段13.3358→11.5422s，RSS610076→368368KiB，per-video额外校验导致总耗时倒退。两失败性能反例/代码/Swan原结果保留，未上线此merger，没有跳过任何原校验或覆盖运行中index。实际不缺RAM，不能把降内存写成提速。r02仅系统调用计数降低，23synthetic tests通过不替代真实吞吐结论。
+
+14:00累计2840091/12268319clips=23.14980%，每logical task一次。五项：GPU0 VMA-XD pre9/r50 120246/145703（82.53%），GPU1 r70 62790/145703（43.09%），GPU2 TS-UCF pre9/r70 125489/138853（90.38%），GPU3 TS-XD pre9/r70 24573/291781（8.42%），GPU7 VMA-UCF pre12/r50 528/69364（刚启动）。两个VMA-XD最近1079.2s、已排除copy前缀的实际新clip速率12.8697/12.9800clips/s，旧约2.6–2.7；仅生产统计非正式算法倍率。效率原encoder228/228、pipeline214/228、恢复Swan r4ef7f3u仍RUNNING，待终态才可释放GPU5。
+
+ETA依据eta-planning-20261016-1400.json：55pending+5running，按各自encoder/dataset实测wall/新VMA生产吞吐及原merge/prediction尾部，规划余172.7–258.9 GPU小时；当前5卡理想34.5–51.8h，再留负载尾部/报告/云验约4–9h，实际目标范围10/18 04:30–10/19 02:50 HKT。对用户简报“10/18白天—晚间，保守10/19上午”；若GPU5原228+228全部完成/审核/原云端FINISHED后加入六路，有利情形可提前到10/17深夜—10/18上午，但不是承诺。VisionZip/uniform优化后整task吞吐未完整实测、共享CPU/I/O/其他项目负载和网络仍不确定，不用CPUprepare倍率直接除整套时长。全76/72/456、最终报告/云端尚未齐，goal active；未commit/push/恢复旧定时任务。
+
+## 2026-10-16 13:14 HKT 通信观察链恢复原四PID/原五Swan；优化remove70已进入新提取，新增三pair CPU门通过
+
+13:02前后四条formal和原效率的持久SSH同时Connection reset，Windows logger退出，observer142864按安全规则hold四slot；并非GPU任务失败。一次node3原PID核验确认bash12250/12240/27487/21226及效率父10074/child10329均仍live、无exit-code，未重投GPU或重复benchmark。此类故障不因进度观察中断重启任务；原已故意取消的旧VMA h7xmqfsw/v884d11z云端CRASHED/test_failed=1也如实留存，不混成当前运输故障的恢复对象。
+
+新增transport-recovery-r01/reattach_stream.py，仅短SSH只读/proc与原log、原URL及exit/queue；PID+start_ticks/owner/完整command marker和log inode固定，递归tracking链精确匹配所有已上传EVENT prefix，只补新events；每轮传输max3、认证/主机失败立即停，不启动/停止任何远端任务。synthetic5项及原TS-UCF真实189个EVENT prefix只读验证通过。五个原Swan均resume must、ONLINE恢复原身份；实际源、provenance、recovery先上传，结束仍须原FINISHED+completion1。API回读13:10五run全部RUNNING：VMA z7qo6cbv/rgtsdfdm、TS c4upi8u3/bdgmc4w0、eff r4ef7f3u，prefix全部匹配；失败scalar恢复置0，历史失败事件及原日志保留。观察层故障原因未归咎具体网络/代理。
+
+新observer143868/controller-r05，formal-r02-transport-r05，精确支持新tracker源SHA/新logger创建时间而保留原task started时间/行内expected_snapshot/source和Swan；四logger161688/101140/165092/166368，效率logger160248，质量主控102460均live。实际remote任务PID未改变。当前status_snapshot递归组合旧tracking+恢复新events，已保留旧前缀max计一次，不把reattach/复制当新吞吐。
+
+真实复用检查：优化r70已越过191个原完整video/17690clips进入新GPU提取（13:14之前已发表247video/25380clips）；r50仍逐数组独立copy原611video/87078clips，检查时514video/70208clips已发表，未宣称全部copy结束。原TS-UCF是1小时Normal_Videos_924_x264长视频，PID27489实际R、3秒CPU205ticks并持续读取，当前完整block索引已有13499clips；video级progress在publish前不跳，不能因几分钟无event判挂。原TS-XD已291781clips提取完成，正常固定head收尾，未重启。
+
+同时已有相同r02候选在其他三pair的真实训练CPU exact门（串行，不建model/GPU）全通过并FINISHED：VMA-UCF h336zw27、TS-UCF r0nnn6up、TS-XD 7fhb614l。实际acceptance原SHA分别6adbb92bce73b80e7ccdcf252692f401e888c04486db1c3bba7d945392048662、4db3e6e3a92fde6b74edc2267c066f3a10328117d8b1a54c37916dfb4b70080c、690e690c4185b75179a7825dbaa7d288ea93dd88f83bb0a77769c753b5baa578，均对原completed EVENT结果SHA核验。B8纯prepare倍率1.4356/1.2434/1.2390；TS B1反而0.5170/0.4978，原因候选固定16帧分组对native8帧多pad。结果如实保留，不把它推广为全面加速；这三pair尚未接入正式新执行，继续改进有据的执行打包（非方法选择），现有TS不动，原r02候选/真实门不覆盖。
+
+13:14正式15/76、质量11/72；累计2709338/12268319=22.08402%，每logical task一次。效率当前原encoder228/228、pipeline208/228（恢复prefix+新events口径），原会话仍RUNNING未终态；GPU5未挪生产。完整76/72/228+228、最终报告与全部云端未齐，goal active。科学冻结/head/预算/采样不改，旧V2/CLIP不重跑，其他项目/已完成及失败资产保护；未commit/push/恢复旧定时任务。
+
+## 2026-10-16 13:00 HKT 执行提速已上线：两个VMA-XD原writer安全替换，104768clips保留并逐视频严格复用
+
+用户明确要求多智能体优化慢进度，并进一步允许“可以的话杀掉，换最新优化提取”。本turn完成实际代码/验证/替换，不是仅提出计划。三名代理分别只读定位CPU路径、审计队列关键路径、实现最小CPU候选；root整合并经独立审阅。只读证据：VMA-XD已完成格13.91–14.86h、约占剩余GPU小时60%；816条原完整视频效率事件中encoder+H2D16.65%、head0.14%、其余83.20%（不能等同全部packing）。20秒relay不是小时级拖延来源；CPU全节点未满。工作量本轮12268319clips，旧V2仅4086273，不能把范围差异忽略。
+
+新增optimization-r01/numpy_packing_candidate.py只把原HF最终容器改np→torch.from_numpy；numpy_dedup_candidate.py在同batch按真实frame_indices校验重复RGB后，仅对unique帧运行完全相同原HF逐帧resize/crop/normalize，并还原原B,T顺序。无跨batch/cache，不动adapter原constructor/默认pt/权重、head、方法/层/预算/采样/真值。真实CPU门分别原Swan ftjy2gtw（packing）和berxx8zk（dedup）ONLINE先于计算，均FINISHED/qa/completed=1回读核验；各27case、训练2normal+2anom、B1/B8首中尾/存在的tailpartial、每路径交替2重复及B8双worker重复，全RGB/indices/valid lengths/keys/dtype/shape/tensor逐元素相等，结果SHA与原completed event绑定。Packing acceptance SHA8603cdda5b4713bbc817ebb5cce9e8e6219c8306721806c6d1ac4c34bd586ea9；dedup SHA017bf2b81a1c155f2f289855921afed44b2c2a8e56f66188a769ecbd82051b78。B8纯prepare：packing原3.0428→10.3953clips/s=3.4164x；dedup原3.0735→15.2514=4.9623x。此为共享CPU准备阶段，不是encoder/完整提取或算法正式加速倍率。
+
+preblock_resume.py为独立狭窄PreBlock复用实现，实际PreBlockDeployment类型及完整frozen reducer/每层真实shape回执严格校验；仅copy，不hardlink/伪装PairMerge。除绑定exact门的spec.cpu_pipeline差异外，spec/microbatch/encoder/paper/data/semantic runtime保持严格；继承原copy_video逐样本/原视频SHA/每数组SHA、shape、dtype、finite、readout、runtime-reference检查；仅完整发表video复用，partial整视频重提。Synthetic packing5项、dedup10项、resume17项通过，compileall src tests通过。另上线前对两个真实源103380条原metadata几何回执核验通过（不是数组copy验收）。原全局resume/科学快照未改。
+
+冻结执行bundle execution-optimization-r03.tar.gz SHA466fb7adcdb578453e1184daefc49ac66c6ffe3664ba9dcd3853162229038ec4；execution-config SHA265eed471ed3c7c80c590dc7b725e289c45b6503945bdd4e8b066c0307eae3f0；候选SHAeb55d8d759b017df8f487257ed0071d49defa99b8418e84f31225869b01de4c8。含原科学tar、实际wrapper/controller/候选、原在线门acceptance/events/cloud与测试。remote先验bundle SHA/所有proof及实际导入pipeline路径/SHA、候选实际execution_identity；原campaign-r02 SHA16cec7a9…/formal-source-r02原字节不改。独占效率实验仍原路径，不以新生产提速替换已测228+228数字。
+
+先只停止本机observer161388（完整记录cmd/原queue/所有logger，未递归终止子进程），再按原runner PPid+owner+完整argv精确找到VMA-XD pre9/r50 python23713、r70 python27300，SIGTERM后确认实际writer消失、原runner exit143，才将两完整旧task目录原样rename至同output_root/preserved-execution-r02/<task>。r50保留611完整视频/87078clips；r70保留191/17690；合计104768clips。原PID/Swan/日志/失败终态和未发表partial全保留，replacement-receipt.json SHA77c4dfed3c6525040c7953c1da5b3c7ffea9c7e19ff5269fad81a7e55ee9e1d4。没有删资产/覆盖旧run或重跑已完成logical格。
+
+新observer142864，controller-r04在formal-r02-execution-r04；原TS-XD logger148884/原Swan c4upi8u3、TS-UCF logger121412/原Swan bdgmc4w0完整接管、未重启。新VMA-XD两个logger135316/142700，remote bash12250/12240、python12252/12242，GPU0/1；已通过原head SHA与backbone code_digest9a23c5da…严格preflight、真实resume_lineage已生成，首次检查各已有33个完整video/3838clips经原copy验证发表。此时仍在copy阶段，不把复用clips当新GPU吞吐、也不宣称全部104768已验完。status_snapshot按每logical task取新attempt与preserved完整前缀max只计一次，并从新吞吐中扣除旧前缀，防止复制速度冒充GPU速度。
+
+12:58本机快照正式15/76、质量11/72、累计2675761/12268319clips=21.81033%；encoder228/228、pipeline207/228，原效率父10074仍live/GPU5独占测量继续，未提前挪用。已授权的后续提速继续有界验证，TS和UCF尚未放行新candidate；其他项目1827/26335等保护、旧V2/CLIP不重跑、未commit/push/恢复旧定时任务。完整目标76/72/228+228、最终报告/终态云端仍未齐，goal active。
+
+## 2026-10-16 12:37 HKT 15/76预测、11/72质量；完整视频效率204/228逐组审计通过
+
+本turn先核实用户询问的生产吞吐与CPU占用，而非擅自执行提速。node3公网只读采样12:32：32逻辑CPU，3秒整体busy27.6643%、iowait0.1572%、steal0，load 7.52/7.48/7.21，没有逻辑核在该窗口平均超过80%；MemAvailable2022694072kB。该证据不支持“别人把整机CPU占满”的说法，但不排除短时争用/局部限制。原VMA-XD约2.77–2.87clips/s，当前两配置2.65/约2.7，持续偏慢而非突然大跌；慢CPU准备路径及分阶段耗时为原有证据，不能未经隔离实测断言全部耗时均来自单个张量打包函数。用户只问原因和前后速度，没有批准切换CPU路径或GPU5加入正式生产；本次没有进行此两项变化。
+
+主控161388、CPU质量102460、效率logger103812均本机live。node3原效率父10074实查/proc存在、queue running；audit_completed_pipeline.sh对204个已完成pipeline组逐一通过：每组16完整冻结训练视频、video SHA/帧数/clips、对应head SHA、原采样、目标block与前一signal block、真实变短token及组前空GPU/组后仅自身PID，结果SHA匹配原queue。只是204/228中间审计，不冒称228全完或Swan终态成功；encoder228/228既有审核复用。
+
+12:37快照正式15/76=19.73684%（4dense+11压缩）、质量11/72=15.27778%。新增两项：VMA-XD Attention pre6/r70主PR71.0012893033%，对dense70.3000788652%，Δ+0.7012104381pp、95%CI[-1.2102812206,+2.6608263804]pp，inconclusive；补充stepAP64.8401074310%降至57.6441098513%，不能称全面提升。VMA-UCF pre9/r70主ROC80.0209500511%，Δ-0.5277914420pp、CI[-2.7304471361,+1.4592837537]pp，inconclusive。原Swan h878fifb/3zaxtr6u及原结果SHA/云端主三点已在上一执行段核验；已有结果复用不重bootstrap。总计2supported、9inconclusive、0确认劣于margin，所有质量结论仍单head/多配置未校正。
+
+累计2640537/12268319clips=21.52322%，每task一次、结束video下界。GPU0 VMA-XD Attention pre9/r70为14610/145703=10.03%；GPU1 VMA-XD同pre9/r50继续；GPU2 TS-UCF pre9/r70为62643/138853=45.11%；GPU3 TS-XD pre9/r50为265051/291781=90.84%。原四卡继续、未重启/重投；GPU5原效率单任务继续，保护其他项目。完整76/72/228+228、最终报告和云端终态仍未齐，goal active；未commit/push、未恢复旧定时任务。
+
+## 2026-10-16 09:21 HKT 13/76预测、9/72质量：TS-UCF pre9/r50首次在UCF主ROC支持非劣
+
+本turn为确认live的持续执行与有界等待：TS-UCF Attention pre9/r50完成全部138853clips、完整预测与原Swan成功后，由主控161388把GPU2补到VMA-UCF pre9/r70。原四路任务持续输出，旧Swan身份和正式source-r02/campaign-r02不变，未重投/重启、未据分数调整冻结网格。恢复主控写队列稳定、CPU质量102460和效率logger103812均live。
+
+新增第九项TS-UCF Attention pre-block9/remove50：原dense frameROC-AUC78.6800663081%，method80.0865229571%，Δ+1.4064566489个百分点；95% paired-video CI[−0.4125422792,+3.4748940875]个百分点，下界>=−0.5pp，原noninferiority=supported。CI仍包含0，不能声称已证实显著提升；单head seed0/多配置未校正限制保留。同一配置TS-XD还在提取，不能提前说跨dataset均支持。方法/位置/预算/head/采样/真值仍原冻结值，seed0/10000draw没有修改。
+
+质量原Swan tpe6r5xj FINISHED/quality_completed=1，主三点API回读与本地匹配。原结果SHA9561f661ca2f71d251a42762c8959fbaa61c5c0fedcb581cda8df259f31c34e2回传校验，其他8结果原SHA复用、不重复bootstrap。预览MD/CSV/JSON更新9项，不覆盖quality.json。当前主指标2supported（VMA-XD pre6/r50及TS-UCF pre9/r50）、7inconclusive、0确认劣于−0.5pp界限；前者stepAP下降−2.9883pp的反向补充仍明确保留，不能概括全指标提升。
+
+09:21正式13/76=17.10526%（4dense+9压缩），质量9/72=12.5%，encoder228/228、完整视频效率177/228=77.63158%。累计2308164/12268319clips=18.81402%，每task一次、结束video口径。四卡继续VMA-XD pre6/r70、VMA-XD pre9/r50、VMA-UCF pre9/r70、TS-XD pre9/r50；VisionZip/uniform正式格子仍按原顺序排队，未因已有支持非劣格就跳过。效率GPU5原会话RUNNING待全部228及终态核验；全76/72/228+228、最终报告/云端未齐，goal active。其他项目与旧资产不动，未commit/push/恢复旧定时任务。
+
+## 2026-10-16 07:17 HKT 12/76预测、8/72质量；TS-XD pre6/r70主PR下降，仍未支持非劣
+
+本turn为核验live的持续工作/有界等待：TS-XD Attention pre6/r70完成全部291781clips后经历正常固定head预测收尾，未因观察时间较长重启。必要一次node3原PID检查：bash1975/python1977仍live，原formal-source-r02/原Swan mh8iia8r命令不变，Python RSS约7.9GB、GPU3约616MiB，表明已进入固定head阶段而不是GPU提取失败；随后自然完成并云端成功，GPU3由主控161388自动补到TS-XD pre9/r50。其他原任务未重投、源/方法/head/预算不改。
+
+第八项质量TS-XD Attention pre-block6/remove70：冻结主梯形frame PR-AUC dense76.6558428832%，method75.6858562160%，Δ−0.9699866671个百分点，95%视频配对CI[−1.8967412284,−0.0324245474]个百分点。CI整体为负，但相对−0.5pp容忍界限仍跨界，原noninferiority=inconclusive：未支持非劣，亦未确认损失超过容忍界限。不能把“相对0的下降方向”与“确认劣于−0.5pp界限”混为一谈。补充stepAP dense70.8385083610%、method70.5280995569%，差−0.3104088041pp，仅点值，不另作CI。
+
+原质量Swan rtvcfckf FINISHED/quality_completed=1，API主三点与本地全精度一致；原结果SHA c90063aca2be33f1f5f3feb1fcbdb06862df587bc920c8db86b135dd2690e958回传匹配。其余7项原SHA保持，collect仅复用、没有重复bootstrap。预览MD/CSV/JSON共8项已更新，补充明确“不能因主指标改善而省略stepAP下降或称全指标提升”。只改派生报告措辞，未改指标/冻结源；compileall src tests exit0。
+
+当前正式12/76=15.78947%（4dense+8压缩），质量8/72=11.11111%（主指标1supported、7inconclusive、0确认劣于容忍界限），encoder228/228，完整视频效率156/228=68.42105%。累计2102465/12268319clips=17.13735%，每task一次、结束video口径。四卡继续VMA-XD pre6/r70、VMA-XD pre9/r50、TS-UCF pre9/r50、TS-XD pre9/r50；CPU主控102460与效率logger103812正常。主控恢复已自然完成并补位多个原/新任务，队列写入稳定，无新WinError5；原身份/行内tracking/source约束有效，其他项目未动。全76/72/228+228、最终报告及终态云端尚未齐，goal active；未commit/push/恢复旧定时任务。
+
+## 2026-10-16 05:26 HKT 11/76预测、7/72质量：首次主梯形PR支持非劣，但同组stepAP下降，不能称全面提升
+
+本turn持续验证原live任务并等待自然完成：第四个dense VMA-XD已完整145703clips/800视频预测并云端成功，四dense至此全ready；GPU1按原队列补VMA-UCF Attention pre9/r50，该项完整完成后补到VMA-XD pre9/r50。原长任务VMA-XD pre6/r50也完成145703clips+预测+原Swan hi0l3k2h成功，GPU2补TS-UCF pre9/r50。所有动作由恢复主控161388完成，原身份/正式source-r02/campaign-r02保持；没有重投GPU、没有改冻结配置或依据分数调整队列。
+
+新增VMA-UCF Attention pre9/remove50主frameROC-AUC：dense80.5487414931%，method80.5039537124%，Δ−0.0447877806个百分点，95%视频配对CI[−2.1216258574,+1.8945156626]个百分点，inconclusive。点值很接近不等于已证实非劣。原质量Swan s80vf370 FINISHED，原结果SHA f11f54141c69a86e1421003d90b1b979b3a506fe24f59be11461d8f05a672530回传验证。
+
+新增VMA-XD Attention pre6/remove50：冻结主frame梯形PR-AUC dense0.7030007886523076（70.3000788652%）、method0.7209091822113581（72.0909182211%），Δ+1.7908393559个百分点，95% paired-video CI[+0.3319367101,+3.2753465512]个百分点。按预登记margin−0.5pp，原noninferiority=supported；单次未校正CI在0以上，但不能扩展成跨配置/跨seed或全面质量提升。关键反向补充：同组stepAP由64.8401074310%降到61.8518277814%，点差−2.9882796495个百分点，未给stepAP计算CI。UCF同配置也仍未支持主ROC非劣，因此当前没有同一非平凡配置两dataset主CI同时支持的证据。保持原作者梯形PR主指标与stepAP单列，不能挑有利指标来宣称胜出。
+
+该VMA-XD质量原Swan6qqsllhk FINISHED/quality_completed=1；API回读dense/method/delta与本地全精度匹配。原quality-preview.json SHA ace755377b2ab140f235a6a19f1931c692b36da5e119ccfcd4fa501d35b23d16校验一致。800视频/2330384帧、正常300/弱正500，paired seed0/10000次有效draw，无无效样本。静态复核原PRCurve实现确为全局同分阈值分组+PR原点线性梯形积分，stepAP为分组矩形积分，未发现需要修正的代码；未额外重算正式指标、未换主指标。已有7结果只验SHA复用，MD/CSV/JSON预览和stepAP独立表已更新。
+
+当前正式11/76=14.47368%（4dense+7压缩），质量7/72=9.72222%（1主指标supported、6inconclusive），encoder228/228，完整视频效率137/228=60.08772%。累计1923173/12268319clips=15.67593%，每task一次，当前未结束video不计。四路为VMA-XD pre6/r70、VMA-XD pre9/r50、TS-UCF pre9/r50、TS-XD pre6/r70，正常自动接力；CPU主控102460/效率logger103812继续，原效率会话仍RUNNING待228全部及终态核验。主控原子队列恢复后稳定，其他项目及旧资产不动。最终76/72/228+228、完整最终报告/云端仍未齐，goal active；未commit/push/恢复旧定时任务。
+
+## 2026-10-16 00:41 HKT 恢复主控已完成真实补位；8/76预测、5/72质量、完整流程效率102/228
+
+恢复后的controller161388已实际观察原TS-UCF pre6/r70自然完成、核验原Swan成功、把GPU3补到TS-XD pre6/r70；不是仅看见PID就宣称恢复。原logger103052/原Swan p2945py2完成后复用结果，新任务logger154108正常启动；新local tracking目录formal-r02-recovery-r03/tasks/...，行内expected_snapshot仍formal-source-r02，原campaign-r02 SHA/方法/head/预算/保护命令不改。其余三个原GPU任务保持旧PID/旧Swan继续，没有重新提取或重投。主控恢复后连续写队列超过1小时，无新增PermissionError，旧源/故障记录/接管审计均保留。
+
+新增第五项质量为TS-UCF Attention pre-block6/remove70：原dense frameROC-AUC78.6800663081%，压缩77.0134477467%，Δ−1.6666185614个百分点，95% paired-video CI[−5.0112354039,+1.9256533795]个百分点。原决策inconclusive，点值超出−0.5pp容忍界限，CI仍不能确认劣于界限，更不能称非劣。seed0/10000draw、对应正式head和相同输入/真值SHA不变；没有根据该结果改参数、切指标或停止计划内其他配置。
+
+原质量Swan od69syin FINISHED/quality_completed=1，API三点回读与本地一致；原结果SHA ddf94d521aaef24b0a669657a1db556aaac28e7d2ac72adc773b58d91a8466e1回传验证。其余4个结果验SHA复用，不重跑bootstrap。预览MD/CSV/JSON已更新5项，时间显示改为HKT并保留原UTC字段；未覆盖任何最终quality.json。
+
+当前正式8/76=10.52632%，质量5/72=6.94444%，encoder228/228、完整视频效率102/228=44.73684%；累计1498864/12268319clips=12.21735%，每task仅计一次、已完成video口径。四路为VMA-XD dense136894/145703、VMA-XD pre6/r50为102747/145703、VMA-XD pre6/r70为44896/145703、TS-XD pre6/r70为6114/291781。效率原父10074/本地103812继续，CPU质量主控102460完成第五项后等待匹配。完整目标76/72/228+228、最终报告及云端终态还未齐，goal active；未commit/push、未改其他项目、未恢复旧定时任务。
+
+## 2026-10-15 23:37 HKT 本地调度器写队列瞬时失败已恢复；四原GPU/PID/Swan完整接管、没有重投
+
+本turn观察到原本地controller PID125064退出，stderr明确为os.replace(queue.tmp,queue.json)的Windows WinError5/PermissionError，最后正常队列时间22:54:09 HKT。具体持锁者未定位；不是GPU计算失败或模型错误。queue.json与遗留queue.tmp逐任务状态一致，没有未登记新任务。只读核验四个原本地logger128876/87480/114528/103052均live，完整命令/原provenance/输出路径一致；node3四原bash PID26832/2548/1633/29847均live、无exit-code，日志继续产出，原Swan分别pr54ynzc/hi0l3k2h/w5r5goko/p2945py2未改变。因此没有重启、SIGTERM或重投任何GPU任务。
+
+新增纯调度恢复controller-r03.py，保持原campaign-r02 SHA和formal-source-r02、GPU保护/显存上限/全部76格不变：--resume按行尊重tracking_directory/swanlab_source/expected_snapshot，核对原logger命令+创建时间、原Swan link、原campaign/provenance后接管；已完成任务严格复用原云端成功，未知/失败只hold原slot，绝不重放。新增controller_state_io.py仅针对已观察PermissionError对原子replace做最多10次有界重试（最大约6.5秒），旧JSON在成功前保持不动，失败临时文件保留可恢复。不吞其他错误。
+
+新主控PID161388，日志work/preblock-vma-ts-20261015-r01/formal-r02-recovery-r03/controller.stdout/stderr；ADOPT_ORIGINAL四条逐一打印原ID，队列controller_pid与source SHA已更新。未来新任务的local tracking目录在recovery-r03下，但四个活跃行仍使用原formal-r02路径，远端tasks-r02/模型source-r02不变。controller-recovery-r03.json/tar.gz绑定旧stderr、新源/IO helper/原队列备份/原PID核验/接管日志；audit_controller_recovery.py确认四行六个身份字段及Swan对象完全不变，7个已完成状态不丢失。故障注入测试2passed：临时锁两次失败后成功、永久锁10次后抛出并保留旧队列/完整临时状态；compileall src tests exit0。恢复后实际30分钟持续写队列成功、新主控及原loggers均live，未更改任何科研配置/源码快照或已完成质量结果。
+
+23:37正式仍7/76、质量4/72、encoder228/228；累计1433349/12268319clips=11.68334%，原四任务继续自然推进。完整视频效率父10074/本地logger103812正常接力，CPU质量主控102460正常等待匹配；没有因观察器退出新建Swan身份或重复bootstrap。目标76/72/228+228与最终报告/终态云端未完成，goal active；未commit/push/恢复旧定时任务，其他项目进程与旧资产保留。
+
+## 2026-10-15 21:55 HKT 首个XD配对完成；7/76预测、4/72质量、完整流程效率79/228
+
+本turn为实质进展与确认live的有界等待：VMA-UCF Attention pre6/r70完成完整69364clips+预测+云端后GPU0补到VMA-XD同配置；TS-XD Attention pre6/r50完整291781clips+预测+Swan成功后GPU3补到TS-UCF pre6/r70。正式7/76=9.21053%，质量4/72=5.55556%，encoder228/228、完整视频效率79/228=34.64912%；累计1289173/12268319clips=10.50815%，单task计一次。正常旧PID/原Swan身份继续、没有重投/重启，没有修改冻结方法或其他项目。
+
+新增VMA-UCF pre6/r70主frameROC-AUC：dense80.5487414931%，压缩79.7548360770%，Δ−0.7939054161个百分点，95%视频配对CI[−2.9324303084,+1.6815758966]个百分点；非劣仍inconclusive。原head/采样/真值/实现SHA门通过，点值超过−0.5pp界限但CI不能确认劣于界限，更不能称支持非劣。不据该分数改预算/位置或切换主指标。
+
+首XD质量是TS-XD Attention pre6/r50：主作者口径梯形frame PR-AUC dense0.7665584288317776（76.6558428832%），压缩0.7655602667912158（76.5560266791%），Δ−0.0009981620405618008（−0.0998162041个百分点），95% CI[−0.006560589259434912,+0.004676768825352917]，即[−0.6560589259,+0.4676768825]个百分点。margin−0.5pp，CI下界仍越界，noninferiority=inconclusive，不能把小点差说成非劣已证实。补充step AP单列：dense70.8385083610%，压缩70.9037622542%，差+0.0652538932pp，未为stepAP另算CI、不替换主指标/结论。两个定义在并列分数下可以明显不同；未为解释差值重复读取正式真值或重算评测。
+
+原XD质量Swan smya5sd8 FINISHED/quality_completed=1，并API回读dense/method/delta与本地完整精度匹配。首XD原quality-preview.json SHA230be0b8079cb5b11988d8393cd4e19c8ad36b4b8cd43ec12463c1d530b63ca5回传一致，seed0/10000 paired-video draws不变。运行中只必要一次查原CPU子30187：99.8%单核、RSS约3.46GB，节点可用内存约1.96TB，证明正常CPU计算而非观察超时后重启；随后自然完成。其他三质量原结果SHA仍一致，仅收集复用、没有重复bootstrap或覆盖quality.json。
+
+reports/preview-20261015/MD/CSV/JSON已更新四项真实结果，新增XD补充stepAP独立表和未给stepAP做CI的限制，不混报PR与stepAP。给原有纯合成单测补明确断言：同分阈值toy例梯形PR=.75、stepAP=.5，说明二者不是别名；tests/icassp2027/test_urdmu_quality_export.py当前3passed，compileall src tests exit0。没有修改实际指标实现/冻结源或重新计算正式分数。
+
+四路正式提取继续（VMA-XD dense、VMA-XD pre6/r50、VMA-XD pre6/r70、TS-UCF pre6/r70）；CPU质量主控102460等待后续匹配，效率父10074/本地logger103812继续GPU5逐组独占测量。当前四项主CI均inconclusive，不扩大为全部方法结论；余68配对尚未评测，VisionZip/uniform正式矩阵仍按原冻结队列等待。完整76/72/228+228、最终报告及终态云端核验仍未结束，goal active；未commit/push、未恢复旧定时任务。
+
+## 2026-10-15 18:24 HKT TS-XD dense及TS-UCF首压缩完成，第二项配对质量仍未支持非劣
+
+本turn持续工作并对原live任务做有界等待，期间TS-XD dense完整提取291781clips+预测+Swan FINISHED后自动补到TS-XD Attention pre6/r50；TS-UCF Attention pre6/r50完整提取138853clips+预测+云端完成后GPU0自动补到VMA-UCF Attention pre6/r70。没有重启正常任务或修改冻结矩阵。正式5/76=6.57895%，质量2/72=2.77778%，encoder228/228、完整视频效率47/228=20.614%；累计946825/12268319clips=7.71764%（每task一次、结束video口径）。四路当前进度VMA-XD dense69645/145703、VMA-XD Attention6r50为37562/145703、TS-XD Attention6r50为126875/291781、VMA-UCF Attention6r70为4528/69364。
+
+新增TS-UCF Attention pre-block6/remove50（前block5完整输出后、1569→785）的真实配对主frameROC：dense0.7868006630812754（78.6800663081%），method0.7812979816906978（78.1297981691%），Δ−0.005502681390577603（−0.5502681391个百分点），95% CI [−0.03004511970691046,+0.0219722930596632]，即[−3.0045119707,+2.1972293060]个百分点。非劣margin仍−0.5个百分点，点值已超容忍界限，但CI仍跨界/跨0，原决策inconclusive：不能称支持非劣，也不能称已确认劣于界限。单正式head seed0/paired-video bootstrap seed0/10000不变；不据该分数调参、换head或删预定配置。
+
+原质量Swan5ivp441n FINISHED/quality_completed=1；API回读dense/method/delta三点与本地结果匹配。原quality-preview.json SHA216878c25611c8fbca054dfdeb2be28c706895e162e54ad4d0b43b0f24c91292回传验证，首VMA结果原SHA仍一致，仅复用不重算bootstrap。reports/preview-20261015/QUALITY_PREVIEW.md及CSV/JSON已按两项真实结果更新，余70格不补旧成绩。尚无XD配对分数；三项dense中只有已配对的UCF两条读过帧真值。
+
+效率父10074及在线会话继续；audit_completed_pipeline.sh对已结束31组逐组核验每组16完整冻结训练视频、成员/原视频SHA/全部native clips/帧数/head SHA/采样、真实token/目标/信号block、GPU前空后仅自身PID、raw结果SHA，全部通过，之后自然推进至47组。不是把raw视频到score计时冒充含FeatureStore落盘的正式提取总耗时；全节点CPU/存储共享、SHA预读可能暖页缓存的限制保留。全会话仍RUNNING，未提前报终态成功。4.6TB空闲存储及充足inode已核验，无需清理其他项目。
+
+主控125064、CPU质量102460、效率logger103812均继续，质量队列完成两项后等待后续匹配。下一项预计是VMA-UCF pre6/r70与稍后的TS-XD pre6/r50；具体以实际完成+云端门为准，不预报质量。完整76/72/228+228、最终报告与终态云端仍未全完成，goal active；未commit/push、未恢复旧定时任务、没有改其他项目或已完成V2/CLIP资产。
+
+## 2026-10-15 15:41 HKT 首个正式配对质量完成：VMA-UCF Attention pre6/r50，CI未支持非劣
+
+本goal turn为实质进展：首个压缩提取/完整预测/在线终态核验完成，CPU质量主控自动匹配对应dense，原compare_prediction_runs已真实跑通一次；没有重复bootstrap或修改冻结方法。正式3/76=3.94737%，质量1/72=1.38889%，encoder228/228，完整视频效率21/228。累计608117/12268319clips=4.95681%，单task计一次、当前未完成video不计；status-snapshot已按实际更新。
+
+首质量为videomae×UCF、Attention在block6之前（block5完整输出后）移除50%，1568→784token，原正式UCF head SHA9c47365f…、相同完整290test视频/采样/真值SHA门均通过；encoder不是VideoMAEv2，不与旧模型分数混比。Dense frameROC-AUC=0.8054874149305954（80.5487414931%），method=0.8029191175454538（80.2919117545%），Δ=−0.0025682973851416206（−0.2568297385个百分点）；95%视频配对CI=[−0.021502819585984777,+0.017640679723698326]，即[−2.1502819586,+1.7640679724]个百分点。非劣界限−0.5个百分点；点值在容忍范围内，但CI下界越界，原决策inconclusive，不能称已证明非劣，也不能称确认劣于界限。单head seed0/分层paired-video bootstrap seed0/10000draw保留，不据此调参/停跑预定配置。
+
+质量原Swan3nrtocm7 FINISHED/quality_completed=1终态已核验；另用API回读quality/dense、method、delta，三项与本地结果在1e-12内一致。远端quality-preview.json原SHA c95b751a93bd6b53a9264b0b642249fe4860f160129353a1ca890d1ea84e8a10，经scp原字节回传吻合；quality-results-index.json及quality-cloud-points-verification.json记录绑定。collect_quality_previews.py只收集完成且云端成功原结果，已有则验SHA复用，不重算；build_quality_preview.py仅生成reports/preview-20261015/QUALITY_PREVIEW.md、quality-available.csv/json，明确partial_not_final，其他71格不填旧成绩，不覆盖quality.json。
+
+该配置独占GPU常驻encoder+原adapter/readout/plugin的三轮配对中位倍率为B1 1.37004×、B8 1.41112×；这不等于完整视频流程加速，也不能抵消质量CI未支持非劣的事实。同配置全流程三轮尚未齐，不填虚构值。
+
+主控已自动把GPU0从该已完成压缩任务补到TS-UCF Attention pre6/r50（6324/138853），GPU2继续VMA-XD同配置（9086/145703）；GPU1原VMA-XD dense40966/145703，GPU3原TS-XD dense274160/291781。四卡正常、不重启、不改原身份；前两个UCF dense及首压缩三条预测成功保留。CPU主控102460完成首项后等待后续匹配，效率父10074/GPU5原会话继续。全部76/72/228+228、最终报告和终态云端未全完成，goal active；未commit/push/恢复旧定时任务。
+
+## 2026-10-15 15:22 HKT 两个UCF dense全完成，首个压缩任务94.27%，完整流程效率19/228
+
+本turn属于实质进展与已核验等待：VMA-UCF和TS-UCF先后完整提取+预测并云端FINISHED/test_completed=1，正式2/76=2.63158%；主控自动补位GPU0到VMA-UCF Attention pre6/remove50、GPU2到VMA-XD同配置，不重启正常旧任务。first-dense-provenance-audit.txt已核验首dense完整69364clips、全部native windows、query256全key、对应head SHA、prediction与feature contract三文件SHA；不打开帧真值。存储预算只读检查data2剩4.6TB/inode余2.81亿，无需清理其他资产。
+
+15:22累计567948/12268319clips=4.62939%，每task只计一次（完成video口径）。GPU0 VMA-UCF Attention pre6/r50：65389/69364clips=94.269%、275/290视频；GPU1 VMA-XD dense：37562/145703=25.780%、324/800；GPU2 VMA-XD Attention pre6/r50：6186/145703=4.246%、54/800；GPU3 TS-XD dense：250594/291781=85.884%、743/800。node3原bash PID分别4422/26832/2548/26825均/proc存在、无exit-code，主控125064与原Swan loggers正常；保护其他项目，没有重投GPU。
+
+Encoder228/228原始审核与预览不变；完整视频效率19/228=8.333%，原父10074确认live，Swan r4ef7f3u仍在线RUNNING，未冒称整套终态。CPU质量主控102460正常等待，质量0/72：首压缩尚未预测完整，不能提前读真值报分数/非劣。
+
+按各自实际生产clips/logger wall（非独占速度），VMA-UCF压缩约10.04clips/s，VMA-XD dense2.87、压缩2.77，TS-XD dense19.17；首VMA-UCF压缩剩余提取估计15:27–15:32，另需预测/配对CPU评测；TS-XD dense提取15:49–16:16；VMA-XD dense今日23:12–明日07:03，VMA-XD压缩明日01:50–12:19。规划范围来自同任务余量/吞吐乘0.75–1.5，不是统计CI，也不含未测预测尾部。TS压缩/VisionZip/uniform生产吞吐尚未测，整套可靠ETA仍未知，不能承诺当日全完。完整目标76/72/228+228/报告及云端仍active。
+
+## 2026-10-15 13:11 HKT Encoder独占效率228/228完成；完整视频效率与四路正式提取继续
+
+上一goal turn已实质启动四路正式提取与76格接力，不是无进展。本turn在不重启任何正常GPU任务、不改冻结方法/head/预算的前提下，完成独占效率代码、计划冻结、CPU质量自动接力，并两次对确认live的原PID做20/45分钟有界等待；主提取持续产出。
+
+新增src/vadbench/paper/pre_block_efficiency.py：228个encoder组（2encoder×19配置×B1/B8×3独立进程），每组20warm/40实测，GPU常驻的原生输入，含原adapter/mean读出/插件信号选择merge与执行回执，不含解码/CPU预处理/H2D。GPU5每组前后只允许自身PID，保存raw wall/CUDA stream/allocated/reserved；共享生产吞吐不当正式速度。另228个完整流程组（2encoder×2dataset×19×3），每组固定16完整训练视频（8normal/8anomalous、按ID首8、全native dense），分别2973/2354/5952/4718clips。含连续解码、原HF CPU管道、传输、encoder、各自正式head的exact query256全key推理及原帧均值投影；不含权重加载、SHA检查、FeatureStore落盘和最终结果文件写入。原视频SHA在计时前核验可能预热页缓存，不称冷盘/冷启动；CPU/存储共享、不冒称全节点独占；完整时序head为离线非因果。协议EFFICIENCY_PROTOCOL_R01.md已固定，不按速度/正式分数筛选配置。
+
+冻结efficiency-plan-r01.json SHA2e0e30adbd76726f7f7368aee80c51cf42205b0c54efb264158effff1e50e619，456个唯一组在测前列齐；efficiency-source-r01.tar.gz SHA47fcd0decaa1cda2100ac83c4db8ff821cb91d48935b952413906d7ee2c89cb2，原adapter字节/bridge/selector与formal-r02一致。效率在线会话r4ef7f3u先建后算，本机logger103812、node3父10074，GPU5单子进程自动接力；其他项目1827/15743/15744/26335/4592/4593保留。源/父控/计划/协议云端bundle b071867ac8a8e750aefcf75d8f84323e05b9d875d467313048e93adf79efcd3d，本地Git HEAD/dirty状态补存，不commit/push。
+
+已真实完成encoder228/228=100%，云端summary回读encoder_groups_completed=228；但会话仍RUNNING，不能称整套效率终态已核验。原始228份结果从服务器打包回传，SHA daf122debd40b5d97c4a2d3896ad7645f2b9a95640a8c662dc8c79ab4042618d，两端匹配。audit_encoder_results.py逐组核验全部job集合、每组40wall+40stream样本、3独立进程重复、实际token/目标block/信号block、GPU前无进程/后只有原自身PID、显存正值与plan SHA，228全部通过；聚合76个encoder×方法×预算×batch格到encoder-efficiency-preview.csv/json，含全部raw groups。描述性三轮配对wall倍率：VMA B1约1.0049–1.5519×、B8约1.0444–1.6424×；TS B1约1.0048–1.5511×、B8约1.0352–1.6485×。这不是完整流程加速、显著性结论或质量保持结论，未据此选配置。
+
+完整视频效率已完成2/228，当前第三组TS-XD VisionZip pre6 keep0.5 R1在跑（16视频已8个）；仍须等待全部228及终态云端核验。原结果/每video分阶段耗时、帧数与clips、frame score字节SHA均保留。针对新增效率与bootstrap入口测试5passed，compileall src tests当前exit0；前一turn bridge+quality13passed/9local-version-skip记录保留，不混报为本轮完整测试。
+
+CPU质量主控102460已实际启动，quality-control-r01/queue.json保持waiting_for_matched_predictions；只在method和对应dense均预测完成且Swan成功时启动一个CPU worker，CUDA_VISIBLE_DEVICES为空，每项先建在线会话，再由原compare_prediction_runs跑一次seed0/10000配对CI，独立quality-preview.json严格复用，不覆盖quality.json。质量尚0/72，第一项正式预测匹配后才能验证真实质量入口；不把等待队列说成质量完成。
+
+13:11 HKT正式完成仍0/76；clips已241635/12268319=1.96959%，每task仅计一次、当前未结束video不计。四原提取任务/原Swan身份均正常，没有重启；当前source-r02不变。各自从logger启动到当前的生产吞吐下界约VMA-UCF11.12、VMA-XD2.82、TS-UCF13.24、TS-XD18.88 clips/s（含数据/写盘/启动，不是独占计时）。同任务剩余提取时长以0.75–1.5倍作规划范围：UCF-VMA今日13:24–13:36，UCF-TS14:17–15:22，XD-TS15:19–17:27，XD-VMA今日22:51–明日08:31；不含尚未实测的预测收尾，范围不是统计CI。VMAXD使用原默认pt处理器路径明显较慢，如实记录，未为赶进度偷换身份或重启。压缩生产配置尚无实测速率，整套完成ETA不硬承诺；status-snapshot.json/status-history.jsonl已保存各task实测与未知项。目标仍active，76/72/228+228/报告/云端全验收未完成。
+
+## 2026-10-15 11:47 HKT 原环境门通过，四卡正式dense已实际提取、76格自动接力启动
+
+上一turn属于实质进展：定位原提取环境和constructor差异、恢复原摘要，而非重复状态。本turn恢复classic-video-v2环境完成真实native和B8 pipeline门：TimeSformer m2y5f5uo、VideoMAE k6dxrcxk均在线FINISHED且qa/all_completed=1云端回读；两个dataset各18配置、ratio1三个位置、四独立fulltrain head消费、原生RGB/processor精确一致和持续B8桥均通过。TS无需重跑已成功部分。VMA额外失败4ffmxeee已保留：原因是显式processor_tensor_type='pt'在canonical constructor中不等同于原来省略该键，虽实际默认同pt但摘要不同；最终按原构造省略该键（request None），精确复现XD9a23c5da…，不伪造/放宽检查。原VMA UCF=np 81e31440…与TS两dataset=np 7f9a3ac6…也全部原值精确匹配。
+
+真实新source-r02压缩快照SHA aae666274c3ddd37e24e925e3827cff1cb3b49966504af78f8ad37226826dd81；campaign-r02 SHA16cec7a9cba5ca1505d36a1bb8be6815948bbce72864fe93b5285db7002b584e。FORMAL_FREEZE_R02.md/method-freeze-r02.json及四条原环境gate原始SHA均服务器验证。VMA原receipt实际路径classic-classic-gate-videomae-r02（launcher替换产生双前缀），如实绑定原路径、不移动重命名；回传四文件字节SHA均吻合。旧source-r01/失败输出不改，新output根preblock-vma-ts-20261015-r01-r02。
+
+主控本地PID125064已实际启动四卡接力，队列按原逻辑76格，只有预测完成+云端FINISHED/test_completed=1才记完成。GPU0 VMA-UCF（bash26840/python26842，emwifjsk），GPU1 VMA-XD（26832/26835，pr54ynzc），GPU2 TS-UCF（26810/26812，pb88ijf6），GPU3 TS-XD（26825/26827，p4j06tic）；四个正式预检已通过并已写真实特征。每卡一个本项目任务、显存上限0.5，0/1/2既有1827/15743/15744完整命令+owner+PID保护、至少24GiB空闲才派发；现场原进程保留，新增约3120/3120/2020/2020MiB。未知占用、失败或网络异常只hold该slot核查原PID/Swan身份，不盲重投。track目录/原Swan来源/expected_snapshot已逐行写queue，独立formal-r02/controller.stdout与tasks-r02原PID/日志可恢复。
+
+11:47 HKT快照：正式完成0/76，质量0/72，效率0/228+0/228；四任务已完成视频的clips分别1294/69364、433/145703、1511/138853、2838/291781，单task计一次共6076/12268319=0.04953%。当前视频仍写入的clips未纳入，是保守下界。主指标尚无新结果，未读旧成绩冒充。仅启动数分钟，压缩配置尚无生产吞吐，整套ETA保持unknown，待实际分encoder/dataset/method测速再估，不套CLIP或foundation门速率。
+
+并行于GPU生产（主控独立，未派agent）准备CPU质量入口scripts/icassp2027/run_pre_block_quality.py：先核验配对预测/head/sampling/encoder与artifact SHA，再打开真值；复用原compare_prediction_runs，独立quality-preview.json、存在则严格身份复用，绝不覆盖quality.json。共享compare_prediction_runs仅增加可选bootstrap_seed参数，历史默认20260918不变，本goal显式0与冻结一致；UCF ROC、XD梯形PR、stepAP单列。此新入口尚未对正式预测调用，质量snapshot上传/接力和228+228独占效率仍待实现，不能称goal完成。本机受影响测试13passed/9skipped，compileall src tests通过；9skip为本机4.53.2 VMA不同于审核版本，server实际classic完整门已通过。未改正式分数选参、未head训练、未动V2/CLIP旧成果、未commit/push/恢复定时任务；goal active。
+
+## 2026-10-15 11:36 HKT 正式预检拦截与原环境身份恢复（正式0/76）
+
+Goal仍active，仅VideoMAE/TimeSformer；76提取预测格、72质量、228 encoder+228完整视频计时范围未变。foundation环境的真实训练侧native gate和B8持续部署gate只是工程证据，不能算正式完成或替代对应原head环境。pipeline云端bokx6g25/i5kd3on4均FINISHED；首次未启动GPU的568mscov/mkdx81r7失败保留。
+
+正式source-r01四dense尝试均在特征提取前被原direct_insert兼容门拒绝，backbone code_digest不一致；dvqg3wpx/dgfm63l6/ygja56yb/htt9l1h2失败云端及原目录/exit1保留，无正式clip产出、不覆盖失败目录。queue已改compatibility_recovery_classic_runtime_gate_required；正式完成0/76、clips0/12268319。没有伪造摘要或修改兼容白名单。
+
+已定位并CPU元数据复算：原提取是classic-video-v2（torch2.3.0+cu121、Transformers4.37.2、timm0.9.12），而非前期工程gate的foundation（2.8.0/4.57.3/1.0.28）。旧adapter原文件仍在code-e30c3ab-s6p，SHA2ff1f9e0…匹配；独立compat-candidate-r01仅恢复该文件/原解释器，不安装环境、不改共享源码。实际constructor用原processor_tensor_type：VMA UCF=np精确复算81e31440…，VMA XD=pt精确复算9a23c5da…，TS=np精确复算7f9a3ac6…，均与各正式head逐字相等，无需新增豁免。证据classic-candidate.txt、classic-np-candidate.txt、old-constituent.txt、diff-runtime.txt。旧resolved仍在，但顶层及全部constituent的index/特征已清理，4dense需新提。
+
+pre_block桥已新增读取审核过的4.37.2 VideoMAE原生forward AST支持：直接取原生dropout前概率，VisionZip同LN输入额外算原K，不改原attention。TS原生forward AST与先前一致。补丁尚未在classic真实权重上完成训练侧门，不能提前宣布通过。本机回归10passed/9skipped（本机4.53.2 VMA仍不在审核版本），compileall src tests通过。下一步在恢复原环境做必要native/pipeline门，再冻结新source/campaign，用新attempt输出目录恢复四dense及72项自动接力。生产吞吐未知，不给未经测量ETA；其他项目1827等未改动，未commit/push、未恢复旧定时任务。
+
+## 2026-10-15 11:11 HKT VideoMAE/TimeSformer真实层前桥及四head消费门通过
+
+本goal上一turn为实质进展（76格范围、4head元数据、pre_block桥草案及合成测试）；本turn完成4份training_qa与result/checkpoint匹配，均passed/completed、正式fulltrain1610/3950且seed0。_load_source原严格检查通过，保留训练阶段实际manifest SHA及完整样本数，不依赖已清理旧cache/view目录授权。模型真实路径/config确认VMA16帧tubelet2、TS8帧divided_space_time、224/16patch。旧4个dense合并合同SHA均仍匹配，但顶层index与features文件已清理，只剩contract/status/resolved；来源constituent可用性仍最后核对，若无有效索引/原特征则4个dense全部重提，不复用历史分数伪装对照。合同历史计数VMA UCF69364/XD145703，TS UCF138853/XD291781；新提取仍按实际完整manifest重算，不能用同一clip分母。
+
+服务器原生训练侧检查已实跑且云端成功：VideoMAE36ewe307 FINISHED/qa_completed=1、TimeSformer oe6arjmy FINISHED/qa_completed=1。每encoder从各自四个正式head的全训练清单中固定每dataset2normal+2abnormal，一视频一真实原采样clip（不拼不同视频成虚构时序），前层信号与pre6/9/12 ×3方法×2预算在两dataset共36条件检查通过；三个ratio1位置数值一致性通过、所有真实target输入及MLP长度已核验，2个对应固定UR-DMU head分别消费dense+18配置的训练features并独立单视频得有限frame分数。真实VideoMAE支持1568→784/470，TS支持1569→785/473的完整轨迹缩短，原position/attention/backend/mean读出不变，未打开正式测试真值。结果已保存videomae/timesformer-native-gate-result.json。
+
+首次两条检查在第一原生卷积处共同出现CUDNN_STATUS_SUBLIBRARY_LOADING_FAILED，尚未触及压缩，原hdhkcbuh/4anjr1eu CRASHED云端失败记录/exit1/PID消失已核验后，针对已定位执行配置只修一轮：采用项目现有cudnn=False、FP32/TF32off，dense/压缩一致，未重装依赖、未切换attention backend、未改压缩规则。新source-r03与旧snapshot/failed dirs均保留；r01/r02源archive区别含开跑前的逐视频head消费检查整理，未曾混拼正式视频。新gate实际场景完成，不能用旧本机9skip代替。
+
+正式完成仍0/76、未启动72项test矩阵；queue状态native_gates_passed_dense_reuse_final_audit。接下来接入已存在的PooledExtractionSpec/FeatureStore和严格UR-DMU评测，避免另写无provenance pipeline；包装已验收的pre-block桥为一次附加、每batch清信号的部署接口，正式前固定身份、源码、采样和4dense处理结论。当前无新生产吞吐，不给CLIP式两小时承诺。没有重跑V2/CLIP、没有head训练/正式分数调参、没有动其他项目或恢复定时任务，goal active。
+
+## 2026-10-15 10:51 HKT 新goal启动：仅VideoMAE/TimeSformer层前压缩，76格
+
+用户明确授权建立新goal并执行，仅videomae/timesformer；不重跑videomaev2/CLIP，不重训head。已创建work/preblock-vma-ts-20261015-r01/queue.json：76逻辑格（72新压缩+4个dense复用核验/重提）、72质量、228encoder+228完整流程效率；正式完成0，当前asset_audit_and_bridge_implementation。原工作树修改与旧完成成果已保留；未启动正式GPU/CPU评测，未恢复旧定时任务、未commit/push。
+
+P0已只读登录node3公网，核验四个checkpoint实际存在并算SHA/读取元数据：VMA UCF9c47365f…、XD4b273e63…，TS UCF2b55818b…、XD85586f89…；均metadata run_mode=formal/status=completed_training/seed0/3000steps，UCF available1610、XD3950。实际采样身份确认VideoMAE clip16/frame_stride2/window_stride16，TimeSformer clip8/frame_stride2/window_stride8，两者head输入768/mean读出，不把TS默认或V2采样强套。完整训练QA/训练manifest及dense资产文件仍待逐项配对核验，不提前宣布4个dense可复用。资产记录asset-audit.json含原metadata和原生类源码；foundation-video-v2 Python3.10.20/torch2.8.0环境可用。现场GPU1/2/3/5空闲，GPU0原1827、GPU4/6/7其他项目保留，本轮未占卡；实际派发前重查。
+
+新增src/vadbench/token_reduction/bridges/pre_block.py草案，source为target前一完整block，目标pre-block6/9/12分别source5/8/11。原attention及backend不改；VideoMAE无法直接取融合attention概率时同LN输入/原权重额外计算必要Q/K并计入成本；TimeSformer观察前层原生空间attention概率及实际QKV，空间score跨帧聚合/共享轨迹选择，VisionZip通过沿特征轴打包时间轨迹复用同一策略，逐帧应用同一merge，不平均混掉时间。桥一次附加可多batch使用，每forward清空信号，避免上一轮逐forward源码审计开销。
+
+关键结构审计：HF TimeSformer suffix用image_size/patch_size写死14的reshape，70%空间保留59不能被14整除。新桥仅在已SHA审核的suffix block实例中，将H×W的逻辑槽分解改为S_retained×1，原有temporal/spatial attention及MLP操作不变，绝不改config/位置embedding、不把1×59称作物理图像网格。原14×14来源坐标关系仍由trajectory/representative映射解释。预算明确按空间轨迹：196→98/59，保留8个时间位置，因此TS总tokens预期1569→785/473；VideoMAE1568→784/470。需真实checkpoint训练侧证明，不把草案说成已生产通过。
+
+新增tests/icassp2027/test_pre_block_bridge.py，CPU合成原生模型单测10passed/9skipped；9skip因本机Transformers4.53.2与已审核服务器VideoMAE新源码不同，保护门拒绝，不扩大SHA白名单以迁就单测。TimeSformer本机原生函数与server审计一致，其identity、两预算/三方法、重复前向清状态、真实target input/MLP长度/恢复通过；compileall src tests通过。服务器原生权重训练侧检查仍未跑，必须先SwanLab online再做，之后才正式冻结/派发。当前没有新吞吐，不能按旧CLIP两小时承诺ETA。
+
+下一步：核验四份training_qa与完整训练清单、查旧dense合同/预测位置及实际SHA是否可复用；完成server训练侧有界native gate和对应head消费，再冻结真实方法/源版本与接力。旧152格四encoder计划不执行，唯一范围以本次76格queue及用户新goal为准。
+
+## 2026-10-15 02:26 HKT DSANet 三方法38项、完整质量及两层效率最终交付完成
+
+38/38=100%完整提取+预测+云端成功，UCF19/XD19；4105577/4105577编码图像100%（19×69634+19×146449，非VideoMAEv2 clips单位）。36/36单次主指标视频级配对CI与两branch补充ROC/stepAP/梯形PR点值、原生五tIoU mAP齐全，36个唯一质量云端URL；38个唯一预测URL。所有比较实际head/manifest/crop/采样/桥策略/真值SHA门通过、bootstrap_seed0/10000保留，未按正式分数改参数，不重算旧preview或最终quality.json。
+
+两层正式效率皆齐：encoder114组=19配置×B1/32×3独立PID；完整流程114组=两dataset×19×3独立PID，每组完整固定16个训练视频，共1824次完整视频测量。均GPU5独占前/后PID/UUID验证、20warm40测量的encoder原始样本与完整视频三轮/阶段/p50/p95/吞吐/allocated/reserved/插件信号选择gather耗时保留；CPU/存储共享边界披露。encoder Swan w2iyxnvr、pipeline mv2zg766 FINISHED/efficiency_completed=1回读。每次源版本相同，完整流程OpenAI视觉与DSANet自带clip独立命名加载且训练侧身份核验通过。效率不是仅共享生产吞吐。
+
+最终报告仅复用38预测/36质量及已完成228计时组，未运行新模型/重bootstrap。目录work/dsanet-three-method-20261015-r01/reports/final-20261015/：FINAL_REPORT.md（36主指标及全部CI、两branch补充帧指标、原生五tIoU、完整效率和局限）、quality-results.csv、final-results.json（完整原结果/所有Swan links及来源SHA、未知作者seed/未校正/未测null）、efficiency-results.csv/json（76个三轮汇总格及全部原始重复样本）、artifact-sha256.json、cloud-verification.json、swanlab.json。最后汇总Swan fgsl8mtg FINISHED/report_completed=1与38/36/114/114摘要回读；客户端上传完成7文件12.6MB、本地SHA与CSV36/76行数已核验。SDK未提供云端保存文件逐SHA读取接口，明确不伪称云端文件byte-hash回读。
+
+真实质量结论：dense UCF ROC-AUC88.867606%；XD主stepAP85.596471%，XD补充梯形PR-AUC85.596286%。36配置共14支持非劣、7确认劣于界限、15证据不足；UCF6/18支持（均block12结构对照），XD8/18支持（block12六格+Attention6r50+VisionZip9r50）。12/14支持来自最后attention后仅patch操作、不再影响CLS的结构对照；没有取得两dataset同时支持非劣的非平凡前层压缩格。单作者权重/训练seed未知、未多配置校正，不称多seed泛化或方法间显著性。
+
+真实效率结论：所有B1压缩净倍率约0.2474–0.2950×（变慢），B32约0.8797–1.3255×依配置不同；完整视频UCF三轮配对中位倍率约0.8987–1.1105×、XD0.9131–1.0874×，不据最好点称普遍显著端到端加速。source guard/上下文/hooks开销已在net wall中，不把GPU组件节省冒充净效率；完整时序头非因果，来源时长比只为离线处理。所有负例保留、能耗/FLOPs/F1无证据保持null。
+
+completion-audit.json及final-remote-audit.txt已完成范围级复核：远端38份sealed scores/summary逐SHA再验，36份preview存在；本goal GPU/CPU/原controller/logger已结束，GPU进程表只剩他人任务，1827及R5 13429/13430继续正常。两个启动前busy失败只在无PID/无输出证据后开新attempt，正常旧任务未重启；元数据65字符SHA错误以独立分析绑定显式纠正、旧记录保留，无全局门豁免。源码四个byte-exact本地annotated tree tags核验，未commit/push；不动用户已有/无关改动、不停其他项目。
+
+key-attention-40在本机toml仍PAUSED已复核，本轮未创建定时任务，不归档聊天。当前queue状态completed_report_cloud_verified，无后续自动训练/新模型/额外实验。所有必要任务已完成，不再给ETA；最终报告云端链接https://swanlab.cn/@ryfrcd693/VAD-DSANet-Compression-20261015/runs/fgsl8mtg。
+
+## 2026-10-15 01:40 HKT DSANet 独占encoder全114组完成、完整视频效率实跑及R5保护恢复
+
+上一goal turn为实质进展（四卡接力、单次CPU及encoder计时）；本轮复核encoder Swan w2iyxnvr FINISHED/efficiency_completed=1，114/114组完整原始wall/CUDA事件/allocated/reserved与plugin分项已复用保存encoder-results-reused.json；3个独立PID、同训练输入SHA、B1/32、19配置各20warm40measure满足预算，无GPU或bootstrap重跑。B1 dense中位5.192418ms，Attention6r50 18.031462ms、VisionZip6r50 20.489110ms、uniform6r50 18.531887ms；配对三轮倍率约0.2950/0.2555/0.2807，明显变慢。B32 dense83.680786ms，同三格75.228518/75.050327/72.810993ms，配对倍率1.1211/1.1177/1.1398。是当前实现的净wall（包含源校验/上下文/hooks/额外QK/选择），不能抹去B1反例或用局部CUDA节省代替净成本。
+
+新增benchmark_pipeline.py，GPU5独占空卡核验后在原在线run mv2zg766启动。DSANet保留其原clip包，OpenAI视觉包用独立名称装载原始同一源码/权重（无全局替换/无dtype补丁），每dataset每独立进程先对已通过P1的固定训练feature和对应发布head CPU分数做数值身份检查。UCF/XD首轮检查均通过。边界完整打开训练原视频→原16帧采样/作者单crop/尾段→B32 CLIP及原插件→对应固定DSANet→真实coarse/class CPU分数，无特征落盘；每dataset固定8normal+8abnormal完整16视频，19配置×3独立进程，预设114组/1824测量。统一先完整读取16个原视频文件作暖文件策略，每配置首视频另做未计时预热；组前后PID/UUID独占门、CPU/存储共享如实保留。当前66/114完整流程组已产出，原在线logger108044/远端runner3580及其当前原进程实活核验，未宣布全部效率完成。
+
+生产接力两次启动前busy门拒绝（AttentionXD12r70 l7auuq3v、VisionZipXD9r50 a4ycvu8q）。均核验远端目录只有Swan URL，无run.sh/PID/输出、exit22，无GPU计算，保留失败回执和队列。原controllers96816/115772已退出；恢复只采用新attempt目录并接管其他正常/成功logger，未重启计算。第二次核实实际GPU1/2新占用PID13429/13430均fotile、cwd CVPR-JY2、精确R5_E17/E18命令，自01:21:38 node时间启动，各约11GiB；根据用户已有全16卡共享空余显存授权，新controller91388用精确PID/owner/cmd/cwd名单及free≥16GiB/B32派发，不停其他项目、不永久放行未知PID。queue-before-recovery-r02/r03、recovery-r02/r03及gpu-share-r03保留，所有实际task tracking_directory权威，不按旧默认目录猜。
+
+当前28/38完整预测云端核验，24/36单次主指标CI/两branch补充点指标/原生定位质量核验。最近图像库存2608249/4105577=63.5294%（采集稍早于当前队列）。UCF18质量齐全；XD首Attention6r50 stepAP85.956976% vsdense85.596471%，delta+0.360505pp CI[-0.276952,+1.040418]支持非劣但不证明提升；6r70=84.203485% CI delta[-2.920881,+0.260363]非劣不足；9r50=85.435173% CI[-0.572433,+0.271602]不足；9r70=84.487239% CI[-2.133651,-0.010546]不足但支持下降；12r50接近dense、支持非劣，结构对照。stepAP主与梯形PR补充不互换，不据这些test结果改变方法/预算。实际XD Attention生产median约246.13图/s、VisionZip243.27（目前样本少；共享工时不作效率）。
+
+重要执行源版本已用fingercd/noreply身份annotated tags绑定实际源码tree，不创建branch commit、不改主index、不push。最初Git autocrlf正规化tag保留为记录；新formal-source-r01-raw-v2、quality-source-r04-raw-v2逐blob与archive原字节核验，encoder/pipeline原tag字节本来一致。source-tags.json有全部tree/tag/archive SHA与正规化差异，不误把脏代码当HEAD。第三方export源码当前逐py SHA记录native-dependency-source-sha.json，原导出没有.git，不编造Git revision。
+
+最终汇总脚本build_final_report.py已实现但未发布假最终结果：严格要求38预测/36质量/114encoder/114pipeline云端、重复PID/输入/权重/源码/tag/全配置预算门；已验证当前partial被拒绝。只复用既有preview/计时，导出MD/CSV/JSON及SHA并在线记录、回读，显式区分ROC/stepAP/梯形PR单位；尚待全部数据完成再执行。compileall src/tests及本轮work脚本通过。
+
+ETA按实际XD方法剩余队列及完整流程每组约23–28s更新：38预测暂HKT02:00–02:35；全部质量、余下完整流程效率、报告及云端核验暂02:30–03:30。R5共享/I/O、未测XDuniform及后续独占窗口不确定；当前任务不是被暂停或blocked，goal active；旧定时任务仍PAUSED，聊天未归档。
+
+## 2026-10-15 01:04 HKT DSANet 四卡接力、单次CPU质量与独占encoder计时实产
+
+上一goal turn为实质进展（原生训练门通过、两项新dense启动）；本轮接管两个原在线logger，无GPU重启，新增唯一生产接力controller96816并按完成后同dataset dense ready派任务。四卡0/1/2/3每卡一个任务，GPU0仅放行现场核实的yangrunze PID1827及完整uvicorn gpu_service命令；free>=16GiB、冻结B32限制本项目显存，未知PID拒绝，不停他人。当前16/38完整提取+预测+FINISHED云端核验，42.11%；最近读取累计1431658/4105577编码图像=34.87%，每task只计一次。GPU任务/原Swan身份与tracking_directory/expected_snapshot均在queue.json。两dense已成功，UCF主coarse ROC-AUC88.867606%，XD主仍待其压缩配对CPU输出，不从另一轮指标套用。
+
+新增DSANet quality-one入口，仅完成且匹配dense的单taskCPU评测：保持对应head/输入采样/实际bridge+selector SHA、真值SHA门；主指标UCF ROC-AUC/XD stepAP用原compare_paired_quality显式bootstrap_seed0、10000视频级分层配对；两branch的ROC/stepAP/梯形PR-AUC点值以及原生5tIoU定位mAP分别保留，补充点值不冒充已有CI。dense补充点值/mAP通过输入/真值/模块SHA缓存复用，独立quality-preview.json和main-ci.json，不覆盖quality.json、不重复全矩阵bootstrap。68项相关单元测试通过，compileall src/tests通过。CPU主控117348（quality_controller_r02.py）串行，当前9/36成功云端结果，原CPU不重投。
+
+启动CPU前出现元数据错误：原campaign UCF真值SHA被cat无换行尾部的右花括号拼成65字符，qm38khb3失败且在帧标注解析/bootstrap之前被严格SHA门拦住，原PID32767已退出/exit1，无preview/无CI计算。实际原真值文件hash重新核验为3fdf2faf…，未变化。原campaign.json/原SHA/原失败保留；新增analysis-campaign-r01.json指向原campaignSHA并显式记录这一字段的metadata correction，仅CPU使用此新绑定，预测/方法/预算/采样/权重不变，无全局门豁免。质量加载器在CPU-only薄入口装载同一源码，绕过无关encoder registry所需配置文件；三个仅help的缺打包依赖失败保留，未算模型实验/未改旧源快照。
+
+已完成UCF Attention6r50=88.518695% delta−0.348912pp CI[-1.215277,+0.408242]非劣证据不足；6r70=87.190058% delta−1.677549 CI[-3.453344,-0.197448]非劣证据不足但支持下降；9r50=88.747443% delta−0.120163 CI[-0.832396,+0.542642]证据不足；9r70=87.912143% delta−0.955463 CI[-2.326395,+0.181884]证据不足；12两档约88.8676%且支持非劣，符合仅patch操作已无后续跨token影响CLS的结构对照，不是selector优越证据。VisionZip6r50=88.203585% delta−0.664021 CI[-1.605750,+0.145344]证据不足；6r70=86.407404% delta−2.460202 CI[-4.359152,-0.937348]确认劣于−0.5pp界限。单作者权重、未多配置校正，不据上述测试分数改正式队列/方法。
+
+GPU5在已授权node3资源内原本空闲且严格empty-PID门通过，独立encoder计时在线logger114352已启动，19配置×B1/32×3独立进程=114组，20warmup/40同步实测、交错顺序。使用原formal-source-r01桥/策略，net wall包含构造/附加hooks/QK/selector/gather/readout所有实际成本；plugin组件为另行带时间书签的原forward AST副本，不混入net样本，分项边界明确，不将分项相加假冒净时延。每组前后验证独占GPU UUID只出现自己的CUDA PID；第一重复38组完成，剩两独立重复实跑，未宣布全效率完成。完整原视频两dataset×19×3×16视频效率尚待实现/执行，仍为goal必需，不能只以encoder结果完成。
+
+现场生产提取完整任务median UCFdense约294.81图/s、Attention362.89、VisionZip356.04；XDdense242.28图/s（均共享生产吞吐，不入正式效率表，XD压缩未测）。按剩余18个XD压缩配置以dense速率仅作代理且允许共享/I/O/初始化差异，当前UCF批次暂HKT01:10–01:25，38项提取预测约02:00–02:45；包含尚未验证的完整流程效率、全部CPU、最终报告及云端核验暂03:00–05:00，非承诺，下一轮按实际分dataset/method更新。node3系统时钟比本地/工具UTC转HKT慢约数分钟，吞吐用同机elapsed，ETA用工具/本地HKT，不混加时钟。无定时任务恢复、无head训练、无据test调参、无commit/push，goal保持active。
+
+## 2026-10-15 00:43 HKT DSANet 原生门通过，两项新dense正式启动
+
+本goal上一轮为实质进展（P0及桥/CLI实现）；本轮完成原生训练侧有限验收并启动真实正式提取。原生检查r03 SwanLab 91v233oa FINISHED/qa_completed=1云端回读核验，18个配置全部真实post-attention shape197→99/60、三处identity与第12层CLS输出通过预先使用的FP32 rtol1e-4/atol1e-5门，B32检查通过，两数据集对应发布head各消费dense+三方法的4个训练视频，8个head检查全部成功。训练侧共每dataset2normal+2abnormal、首16帧固定输入，未读取test真值。
+
+两次已定位修复及反例保留：r01错误把合成单测bitwise要求套到真实FP32运行（native连续自身亦有约4.8e-6差异），失败8t14u16q CRASHED云端核验；r02完成18个CLIP格子后，同进程缓存OpenAI CLIP遮蔽DSANet自带clip，导致DSANet文本分支dtype不匹配，失败原记录保留。r03按历史生产模式以独立进程评分解决，不改DSANet权重、dtype处理或方法。未无限扩展检查。代码回归86项通过、compileall src/tests通过；新bootstrap_seed参数默认保留旧20260918，未来DSANet单task入口显式seed0，不能把旧结果追溯改种子。
+
+formal-source-r01.tar.gz及campaign.json两份SHA远端核验后只读展开；冻结三方法/blocks6,9,12/remove50,70、B32/workers2、原test crops/采样、原CLIP SHA和对应head SHA，38项ID不变。正式数据分母为19×(69634+146449)=4105577张测试编码图像，不是VideoMAEv2的4086273clips。源码快照/各源码SHA固定，未commit/push，不碰已有资产。
+
+GPU1 UCFdense远端CUDA PID17645、本地原在线logger126560；GPU2 XDdense PID17644、原logger133524；均已ps/UUID/持续写入核验。最近读回UCF41/290视频11635图，XD70/800视频7754图，合计19389/4105577≈0.4723%；正式完整提取+预测+成功云端完成0/38，不能将部分产出算完成。GPU0本轮暂未启动（保护其他用户1827），GPU3暂待对应dense ready后的压缩接力。原两个GPU/在线身份不重启。queue.json记录每行tracking_directory/swanlab_source/expected_snapshot及真实slot/PID。
+
+后续继续实现四卡单任务接力与DSANet单配置quality-preview/原生定位输出，38预测结束不自动重算整套bootstrap；独占效率及报告仍为目标必要部分。首批只有初始化后短窗口，不从视频计数或旧模型速度给本轮整套ETA；按实际图像吞吐/后续方法补齐。旧40分钟heartbeat仍暂停，本轮未新建定时任务。
+
+## 2026-10-15 00:26 HKT DSANet 三方法 goal 已激活，P0 完成、P1 接入中
+
+用户明确授权按 DSANET_THREE_METHOD_COMPRESSION_PLAN_20261015.md 建立 goal 并执行。本轮38项固定head提取预测、36项单次质量、计划规定独占效率及最终云端报告均在目标内；未启动head训练、未恢复旧heartbeat、未commit/push。新campaign为work/dsanet-three-method-20261015-r01，queue.json状态p1_implementation_not_formally_frozen，正式完成0/38、正式GPU任务0。既有工作树/未跟踪资产已记录并保护，根A.md不存在，不据缺失文件猜Git授权。
+
+P0只读node3公网核验成功。原CLIP环境Python3.9.23/torch2.0.1+cu117可复用；CLIP权重SHA5806e77c…、DSANet UCF cc674979…与XD78317c34…当前文件SHA核验一致。UCF290/XD800 test、UCF1610/XD3950 train manifests当前全部原视频存在。重要crop澄清：既有test manifest为UCF crop[5]、XD crop[0]（每时刻1图），train为0–9共10crop；本轮保持历史测试协议，不把计划中泛称多crop解读为擅自改10crop测试。资产全文回执work/dsanet-three-method-20261015-r01/asset-audit.json，未读取正式质量分数。GPU1/2/3空闲；GPU0其他用户PID1827占约12GB，GPU4/6/7亦有其他项目，不停止/修改任何foreign任务。现场资源不等于永久独占预订。
+
+P1新增clip_post_attention.py，通过已审计native block/attention AST身份限制，调用原native attention（不改need_weights/backend），同ln1输入额外计算patch-only Q/K选择信号，CLS不进入selection softmax/匹配/预算、native attention保留CLS，单次post-attention residual/pre-MLP缩短。复用原relation_selection三策略；DSANet CLI新增method/block/.5/.3，旧PairSelect预算/身份保留。新关系身份记录桥/selector SHA及执行shape。合成单元验证identity、真实MLP/suffix长度、最后block CLS预期与异常恢复；首次测试发现本机Python3.12+空type_params导致预设AST哈希未正规化，修正哈希生成后34项受影响单元测试通过（含旧CLIP/DSANet轻量入口），python -m compileall -q src tests通过。此为合成代码测试，不是原生checkpoint训练侧验收，不能提前宣布bridge已通过正式门。
+
+下一步：冻结有限训练侧2normal+2anomalous输入，先SwanLab online再做原生模型检查、对应DSANet消费/身份核验；检查通过后才冻结正式实现并接力38项。单task质量入口/调度与效率尚待完成。当前没有本轮真实吞吐，不以旧VideoMAEv2或旧DSANet时间承诺本轮ETA。
+
+## 2026-10-14 17:52 最终交付：38项及质量报告全部完成
+
+38/38=100%提取+完整预测完成（UCF19/19、XD19/19），4086273/4086273clips=100%；36/36压缩配置单次配对质量结果全部完成，38份独立预测云端成功回执、36份独立质量成功回执已汇总。最后XDuniform12remove70原Swan wsfe36x1 FINISHED，原计算/记录未重跑；质量r36 Swan jsofr41c FINISHED/quality_completed=1核验。主作者梯形PR-AUC76.128493%（dense76.181075%），delta−0.052583pp，95%CI[-0.118150,-0.001173]pp，支持非劣（下界≥−0.5）但CI低于0支持微小下降，不能写成提升/无下降。stepAP70.314135%（dense70.333010%）单列。最终quality-result.json已保存，原head/采样/真值SHA门通过、独立preview、未覆盖finalquality.json。
+
+最终报告复用36份原质量JSON，没有重算旧bootstrap/GPU任务。目录work/key-attn-formal-20261013/reports/final-20261014/：FINAL_REPORT.md（全18格双数据集主指标与判定/全部CI/XDstepAP/解释边界）；quality-results.csv（36配置完整数值）；final-results.json（38预测回执与云端链接、36质量源SHA及源输入SHA绑定、campaign/head/data/代码身份、失败恢复说明）；artifact-sha256.json；cloud-verification.json。汇总过程中修正dense在campaign内实际名为identity，以及早期恢复回执链接需从原events/controller.log恢复的问题，均仅汇总校验，不改变质量数值/重算实验。最终核对38个唯一预测run URL、36个唯一质量run URL；最终报告Swan oqyvuz18 FINISHED/report_completed=1、38预测/36质量摘要核验，文件上传已完成。当前controller8队列状态completed_report_cloud_verified。
+
+最终非劣统计：Attention UCF2/6、XD3/6；VisionZip UCF2/6、XD4/6；uniform UCF2/6、XD2/6。共15/36支持非劣、2/36确认劣于界限（XDuniform6r50/70）、19/36证据不足。XD attention/VisionZip第9层两档CI高于0；UCF对应CI跨0；单headseed、未多配置校正，不将点估计排序当方法间显著差异，不据正式分数调冻结矩阵。
+
+正式独占净延迟/插件开销/峰值显存未测量，最终报告相关字段明确null，不能用共享提取吞吐或执行管线工程加速替代压缩方法效率。当前交付是完整冻结质量矩阵与provenance，未宣称质量—效率论文结论已成立。旧失败、协议、指纹及finalquality.json原位保留；不改其他项目，不新增训练/benchmark/QA。
+
+已按用户完成条件将key-attention-40定时任务设为PAUSED（停止每40分钟唤醒），未归档聊天。最终完成时间17:52 HKT，不再提供预计时间范围。未commit/push；仅progress.md为本轮跟踪文档修改，其他用户资产不动。
+## 2026-10-14 17:05 定时汇报：全部clips写入完成，待最后预测
+
+37/38=97.37%完整提取+预测+云端确认（19UCF/18XD），累计4086273/4086273clips=100.00%，按每任务仅计一次。最后XDuniform12remove70已800/800、145703clips全写入，尚未extracted/completed最终回执，不提前将38项计为完成。原在线logger136892、原GPU0 PID2003仍正常，node3公网单次只读17:01:31 fotile/Rl，无新错误。GPU1/2/3任务已完成，无待派任务；已停止的旧调度器不重启（避免重复quality），本heartbeat持续观察原任务，无GPU/其他项目变更。
+
+r01–r35已核验指标保持，没有新质量结果、不重算。最后XDuniform12r70必须等prediction_completed及云端FINISHED后再单次CPU比较，复用原head/采样/真值SHA门和独立preview。UCF三方法全部质量齐全，XDattention/VisionZip/其他uniform齐全；最后XDuniform12r50=76.176378%主梯形PR-AUC delta−.004697pp CI[-.029657,+.019638]pp支持非劣；stepAP70.344682%单列。冻结方法/head/grid不改。
+
+最后35kclips在近39m28s完成，当前ETA HKT原任务后处理/预测/记录17:15–17:40；整套38+最终报告仍暂今日18:00–23:00，最终CPU/bootstrap、复用报告整理和云端核验仍须完成，后处理/共享/通信不确定。只剩原任务收尾，勿以clips100%宣称整个任务完成。无源码/训练/扩展QA/新CPU任务。
+## 2026-10-14 16:25 定时汇报：复用结果收尾接管
+
+37/38=97.37%完成（19UCF/18XD），累计4051128/4086273clips=99.14%。最后GPU0 XDuniform12remove70原PID2003、原在线logger136892正常，无新增错误，node3公网单次只读16:22:03：693/800、110558clips，fotile/Rl。GPU1/2/3任务均完成，无待派任务，不额外开重复计算/不动其他项目。
+
+已核实旧调度器在38项完成后默认进入quality阶段重算全部compare_prediction_runs，这与用户最新“不重复计算、复用已有结果”冲突。仅停止已无待派任务的本地主控138236（command核验为controller8），未停止/重启最后GPU进程或原SwanLab logger。queue-before-quality-reuse-detach.json保留原队列；当前queue状态test_running_heartbeat_observed_quality_reuse，保留原task row/PID，后续heartbeat观察原logger的cloud完成并更新行，最终报告复用各独立preview。不会把主控停止误报为GPU故障，也不恢复旧重复评测入口。
+
+r35 XDuniform12remove50 CPU已完成并SwanLab piogx9ye FINISHED/quality_completed=1核验，quality-result.json保存：主作者梯形PR-AUC76.176378%（dense76.181075%），delta−0.004697pp，95%CI[-0.029657,+0.019638]pp，支持非劣但CI跨0不确认提升。stepAP70.344682%（dense70.333010%）单列。r01–r34既有指标保持，原head/采样/真值SHA门与独立preview/final不覆盖，冻结方法/head/grid不改。现在35个压缩配置质量结果已齐，仅最后XDuniform12r70质量待预测后执行一次。
+
+近40m13s最后XDuniform12r70约16.04clip/s，剩35145clips，ETA HKT今日17:10–17:40（含预测/记录收尾）；整套38+最终报告仍暂18:00–23:00，最后视频/预测/上传/报告核验不确定。调度观察非正式效率，无源码/训练/扩展QA/新CPU任务。
+## 2026-10-14 15:45 定时汇报
+
+主控138236与最后一个在线logger正常，无新增错误。XDuniform12remove50完整预测并云端mdtovj8j FINISHED，37/38=97.37%完成（19UCF/18XD），累计4012423/4086273clips=98.19%。node3公网单次只读15:41:50：最后GPU0 XDuniform12remove70 529/800 71853clips PID2003，fotile/Rl。GPU1/2/3本轮GPU任务均已完成，无待派任务，不额外开重复任务；其他项目不动，最后正常计算不重启。
+
+新完成XDuniform12remove50启动单次原consumer在线CPU r35 local140528，原head/采样/真值SHA门，独立preview不覆盖final，预建日志，当前待回收后续读取不重算。r01–r34已有指标不变（r17 recovered回执），冻结方法/head/grid保持。UCF质量全部回收，XD只剩uniform12两项待质量回收；最终整理必须复用既有preview避免重复bootstrap，38后原调度器quality阶段为旧默认重复计算入口，收尾时应拦截旧入口并保留正常GPU/logger，单独复用结果完成最终导出。
+
+近40m4s最后XDuniform12r70实际约15.39clip/s，按剩余73850clips ETA HKT今日17:15–18:00（含预测/记录收尾范围）；整套38+最终报告仍暂今日18:00–23:00，0待派1在跑，最后视频长度/后处理/共享/通信及报告核验不确定，观察速度非正式效率。无源码/训练/扩展QA。
+## 2026-10-14 15:05 定时汇报
+
+主控138236/controller-r03-recovery8与两在线logger正常，无新错误/新prediction_completed，36/38=94.74%完成（19UCF/17XD），累计3959585/4086273clips=96.90%。node3公网单次只读15:01:46实际slot：GPU0最后XDuniform12remove70 305/800 34858clips PID2003 Sl（持续产出正常等待）；GPU1 XDuniform12remove50 756/800 129860clips PID6346 Rl，均fotile。GPU2/3任务已完成、无待派，不额外开重复工作。正常任务/其他项目不动，无新CPU评测。
+
+上一轮r34 XDuniform9remove70 CPU已完成并SwanLabnzi52ca7 FINISHED/quality_completed=1核验、quality-result.json保存：主作者梯形PR-AUC75.458880%（dense76.181075%），delta−0.722195pp，95%CI[-1.048517,-0.410340]pp。非劣证据不足（CI跨−0.5），但整个CI低于0支持本配置/当前headseed质量下降；不能称CI跨0，也不能确认整个区间低于−0.5。stepAP69.797228%（dense70.333010%）单列。r01–r33指标保持（r17 recovered回执），原head/采样/真值门/独立preview不覆盖final，冻结方法/head/grid不改。UCF全部质量齐全，XD仅剩12层两项待完成。
+
+新GPU0 XDuniform12r70首39分钟约14.84clip/s含初始化，比旧共享卡12层快，但未完成整段仍宽估；GPU1近轮約9.8clip/s。ETA HKT今日GPU0 17:15–18:20；GPU1 15:45–16:10；GPU2/3已完成。整套38+最终报告仍暂今日18:00–23:00，0待派2在跑，最后配置后段/共享/通信及最终报告核验不确定，调度观察不入正式效率。无源码/训练/扩展QA。
+## 2026-10-14 14:25 定时汇报：最后任务已恢复启动
+
+新增UCFuniform12remove50/70（y4s89olg/4ghjucb3）及XDuniform9remove70（9auje3qc）完整预测云端FINISHED，36/38=94.74%完成（19UCF/17XD）。最后XDuniform12remove70在GPU2启动前因foreign R3→R4 PID换代被Unknown门拦住，原bktbnqz1 CRASHED保留；远端无新taskPID/无GPU计算已核验。只读核验GPU1/2新R4 PIDs29679/29680均fotile、完整配置R4_E13/E14，GPU2空闲29343MiB/GPU3空闲40326MiB，旧R3名单备份，运行allowlist1/2更新为已核实新PID，GPU3恢复原空卡严格门；free12GiB/allocator.25与owner/command门不变。仅停止held126548，新主控138236/controller-r03-recovery8接管唯一正常logger/GPU1任务不重启；从resume输入剔除已证明未启动失败行，新attempt最后XD12r70分派GPU0 local136892，preflight通过。保护1827与所有其他项目，无模型/方法/seed/采样/精度或代码快照更改。
+
+当前累计3902612/4086273clips=95.51%（新GPU0恢复后9/800、1418clips计入）。实际GPU0最后XDuniform12remove70已开始实产9/800、1418clips；GPU1 XDuniform12remove50 682/800 106327clips PID6346；GPU2/3本轮任务已完成且无待派GPU任务，不额外开重复任务。两个在线logger正常。node3公网只读14:21:47+后续full-command/PID确认，slot权威以当前queue为准。
+
+新三项分别单次原consumer在线CPU：r32 UCFuniform12remove50 local105580；r33 UCFuniform12remove70 local132964；r34 XDuniform9remove70 local93332，原head/采样/真值门、独立preview不覆盖final、预建日志，r32/r33均已完成并SwanLab afiumgzg/1fsjdor9 FINISHED/quality_completed=1核验，quality-result.json保存。UCFuniform12remove50 ROC-AUC80.689946%，delta+.057988pp，95%CI[-.036016,+.147242]pp；12remove70 ROC-AUC80.646241%，delta+.014283pp，95%CI[-.173193,+.176559]pp，两项支持非劣但CI跨0不确认提升。r34 XDuniform9remove70仍CPU bootstrap remote2699，后续读取本次不重算。r01–r31已核验指标保持，冻结方法/head/grid不据正式分数调参。
+
+ETA HKT今日GPU0最后XD12r70 18:00–19:30（新GPU/共享窗未稳，参考已测XD第12层范围）；GPU1 15:40–16:20；GPU2/3已完成。整套38+最终报告仍暂今日18:00–23:00，0待派2在跑，新R4共享与最后配置/通信不确定。没有以堆进程冒充四卡有效产出，不重跑已完成任务。无源码/训练/扩展QA。
+## 2026-10-14 13:45 定时汇报
+
+主控126548及四在线logger正常，无新错误/新prediction_completed，33/38=86.84%完成（17UCF/16XD），累计3864681/4086273clips=94.58%。node3公网单次只读13:41:37实际slot：GPU0 UCFuniform12remove70 257/290 62002clips PID21338；GPU1 XDuniform12remove50 580/800 80437clips PID6346；GPU2 UCFuniform12remove50 extracted全69364，预测待回执 PID30129；GPU3 XDuniform9remove70 793/800 142442clips PID20790，全fotile/Rl。无本轮新补位/新CPU，full提取不提前计pred完成；正常任务/其他项目不动。
+
+上一轮r31 XDuniform9remove50 CPU已完成并SwanLab55vzs0dq FINISHED/quality_completed=1核验、quality-result.json保存：主作者梯形PR-AUC75.838740%（dense76.181075%），delta−0.342336pp，95%CI[-0.575540,-0.139129]pp。非劣证据不足（区间跨−0.5界限）；但整个CI低于0，支持本配置/当前headseed的质量下降，不能写成CI跨0或已确认超过0.5。stepAP70.042634%（dense70.333010%）单列。r01–r30其他指标保持、原head/采样/真值SHA与独立preview不覆盖final；冻结方法/head/grid不改，不据分数调参。
+
+近39m59s UCFuniform12r70约15.07clip/s、XDuniform12r50约11.59、XDuniform9r70約14.0；按剩余clips和预测收尾ETA HKT今日GPU0 14:00–14:20；GPU1 15:30–16:20；GPU2/3 14:00–14:20。整套38+报告仍暂今日18:00–23:00，1待派4在跑，最后XDuniform12r70接力/共享/通信不确定，调度观察非正式效率。无源码/训练/扩展QA。
+## 2026-10-14 13:05 定时汇报
+
+主控126548与四在线logger正常，无新错误。XDuniform9remove50完整预测并云端0qan4xuz FINISHED，GPU0自动补UCFuniform12remove70；33/38=86.84%完成（17UCF/16XD），累计3743343/4086273clips=91.61%。node3公网单次只读13:01:38实际slot：GPU0 UCFuniform12remove70 119/290 25838clips PID21338；GPU1 XDuniform12remove50 405/800 52621clips PID6346；GPU2 UCFuniform12remove50 199/290 45639clips PID30129；GPU3 XDuniform9remove70 689/800 108809clips PID20790，全fotile/Rl；正常任务不重启/其他项目不动。
+
+上一轮r29 XDuniform6remove70已完成并SwanLabgpbitl8e FINISHED/quality_completed=1核验、quality-result.json保存：主作者梯形PR-AUC73.265207%（dense76.181075%），delta−2.915868pp，95%CI[-3.562302,-2.283542]pp，inferior：整个区间低于−0.5，确认本配置/当前headseed超过允许下降幅度；stepAP68.148919%（dense70.333010%）单列。新完成XDuniform9remove50已启动原consumer单次在线CPU r31 local133600，原head/采样/真值SHA门，独立preview不覆盖final，当前待结果后续读取不重算。r01–r28/r30既有指标保持，冻结方法/head/grid不据分数调整。
+
+近38m5s XDuniform12r50约14.0clip/s、UCFuniform12r50约9.38、XDuniform9r70约11.6；新UCFuniform12r70启动28min约15.2含初始化但共享差异，宽估。ETA HKT今日GPU0 14:05–14:45；GPU1 15:10–16:00；GPU2 14:00–14:35；GPU3 14:05–14:45。整套38+最终报告仍暂18:00–23:00，1待派4在跑，最后XDuniform12r70需空位接力且未完整实测/共享/通信不确定。调度观察非正式效率，无源码/训练/扩展QA。
+## 2026-10-14 12:25 定时汇报
+
+主控126548及四在线logger正常，无新错误。新增XDuniform6remove70（w9r0zwsa）与UCFuniform9remove70（r1hntmne）完整预测云端FINISHED，GPU1/2自动补XD/UCF uniform12remove50。32/38=84.21%完成（17UCF/15XD），累计3637665/4086273clips=89.02%。node3公网单次只读12:23:33按实际slot：GPU0 XDuniform9remove50全800/800、145703clips，后处理/预测待回执 PID25680，不提前计完成；GPU1 XDuniform12remove50 220/800 20704clips PID6346；GPU2 UCFuniform12remove50 114/290 24209clips PID30129；GPU3 XDuniform9remove70 586/800 82316clips PID20790，全fotile/Rl。正常任务未重启/其他项目不动。
+
+新完成两项单次原consumer在线CPU：r29 XDuniform6remove70 local117164；r30 UCFuniform9remove70 local21172，原head/采样/真值SHA门与独立preview，预建日志不覆盖final，r30已完成并SwanLab k980aiwv FINISHED/quality_completed=1核验：UCFuniform9remove70 ROC-AUC80.671635%，dense80.631958%，delta+0.039677pp，95%CI[-1.161744,+1.191163]pp，非劣证据不足；原结果quality-result.json保存。r29 XDuniform6remove70仍CPU bootstrap remote652，后续读取本次不重算。GPU0预测未完成暂不启动对应质量。r01–r28已核验指标保持，冻结方法/head/grid不据正式分数改。
+
+第12层uniform启动窗实产较慢：XD约9.2clip/s（37min含初始化）、UCF约9.6（42min），XDuniform9r70近轮約10.8。ETA HKT今日GPU0收尾12:40–13:00；GPU1 16:15–17:15；GPU2 14:00–14:45；GPU3 14:15–15:15。整套38+最终报告修订暂今日18:00–23:00（旧16–23下界不再最新），2待派4在跑，未派XDuniform12r70还须等下个slot接力，按当前完整前缀/共享速度不能维持16点最早收尾。后续速率/共享/通信仍不确定，调度观察非正式效率。无源码/训练/扩展QA。
+## 2026-10-14 11:44 定时汇报
+
+主控126548及四在线logger正常，无新增错误/新prediction_completed，30/38=78.95%完成（16UCF/14XD），累计3527905/4086273clips=86.34%。GPU1 XDuniform6remove70、GPU2 UCFuniform9remove70均已extracted全部clips，尚在预测收尾，不提前计完成或启动CPU质量。node3公网一次只读11:40:35：GPU0 XDuniform9remove50 688/800 108640clips PID25680；GPU1 XDuniform6remove70 extracted145703 PID23034；GPU2 UCFuniform9remove70 extracted69364 PID27572；GPU3 XDuniform9remove70 418/800 54532clips PID20790，全fotile/Rl。无本轮新补位，自动接力保持，正常任务/其他项目不动。
+
+r01–r28质量指标保持不变，复用已有结果不重算，不因变化小静默。Attention/VisionZip质量已全部回收，最后XDVZ12r70=76.291015%主梯形PR-AUC，delta+.109939pp，CI[-.523987,+.720684]pp非劣证据不足；stepAP71.957733%单列。uniform已完成UCF6r50/70/9r50均非劣证据不足、XD6r50=74.865774% delta−1.315301pp CI[-1.631973,-1.002609]pp为inferior，不调整冻结方法/head/grid。
+
+近37m50s XDuniform9r50约15.5clip/s、XDuniform9r70約10.76，按各自剩余clip和预测收尾ETA HKT今日GPU0 12:35–13:00；GPU1/2 11:50–12:15；GPU3 14:15–15:10。整套38+最终报告仍暂今日16:00–23:00，4待派4在跑，后层uniform/共享/通信不确定，调度观察不入正式效率。无源码/训练/扩展QA/新CPU任务。
+## 2026-10-14 11:04 定时汇报
+
+主控126548及四在线logger正常，无新错误/新prediction_completed，不启动新CPU、不重算。30/38=78.95%完成（16UCF/14XD），累计3421569/4086273clips=83.73%。node3公网单次只读11:02:45按实际slot：GPU0 XDuniform9remove50 541/800 73466clips PID25680 Sl（有持续产出正常等待）；GPU1 XDuniform6remove70 732/800 122683clips PID23034；GPU2 UCFuniform9remove70 199/290 45639clips PID27572；GPU3 XDuniform9remove70 278/800 30115clips PID20790，其余Rl全fotile。无本轮新补位，自动接力保持，正常任务/其他项目不动。
+
+最后r27 XDVZ12remove70 CPU已完成并SwanLab6edusn8x FINISHED/quality_completed=1核验，quality-result.json保存：主作者梯形PR-AUC76.291015%（dense76.181075%），delta+0.109939pp，95%CI[-0.523987,+0.720684]pp，下界略低于−0.5，非劣证据不足，不四舍五入放行。stepAP71.957733%（dense70.333010%）单列。至此attention与VisionZip全部质量已回收。均原head/采样/真值门与独立preview/final不覆盖，r01–r26/r28旧指标保持。uniform已完成UCF6r50/r70/9r50均非劣证据不足，XD6r50为inferior；其余待完整任务，不据分数调整冻结格子。
+
+近39m4s XDuniform9r50約14.7clip/s、XDuniform6r70約13.1、UCFuniform9r70約10.4；XDuniform9r70首48分钟约10.4含初始化，仍共享波动。ETA HKT今日GPU0 12:35–13:15；GPU1 11:45–12:15；GPU2 11:50–12:20；GPU3 14:10–15:20。整套38+报告仍暂今日16:00–23:00，4待派4在跑，后层uniform/共享/通信不确定，调度观察非正式效率。无源码/训练/扩展QA。
+## 2026-10-14 10:24 定时汇报
+
+主控126548及四在线logger正常，无新错误。最后XDVZ12remove70（j1590jcp）与UCFuniform9remove50（qzr2na9z）完整预测并云端FINISHED，GPU2/3自动补UCFuniform9remove70、XDuniform9remove70；30/38=78.95%完成（16UCF/14XD），累计3307362/4086273clips=80.94%。node3公网一次只读10:23:41按真实GPU slot：GPU0 XDuniform9remove50 331/800 39018clips PID25680；GPU1 XDuniform6remove70 637/800 91943clips PID23034；GPU2 UCFuniform9remove70 101/290 21201clips PID27572；GPU3 XDuniform9remove70 45/800 5534clips PID20790，全fotile/Rl。正常任务不重启/其他项目不动。Attention/VisionZip全部提取+预测已完成，uniform收尾仍剩8项。
+
+r26 XDuniform6remove50已有CPU结果云端zy3xgikk FINISHED/quality_completed=1核验（此前用户即时问进度已报告），本轮保存quality-result.json：主作者梯形PR-AUC74.865774%（dense76.181075%），delta−1.315301pp，95%CI[-1.631973,-1.002609]pp，inferior：整个CI低于−0.5，确认为本预定配置/当前headseed超过允许下降幅度，不只是证据不足。stepAP69.361571%（dense70.333010%）单列。新完成两项单次在线CPU：r27 XDVZ12remove70 local129728；r28 UCFuniform9remove50 local95700，原head/采样/真值门、独立preview不覆盖final、预建日志，r28已完成并SwanLab x3lmuuh3 FINISHED/quality_completed=1核验：UCFuniform9remove50 ROC-AUC80.324850%，delta−0.307108pp，95%CI[-0.875000,+0.148325]pp，非劣证据不足，quality-result.json已保存。r27 XDVZ12remove70仍CPU bootstrap remote14261，后续读取本次不重算。冻结方法/head/grid不据正式分数调整。
+
+实际近轮XDuniform9r50約14.14clip/s、XDuniform6r70約12.69；新UCFuniform9r70启动32min约10.88clip/s，XDuniform9r70启动9min尚不稳。ETA HKT今日GPU0 12:35–13:20；GPU1 11:45–12:20；GPU2 11:45–12:30；GPU3 14:20–15:40。整套38+最终报告修订暂今日16:00–23:00（旧14–23下界不再最新），4待派4在跑，剩余第12层uniform及共享/通信不确定，不能早于慢XD9任务和后续XD12波收尾。调度观察非正式效率，无源码/训练/扩展QA。
+## 2026-10-14 09:44 定时汇报
+
+主控126548和四在线logger正常，无新错误。XDuniform6remove50完整预测并云端64j9fqtl FINISHED，GPU0自动补XDuniform9remove50；28/38=73.68%完成（15UCF/13XD），累计3187596/4086273clips=78.01%。node3公网单次只读09:40:38按实际slot：GPU0 XDuniform9remove50 19/800 2480clips PID25680；GPU1 XDuniform6remove70 439/800 59175clips PID23034；GPU2 XDVZ12remove70已800/800全部145703clips PID16714，仍后处理/预测待回执，不提前计完成；GPU3 UCFuniform9remove50 199/290 45639clips PID23042，全fotile/Rl。正常任务未重启/其他项目不动。
+
+新完成XDuniform6remove50单次原consumer在线CPU completed-metrics-r26 local119392，原head/采样/真值SHA门，独立preview不覆盖final、预建日志，当前待结果，后续读取本次不重算。GPU2虽所有clips已写但prediction未完成，不提前启动其质量评测。r01–r25已核验指标保持，冻结方法/head/grid不改。
+
+近38m20s XDuniform6r70约12.81clip/s、UCFuniform9r50约8.40（共享下实速低于启动猜测）；新XDuniform9r50启动仅3分钟不足稳定。ETA HKT今日GPU0 12:30–13:30；GPU1 11:40–12:20；GPU2收尾10:00–10:20；GPU3修订10:35–11:00。整套38+最终报告仍暂14:00–23:00，6待派4在跑，后层uniform/共享/通信不确定，调度观察不入正式效率。无源码/训练/扩展QA。
+## 2026-10-14 09:04 定时汇报
+
+主控126548/controller-r03-recovery7及四在线logger正常，无新错误/新prediction_completed，不启动新CPU、不重算已有结果。27/38=71.05%完成（15UCF/12XD），累计3097765/4086273clips=75.81%。node3公网单次只读09:02:18按真实GPU slot：GPU0 XDuniform6remove50 751/800 127704clips PID31504；GPU1 XDuniform6remove70 275/800 29722clips PID23034；GPU2 XDVZ12remove70 743/800 125117clips PID16714；GPU3 UCFuniform9remove50 122/290 26326clips PID23042，全fotile/Rl。共享R3名单恢复后无新增拦截，没有本轮新补位，正常任务/其他项目不动。
+
+r01–r25指标不变，复用已核验SwanLab结果（r17 recovered回执）。UCFuniform6remove50/70=80.055400/79.753894%，delta−0.576558/−0.878063pp，CI[-1.214343,+0.013139]/[-2.374078,+0.466921]pp，两项非劣证据不足，CI跨0不声称显著劣化。XDuniform尚无完成质量。VisionZip/attention原指标及判定保持，冻结方法/head/grid不改。
+
+按近轮实际增量，XDuniform6r50约14.3clip/s、XDVZ12r70约9.3；新XDuniform6r70约12.1/UCFuniform9r50约10.7含启动，两新共享任务速率弱于早期猜测，修订ETA HKT今日GPU0 09:35–10:00；GPU1 11:45–12:45；GPU2 09:55–10:30；GPU3 10:10–10:50。整套38+报告仍暂今日14:00–23:00，7待派4在跑，后层uniform/共享/通信不确定，调度速率不是正式效率。无源码/新训练/扩展QA。
+## 2026-10-14 08:24 定时汇报：R3共享进程换代及GPU表更正
+
+新增UCFuniform6remove50/70完整预测并云端9m3hjpmt/at2th655 FINISHED，27/38=71.05%完成（15UCF/12XD）。下一项XDuniform6remove70启动前因foreign PID换代被Unknown门拦住，原i3am5sxr CRASHED保留；remote新任务无PID无GPU计算已核验。只读确认GPU1/2/3新CVPR-JY2 R3_E09/E10/E11 PIDs8903/8904/8905均fotile、完整cmd核实，GPU1/3空闲约23.5GiB；依据原9/21共享空余显存授权更新运行allowlist，保留R2名单备份，严格PID+owner+command/free>=12GiB/allocator.25门不变。仅停止held主控82184，新主控126548/controller-r03-recovery7直接接管两个旧正常logger；resume输入保留原tracking，仅剔除未启动失败行后新attempt。GPU1补XDuniform6remove70（local92456）、GPU3补UCFuniform9remove50（119772），preflight通过，旧两GPU未重启/其他项目不动。
+
+本轮通过nvidia-smi UUID/PID及queue slot发现此前简报GPU表沿用任务显示顺序并非实际GPU号，明确更正：当前GPU0 XDuniform6remove50 PID31504（638/800 92292clips）；GPU1新XDuniform6remove70 preflight；GPU2 XDVZ12remove70 PID16714（671/800 101974clips）；GPU3新UCFuniform9remove50 preflight。任务统计/质量结果不受表内GPU标号错误影响，旧报告原样保留并以本更正为准。新两项preflight按0clips计，后续从actualslot读取。累计2983162/4086273clips=73.00%。四在线logger现正常。
+
+新完成两项单次在线原consumerCPU：r24 UCFuniform6remove50 local122876/remote23710；r25 UCFuniform6remove70 local127008/remote23727，原head/采样/真值门通过、独立preview不覆盖final、预建日志，两项已完成并SwanLab q16ai8rs/96imaelv FINISHED/quality_completed=1核验，quality-result.json保存。UCFuniform6remove50 ROC-AUC80.055400%，delta−0.576558pp，95%CI[-1.214343,+0.013139]pp；6remove70 ROC-AUC79.753894%，delta−0.878063pp，95%CI[-2.374078,+0.466921]pp。两项点估计下降均超过0.5pp且CI下界低于-0.5，非劣证据不足；CI仍跨0不声称显著劣化。不重复计算。r01–r23已核验指标保持，冻结方法/head/grid不改。
+
+ETA HKT今日按真实GPU号：GPU0 09:30–10:20；GPU1新XD6uniform70 11:30–12:30；GPU2 09:45–10:45；GPU3新UCF9uniform50 09:40–10:30。新R3共享任务及新配置缺稳定速率窗口范围宽；原XDuniform6r50近轮约15.8clip/s/XDVZ12r70约9.7，不跨任务互代。整套38+报告仍暂今日14:00–23:00，7待派4在跑，后层uniform/共享/通信不确定，调度观察非正式效率。无源码/训练/扩展QA。
+## 2026-10-14 07:44 定时汇报
+
+主控82184与四在线logger正常，无新增错误/新prediction_completed，故不启动新CPU/不重算。25/38=65.79%完成（13UCF/12XD），累计2883414/4086273clips=70.56%。node3公网单次只读07:40:26：GPU0 XDVZ12remove70 566/800 78221clips PID16714；GPU1 UCFuniform6remove50 221/290 56549clips PID27131；GPU2 XDuniform6remove50 410/800 53057clips PID31504；GPU3 UCFuniform6remove70 197/290 45419clips PID28018，全fotile/Rl。没有本轮新补位，自动接力继续，不重启正常任务/不动其他项目。
+
+上一轮r22/r23均已回收原CPU结果并云端FINISHED/quality_completed=1核验，保存各自quality-result.json。r22 XDVZ12remove50（Swan zm0rur6r）：主作者梯形PR-AUC76.414071%（dense76.181075%），delta+0.232995pp，95%CI[-0.111887,+0.563082]pp，支持非劣但跨0不确认提升；stepAP71.318831%（dense70.333010%）单列。r23 XDVZ9remove70（jw84q9lp）：主作者梯形PR-AUC77.541321%，delta+1.360245pp，95%CI[+0.750563,+1.954626]pp，支持非劣且区间高于0，限本预定配置/当前headseed未多比较校正；stepAP73.215057%单列。原head/采样/真值SHA门一致、独立preview不覆盖final、不据分数调方法。其余指标保持。
+
+近39m55s各自观察速率XDVZ12r70约9.63clip/s、UCFuniform6r50约12.57、XDuniform6r50约13.75、UCFuniform6r70约13.55；启动窗后的实测速率不同于首波估计，按剩余clips修订ETA HKT今日GPU0 09:45–10:45；GPU1 08:10–08:35；GPU2 09:45–10:30；GPU3 08:20–08:50。整套38+最终报告仍暂14:00–23:00，9待派4在跑，后层uniform未完整实测/共享/通信不确定，调度观察不入正式效率。无源码/训练/扩展QA。
+## 2026-10-14 07:04 定时汇报
+
+主控82184和四在线logger正常，无新增错误。新增UCFVZ12remove70（yi3e0lyo）、XDVZ12remove50（bfc1vems）、XDVZ9remove70（irt083dk）完整预测并云端FINISHED，GPU1/2/3分别自动补UCF uniform6remove50、XD uniform6remove50、UCF uniform6remove70。25/38=65.79%完成（13UCF/12XD），累计2764843/4086273clips=67.66%。node3公网单次只读07:00:31：GPU0 XDVZ12remove70 421/800 55150clips PID16714；GPU1 UCFuniform6remove50 123/290 26438clips PID27131；GPU2 XDuniform6remove50 215/800 20125clips PID31504；GPU3 UCFuniform6remove70 45/290 12962clips PID28018，全fotile/Rl；正常任务未重启、其他项目不动。三路正式uniform已开始实产，不调整冻结队列。
+
+新三项分别单次原consumer在线CPU：r21 UCFVZ12remove70 local117032；r22 XDVZ12remove50 local89504；r23 XDVZ9remove70 local104080，原head/采样/真值SHA门、独立preview不覆盖final、预建日志避免tail竞态，r21已完成并SwanLab4n28z1kl FINISHED/quality_completed=1核验：UCFVZ12remove70 ROC-AUC80.906818%，dense80.631958%，delta+0.274860个百分点，95%CI[-1.036945,+1.510633]个百分点，非劣证据不足，quality-result.json已保存。r22/r23仍CPU bootstrap remote3954/3944，后续读取本次不重复计算。r01–r20已核验指标保持不变，不据正式分数选方法/层/预算。
+
+近轮XDVZ12r70约11.39clip/s；首波uniformUCF6r50/70约17.1/17.5clip/s、XD6r50約14.1含启动，仅初始调度观察不是正式效率。ETA HKT今日GPU0 09:30–10:30；GPU1 07:50–08:20；GPU2 09:40–10:30；GPU3 08:00–08:40。整套38+最终报告仍暂14:00–23:00，9待派4在跑，uniform后层尚未完整实测/共享/通信不确定。无源码/新训练/扩展QA。
+## 2026-10-14 06:24 定时汇报
+
+主控82184与四在线logger正常，无新增错误/新prediction_completed，不重复CPU计算，22/38=57.89%完成（12UCF/10XD）。累计2652913/4086273clips=64.92%。node3公网单次只读06:20:22：GPU0 XDVZ12remove70 262/800 27705clips PID16714；GPU1 UCFVZ12remove70 204/290 52881clips PID18024；GPU2 XDVZ12remove50 789/800 140487clips PID28220；GPU3 XDVZ9remove70 793/800 142442clips PID27863（短暂Dl但近轮有持续产出，IO等待不判故障），其余Rl全fotile。没有本轮新补位，自动接力保持，不重启正常任务/不动其他项目。
+
+r01–r20已核验质量指标不变，复用已有结果（r17以recovered云端核验为准），不因本轮无变化静默。VisionZip已支持非劣UCF9两项、XD6r50/XD9r50；UCF6两项/UCF12r50/XD6r70证据不足。XD9r50主作者梯形PR-AUC77.185239%，delta+1.004163pp，CI[+.639717,+1.365171]pp，本预定配置当前seed支持提升未多比较校正。stepAP分开，方法/head/grid冻结不改。
+
+近39m55s XDVZ12r70约8.99clip/s、UCFVZ12r70约9.39、XDVZ12r50约14.15、XDVZ9r70约13.57。按剩余clips ETA HKT今日GPU0修订10:00–11:00（旧09:00–10:30不再最新，实际短窗后速度较慢）；GPU1 07:00–07:25；GPU2 06:40–07:00；GPU3 06:35–06:55。整套38+最终报告仍暂今日14:00–23:00，12待派4在跑，uniform未完整实测及共享/通信不确定。调度观察不入正式速度，无源码/新训练/扩展QA。
+## 2026-10-14 05:44 定时汇报
+
+主控82184和四在线logger正常，无新增错误。UCFVZ12remove50完整预测并云端93cj0aza FINISHED，GPU0自动补XDVZ12remove70；22/38=57.89%完成（12UCF/10XD），累计2542520/4086273clips=62.22%。node3公网单次只读05:40:27：GPU0 XDVZ12remove70 54/800 6186clips PID16714；GPU1 UCFVZ12remove70 146/290 30396clips PID18024；GPU2 XDVZ12remove50 683/800 106597clips PID28220；GPU3 XDVZ9remove70 691/800 109943clips PID27863，全fotile/Rl。正常任务未重启，其他项目不动。
+
+上一轮r19 XDVZ9remove50已完成SwanLab aidmw2nv FINISHED/quality_completed=1核验，r19quality-result.json保存：主作者梯形PR-AUC77.185239%（dense76.181075%），delta+1.004163个百分点，95%CI[+0.639717,+1.365171]个百分点，支持非劣且区间高于0，限本预定配置/当前headseed配对评测，未多比较校正/不外推。stepAP72.079782%（dense70.333010%）单列。新UCFVZ12remove50已启动单次原consumer在线CPU r20 local21948，原head/采样/真值门、独立preview不覆盖final，预建日志避免tail竞态，r20已完成并SwanLab tyf6n9fi FINISHED/quality_completed=1核验：UCF ROC-AUC80.751865%，dense80.631958%，delta+0.119908个百分点，95%CI[-0.647867,+0.880487]个百分点，非劣证据不足；原结果保存r20quality-result.json不重算。方法/head/grid保持冻结。
+
+近40m2s UCFVZ12r70约9.87clip/s、XDVZ12r50约14.23、XDVZ9r70约14.52；新XDVZ12r70仅12分钟启动窗，不能据前50臆断稳定速率。ETA HKT今日GPU0 09:00–10:30；GPU1 06:55–07:30；GPU2 06:35–07:15；GPU3 06:35–07:10。整套38+最终报告仍暂14:00–23:00，12待派4在跑，剩余uniform/共享/通信不确定，观察速度不入正式效率。无源码/训练/扩展QA。
+## 2026-10-14 05:04 定时汇报
+
+主控82184与四在线logger正常，无新增错误。XDVZ9remove50完整预测并云端cd5mspq9 FINISHED，GPU1自动补UCFVZ12remove70；21/38=55.26%完成（11UCF/10XD），累计2431444/4086273clips=59.50%。node3公网一次只读05:00:25：GPU0 UCFVZ12remove50 229/290 57259clips PID4423；GPU1 UCFVZ12remove70 24/290 6688clips PID18024；GPU2 XDVZ12remove50 534/800 72403clips PID28220；GPU3 XDVZ9remove70 550/800 75060clips PID27863，全fotile/Rl；正常任务不重启、其他项目不动。
+
+新完成XDVZ9remove50单次原consumer在线CPU completed-metrics-r19 local103540，沿用实际head/采样/真值SHA门和独立preview，不覆盖final，当前待结果，后续读取不重复计算。新CPU launcher先touch本任务日志再nohup，避免已确认r17的tail先于文件创建竞态；不改评测算法/快照。r01–r18既有指标复用不变，r17使用recovered云端回执。冻结方法/head/grid不调整。
+
+近39m33s UCFVZ12r50约9.68clip/s、XDVZ12r50約14.07、XDVZ9r70約11.04；新UCFVZ12r70仅12分钟启动窗约9含初始化，ETA参考同层UCF实测保持宽。HKT今日GPU0 05:30–05:55；GPU1 06:50–07:40；GPU2 06:45–07:30；GPU3 07:00–08:00。整套38+最终报告仍暂今日14:00–23:00，13待派4在跑，后续uniform/后层共享/通信不确定，观察速度不入正式效率。无源码/新训练/扩展QA。
+## 2026-10-14 04:24 定时汇报
+
+主控82184及四在线logger正常，无新增错误、无新prediction_completed，故不启动新CPU评测/不重算已有结果。20/38=52.63%完整提取+预测+云端确认（11UCF/9XD），累计2332826/4086273clips=57.09%。node3公网单次只读04:20:52：GPU0 UCFVZ12remove50 164/290 34294clips PID4423；GPU1 XDVZ9remove50 778/800 136328clips PID11529；GPU2 XDVZ12remove50 331/800 39018clips PID28220；GPU3 XDVZ9remove70 383/800 48855clips PID27863，全fotile/Rl。没有本轮新补位，自动接力保持，正常任务及其他项目不动。
+
+上一轮r18 XDVZ6remove70已完成SwanLab cbjmr255 FINISHED/quality_completed=1核验，r18quality-result.json保存：主作者梯形PR-AUC76.120104%（dense76.181075%），delta−0.060971个百分点，95%CI[-0.558620,+0.443500]个百分点，下界低于−0.5，非劣证据不足。stepAP70.750245%（dense70.333010%）单列。复用原CPU结果/原head采样真值门，独立preview不覆盖final。此前r01–r17指标不变（r17采用recovered-cloud-verification核验）。冻结方法/head/grid保持。
+
+近40m25s各自观察速率UCFVZ12r50约9.68clip/s、XDVZ9r50约10.63、XDVZ12r50约12.77、XDVZ9r70约10.58。ETA HKT今日GPU0 05:25–06:00；GPU1 04:45–05:00；GPU2 06:45–07:45；GPU3 07:00–08:00。整套38+最终报告仍暂今日14:00–23:00，14待派4在跑，后层VZ/uniform、共享/通信不确定，调度观察不是正式效率。无源码/训练/扩展QA。
+## 2026-10-14 03:43 定时汇报
+
+主控82184及四在线logger正常，R2共享名单恢复后无新错误。UCFVZ9remove70（oxv1yurs）与XDVZ6remove70（z3xt7jjv）完整预测云端FINISHED；GPU0/2自动补UCF/XD VZ12remove50，正常任务不重启、其他项目不动。20/38=52.63%完成（11UCF/9XD），累计2226970/4086273clips=54.50%。node3公网单次只读03:40:27：GPU0 UCFVZ12remove50 34/290 10829clips PID4423；GPU1 XDVZ9remove50 693/800 110558clips PID11529；GPU2 XDVZ12remove50 72/800 8053clips PID28220；GPU3 XDVZ9remove70 237/800 23199clips PID27863，全fotile/Rl。
+
+上一轮r16 XDVZ6remove50已完成并SwanLab z3r6ka0o FINISHED/quality_completed=1核验：主作者梯形PR-AUC76.579646%（dense76.181075%），delta+0.398571个百分点，95%CI[-0.021895,+0.861495]个百分点，支持非劣但CI跨0不确认提升。stepAP70.727539%（dense70.333010%）单列，r16quality-result.json已保存。新完成两项各单次在线CPU原consumer：r17 UCFVZ9remove70 local94812；r18 XDVZ6remove70 local111096，原head/采样/真值门，独立preview不覆盖final，r17原CPU已完成，但tail抢在后台重定向建日志前启动而漏收EVENT；只读取原PID22951已完成日志、resume原SwanLab9if3ulhp，未重算，云端现FINISHED/quality_completed=1核验，保留原CRASHED记录和recovered-cloud-verification.json。UCFVZ9remove70 ROC-AUC82.166465%，delta+1.534508个百分点，95%CI[-0.301308,+3.552810]个百分点，支持非劣但CI跨0不确认提升，quality-result.json保存。r18 XDVZ6remove70仍CPU bootstrap（remote22955），下一轮读取本次不重复计算。方法/head/grid冻结不变。
+
+ETA HKT今日GPU0 05:20–06:00；GPU1 04:40–05:15；GPU2 07:00–08:30；GPU3 07:00–08:00。近轮XDVZ9r50約10.3clip/s，XDVZ9r70新共享约10clip/s含启动；新第12层UCF约8.8clip/s含20分钟启动窗口/XD短窗速率未稳，完整dense前缀工作多，不能套第6层速率。整套38+最终报告改为暂今日14:00–23:00（旧12–22不再最新），14待派4在跑，余后层VZ和uniform完整前缀、共享/通信不确定。观察吞吐不入正式效率表，无源码/训练/扩展QA。
+## 2026-10-14 03:03 定时汇报：共享进程换代门恢复
+
+新增XDVZ6remove50完整预测并云端pkbcftuc FINISHED，18/38=47.37%完成（10UCF/8XD）。GPU3随后XDVZ9remove70启动前被Unknown process门拦住，原attempt云端uj7zvk1o CRASHED保留；远端该新任务无PID/无计算，不是GPU重跑。只读核验CVPR-JY2已换R2进程：GPU1/2/3 PID3414/3415/3416均fotile，完整配置R2_E05/E06/E07，显存13.6/13.6/11.6GiB，GPU3空闲28751MiB；符合既有9/21共享空余授权。更新运行allowlist三项（原20:20名单备份保留），仍严格PID+owner+command、12GiBfree及0.25allocator门。仅停止held主控115884，82184新controller-r03-recovery6直接接管旧三正常logger；resume输入保留原tracking目录，仅移除已证明未启动的失败行重派新attempt。GPU3新XDVZ9remove70已通过preflight，正常旧GPU/logger未重启、其他项目不动。没有改模型/方法/精度/seed/代码快照。
+
+当前累计2131785/4086273clips=52.17%（GPU3恢复后2/800、136clips计入，不重复已完成）。node3公网只读03:01:06及恢复后localpoll：GPU0 UCFVZ9remove70 199/290 45639clips PID24838；GPU1 XDVZ9remove50 606/800 86259clips PID11529；GPU2 XDVZ6remove70 789/800 140487clips PID6314；GPU3新XDVZ9remove70已开始产出2/800、136clips，local108580。四logger均存活。单次新的CPU在线completed-metrics-r16 XDVZ6remove50 local122452/remote28444，原head/采样/真值门通过，独立preview不覆盖final；结果待回收，后续读取不重算。此前r01–r15指标保持。
+
+ETA HKT今日GPU0 03:35–04:00；GPU1 04:35–05:15；GPU2 03:15–03:35；GPU3新任务06:30–07:45（新共享R2竞争窗口尚不足，宽估）。整套38+报告暂12:00–22:00，16待派4在跑，后层VZ/uniform及共享/通信不确定；近轮XDVZ9r50约10.5clip/s、XDVZ6r70约12.3，UCF9r70约16含启动，调度速率非正式计时。不根据分数改冻结格子，无源码/训练/扩展QA。
+## 2026-10-14 02:23 定时汇报
+
+主控115884及四在线logger正常，无新增错误。UCFVZ9remove50完整预测并云端xw67906e FINISHED，GPU0自动补UCFVZ9remove70；17/38=44.74%完成（10UCF/7XD）。GPU3 XDVZ6remove50已提取全部145703clips，仍在预测，不提前计completed；累计2036329/4086273clips=49.83%。node3公网一次只读02:20:25：GPU0 UCFVZ9remove70 24/290 6688clips PID24838；GPU1 XDVZ9remove50 442/800 59819clips PID11529；GPU2 XDVZ6remove70 693/800 110558clips PID6314；GPU3 XDVZ6remove50已extracted PID8583，全fotile/Rl。正常任务未重启，其他项目不动。
+
+新完成UCFVZ9remove50已启动单次原consumer在线CPU completed-metrics-r15 local120476，独立preview且保持head/采样/真值SHA，r15已完成并SwanLab jqc8n6xy FINISHED/quality_completed=1核验：UCF ROC-AUC81.555593%（dense80.631958%），delta+0.923635个百分点，95%CI[−0.204326,+2.135831]个百分点，支持非劣但CI跨0不能声称提升已确认。原结果保存r15quality-result.json。其余r01–r14已核验指标复用不重算；GPU3尚在预测，不启动XDVZ6r50质量评测。冻结方法/head/grid不改，不据正式分数挑参数。
+
+近40min XDVZ9r50约12.19clip/s、XDVZ6r70约13.73；新UCFVZ9r70启动8分钟约14含初始化，不作稳定速率。ETA HKT今日GPU0 03:30–04:00；GPU1 04:20–05:00；GPU2 03:10–03:45；GPU3预测收尾02:30–02:50。整套38+报告暂今日12:00–22:00，17待派4在跑，后层VZ/uniform及共享/通信不确定，观察吞吐不入速度表。无源码/新训练/扩展QA，仅进度和授权CPU评测。
+## 2026-10-14 01:43 定时汇报
+
+主控115884及四logger正常，无新增错误。UCFVisionZip6remove70已完整预测并云端ruq0ic7a FINISHED，GPU1自动补XDVisionZip9remove50，正常GPU未重启/其他项目不动。16/38=42.11%完成（9UCF/7XD），累计1921483/4086273clips=47.02%。node3公网单次只读01:40:25：GPU0 UCFVZ9remove50 199/290 45639clips PID16697；GPU1 XDVZ9remove50 282/800 30555clips PID11529，短暂Dl但progress持续；GPU2 XDVZ6remove70 562/800 77618clips PID6314；GPU3 XDVZ6remove50 737/800 123474clips PID8583，其余Rl，全fotile。
+
+上一轮r13 XDattention12remove70已完成并SwanLab skfpv2al FINISHED/quality_completed=1：主作者梯形PR-AUC75.904954%（dense76.181075%），delta−0.276121个百分点，95%CI[−1.269023,+0.672717]个百分点，非劣证据不足。stepAP72.091499%（dense70.333010%）单列，不能用AP上涨替代主指标判定。原结果保存r13quality-result.json。新UCFVZ6remove70已单次在线原consumerCPU completed-metrics-r14 local110352，独立preview，原head/采样/真值门，r14已完成并SwanLab177wxrpe FINISHED/quality_completed=1核验：UCFVZ6remove70 ROC-AUC80.185463%，dense80.631958%，delta−0.446494个百分点，95%CI[−2.746208,+1.699475]个百分点，非劣证据不足。已保存r14quality-result.json；不重复已有评测、不覆盖final。Attention六配置×双数据集主质量已全部回收，方法/head/grid不改。
+
+近40min各自速率：UCFVZ9r50约15.4clip/s、XDVZ6r70约14.1、XDVZ6r50约11.7；新XDVZ9r50启动38分钟约13.4含初始化。ETA HKT今日GPU0 02:10–02:35；GPU1 04:00–05:00；GPU2 03:00–03:45；GPU3 02:15–02:45。整套38+报告仍暂今日12:00–22:00，18待派4在跑，后层VZ/uniform、共享/通信未测仍不确定；观察吞吐不入正式速度表。无源码/训练/扩展QA变化。
+## 2026-10-14 01:03 定时汇报
+
+主控115884与四logger正常，无新错误。XD attention12remove70完成并云端xhjzoy44 FINISHED，GPU0自动补UCF VisionZip9remove50；15/38=39.47%完整提取+预测+云端确认。GPU1 UCFVZ6remove70提取全部69364clips，尚在预测（不提前计completed）；累计1792064/4086273clips=43.86%，每任务仅计一次。node3公网单次只读01:00:28：GPU0 UCFVZ9remove50 29/290 8687clips PID16697；GPU1 UCFVZ6remove70已extracted PID30950 Rl；GPU2 XDVZ6remove70 354/800 43814clips PID6314 momentary Dl（进度持续，IO等待不判故障）；GPU3 XDVZ6remove50 655/800 95366clips PID8583 Rl。其他项目不动、正常任务不重启。
+
+上一轮r11 XDattention12remove50已完成SwanLab flu5kz37 FINISHED/quality_completed=1：主作者梯形PR-AUC76.224890%（dense76.181075%），delta+0.043815个百分点，95%CI[-0.548459,+0.633443]个百分点。CI下界低于-0.5，非劣证据不足，不因点值微升放行。stepAP71.459211%（dense70.333010%）单列。原结果保存r11quality-result.json。新完成XD12remove70单次在线CPU completed-metrics-r13，local103536/remote8609，原head/sample/truth门通过，独立preview不覆盖final；当前待结果，后续读取本次不重复计算。UCFVZ6remove70预测尚未完成不启动CPU评测，其余已核验指标不变。
+
+近轮XDVZ6remove50约10.74clip/s，XDVZ6remove70约14.11clip/s；新UCFVZ9启动窗约14clip/s含初始化仅粗估。ETA HKT GPU0今日02:10–02:50；GPU1预测收尾01:10–01:25；GPU2 03:00–04:00；GPU3 02:20–03:00。整套38+报告暂今日12:00–22:00，19未派4在跑，后层VZ/uniform及共享/通信不确定。冻结格子不改；无源码/新训练/扩展QA，仅进度记录和授权CPU评测。
+## 2026-10-14 00:23 定时汇报
+
+主控115884及四在线logger正常，无新错误。新增XD attention12remove50（ko0i24ru）与UCF VisionZip6remove50（9m7ydqll）完整预测并云端FINISHED核验，自动GPU1/2补UCF/XD VisionZip6remove70，不重启正常旧任务、不动其他项目。14/38=36.84%完成，累计1673495/4086273clips=40.95%。node3公网单次只读00:20:53 GPU0 XD attention12remove70 770/800 132905clips PID13324；GPU1 UCF VisionZip6remove70 151/290 31290clips PID30950；GPU2 XD VisionZip6remove70 85/800 10302clips PID6314；GPU3 XD VisionZip6remove50 513/800 69868clips PID8583，全fotile/Rl。
+
+新完成两项各自单次原consumer CPU在线质量评测：completed-metrics-r11 XD12remove50 local121200/remote8970；r12 UCFVisionZip6remove50 local63588/remote8979。PAIRED_QUALITY_IDENTITY_GATE_PASSED，原head/采样/真值SHA与campaign保持，独立quality-preview不覆盖最终quality.json。r12已完成并SwanLab fey1q91y FINISHED/quality_completed=1核验：UCF VisionZip6remove50 ROC-AUC80.490497%，dense80.631958%，delta−0.141461个百分点，95%CI[−1.794929,+1.474373]个百分点，非劣证据不足。原结果保存quality-result.json。r11 XD12remove50仍在CPU bootstrap，下一轮读取既有任务，不重复计算。既有r01–r10指标不变；冻结格子不调整。
+
+近轮XDattention12r70约13.2clip/s、XDVZ6r50约11.0clip/s；新UCFVZ6r70约16.7clip/s含启动；新XDVZ6r70尚只有13分钟启动窗，用范围不作稳定速率。ETA HKT GPU0今日00:40–01:00；GPU1 01:00–01:30；GPU2 02:50–04:00；GPU3 02:10–03:00。整套38+报告仍暂今日12:00–22:00，20待派4在跑，后层VZ/uniform、共享/通信仍不确定。仅进度观察不是正式计时，无源码改动/新训练/额外QA。
+## 2026-10-13 23:43 定时汇报
+
+主控115884及四在线logger正常，无新错误/新prediction_completed，故不重复CPU评测；12/38=31.58%完整提取+预测+云端确认。累计1558897/4086273clips=38.15%。node3公网单次只读23:40:26：GPU0 XD attention12remove70 669/800 100805clips PID13324；GPU1 UCF VisionZip6remove50 278/290 66396clips PID20273；GPU2 XD attention12remove50 774/800 134502clips PID8544；GPU3 XD VisionZip6remove50 350/800 43131clips PID8583，全部fotile/Rl。无本轮新补位，仍自动接力；其他项目和正常任务不动。
+
+与23:01:10比较近39m16s：attention12 XD GPU0约13.70clip/s、GPU2约10.91；VisionZip6 UCF约16.28、XD约11.04。按各自剩余clips更新ETA HKT：GPU0 10/14 00:30–01:05；GPU1 10/13 23:50–10/14 00:05；GPU2 10/14 00:00–00:20；GPU3 10/14 02:15–03:00。仅共享环境进度速率，不是论文速度。整套38+报告仍暂10/14 12:00–22:00，22未派4在跑，未測后层VisionZip/uniform及共享/通信不确定性不变。
+
+已核验指标r01–r10不变：UCF dense80.631958%，attention6remove50/70=80.553156/80.184568，9remove50/70=81.403313/82.130803，12remove50/70=80.678065/80.713885。XD主作者梯形PR-AUC dense76.181075%，6remove50/70=76.640234/75.980119，9remove50/70=77.175098/77.501657；stepAP单列70.333010、71.073361、71.009467、71.981071、73.158876。UCF9两项及XD6r50/XD9两项支持非劣，XD9两项CI高于0仅本配置/seed未多比较校正；其余CI非劣证据不足。冻结格子不调整，无源码/训练/额外QA。
+## 2026-10-13 23:03 定时汇报
+
+主控115884及四个在线logger存活，短轮询无新增错误。UCF attention b12remove70完整预测并云端FINISHED确认（t9dex86h）；GPU3自动补位首个XD VisionZip b06remove50，正常GPU任务均未重启。12/38=31.58%完成，累计1436559/4086273clips=35.16%。node3公网一次只读检查23:01:10：GPU0 XD attention12remove70 504/800 68532clips PID13324；GPU1 UCF VisionZip6remove50 132/290 28034clips PID20273；GPU2 XD attention12remove50 689/800 108809clips PID8544；GPU3 XD VisionZip6remove50 186/800 17121clips PID8583，均fotile/Rl，其他项目不动。
+
+新完成UCF12remove70由原consumer单次CPU在线completed-metrics-r10，local101080/remote18282，PAIRED_QUALITY_IDENTITY_GATE_PASSED，保持head/采样/真值SHA，独立preview不覆盖最终quality.json；结果已完成并云端1qyasal4 FINISHED/quality_completed=1核验：UCF ROC-AUC80.713885%，dense80.631958%，delta+0.081927个百分点，95%CI[-1.620429,+1.706851]个百分点；非劣证据不足，不能因点估计微升判通过。原结果保存quality-result.json，不重复计算。此前已核验指标不变。仅做本轮简查/新完成质量计算，没有新方法、训练或扩展验收。
+
+按近轮clip增量和VisionZip首波实际速率，ETA HKT GPU0 10/14 00:40–01:20；GPU1 10/14 00:00–00:40；GPU2 10/14 00:00–00:45；GPU3 10/14 02:10–03:20。VisionZip首波粗观测UCF约12.4clip/s、XD约10.3clip/s含启动，不是正式效率；attention12近轮约GPU0 11.6、GPU2 8.6clip/s，按dataset/method分开不互代。整套38+最终报告暂仍10/14 12:00–22:00，未测后层VisionZip/uniform、共享负载和通信有不确定性，余22待派、4在跑。冻结格子不因正式分数调整。
 ## 2026-10-13 22:23 定时汇报：退出记录竞态恢复
 
 XD b09remove50远端完整预测已完成，本机poll在进程恰好退出时/proc存在但ps/cmdline消失，set-e空错误导致logger标失败、主控暂停新派；并非GPU计算失败。修复该外部进程退出竞态：只对仍有owner+非空cmdline的活进程执行严格身份检查，已结束时仍必须看到真实completed事件才能成功；不放宽未知活PID门。修复resume让仍在运行的在线logger直接被新调度器观察，不重启它们。主控115884，最新controller-r03-recovery5/queue.json；只补接失败XD50原SwanLab755pv25s并云端成功，旧三正常GPU/在线logger未重启。8项局部控制/轮询测试及compileall通过；无模型、方法、采样、精度、预算或GPU提取变更。
 
-11/38=28.95%已完整预测+云端确认，累计1341358/4086273clips=32.83%。GPU1自动进入首项正式VisionZip UCF block6remove50（1/290 88clips），GPU0 XD12remove70 334/800（40580clips），GPU2 XD12remove50 618/800（88090clips），GPU3 UCF12remove70 282/290（67901clips）。其余已验证共享进程全部保留，GPU仍每卡一个本项目任务。新XD9remove50指标单次CPU在线completed-metrics-r09，本机105324，原head/采样/真值门及原比較器，独立preview；当前待结果和云端确认，下一轮读取原结果不重算。
+11/38=28.95%已完整预测+云端确认，累计1341358/4086273clips=32.83%。GPU1自动进入首项正式VisionZip UCF block6remove50（1/290 88clips），GPU0 XD12remove70 334/800（40580clips），GPU2 XD12remove50 618/800（88090clips），GPU3 UCF12remove70 282/290（67901clips）。其余已验证共享进程全部保留，GPU仍每卡一个本项目任务。新XD9remove50指标单次CPU在线completed-metrics-r09，本机105324，原head/采样/真值门及原比較器，独立preview；已完成并核验SwanLab qprk6p3q FINISHED/quality_completed=1。XD b09remove50主作者梯形PR-AUC=77.175098%，dense76.181075%，delta=+0.994022个百分点，95%CI[+0.491079,+1.484264]个百分点，支持本预定配置/当前headseed的提升及非劣；不作多配置校正后或跨seed结论。stepAP=71.981071%（dense70.333010%）单列。原结果已保存completed-metrics-r09/quality-result.json，不重复计算。
 
 ETA HKT GPU0 10/14 00:35–01:20，GPU1新VisionZip 10/14 00:10–01:10（正式新方法尚缺完整任务实测，范围较宽），GPU2 10/14 00:10–01:00，GPU3 22:40–23:00；整套38+报告仍初步10/14 12:00–22:00，共享竞争和未测方法不确定。保持冻结格子，不根据分数调方法。
 
@@ -2460,3 +3049,10 @@ GPU 验证未运行；服务器盘点时八张 GPU 均有作业，本轮未抢�
 ## 2026-09-22 08:30 当前六格压缩评测状态
 
 六格 dense UR-DMU `official_frame` prediction 已全部完成：UCF/XD × VideoMAEv2/VideoMAE/TimeSformer 均有 `result.json`、`predictions.jsonl` 和 query-chunk receipt，且 `official_frame_scores_read=false`。node3 上 18 个正式压缩 extraction 仍在写入 shard，覆盖三 encoder × 两数据集 × `pair_select/group_uniform/group_random@0.60`；当前尚无压缩 `result.json` 或 `extraction-contract.json`，因此质量 scheduler 尚未启动压缩 prediction 或 export。node2 另有 8 个独立补充 extraction（六格 `pair_select` 加 V2-UCF 两个同预算对照）持续产出，输出根与 node3 隔离。当前未读取正式 test 分数做方法选择；下一门仍是压缩 extraction 合同完成后自动评分并导出 UCF ROC-AUC、XD 梯形 AP/step AP 和 paired bootstrap CI。
+
+
+## 2026-10-16 用户授权的 AutoAI/VAD 存储清理（不改实验）
+
+用户明确要求清理 AutoAI 无用生成权重与 VAD 老旧特征。只在 node3 的 /users 分区清理经核验的旧生成物：DSANet 20260923 head-training-r01 的 ucf-seed235、xd-seed234、xd-seed235 三个 completed run 各 epoch-01 至 epoch-09.pt，共27个中间训练checkpoint、32967780636 bytes；原固定最终轮选择契约、3个final.pt SHA均核对通过，final.pt、epoch-10.pt、全部配置/逐轮JSON/完成回执/日志及未完成ucf-seed234完整保留。AutoAI只删除llm-policy-20260930/pytest-related下test_*旧测试临时文件1081247040 bytes，不删真实实验、输入、数据库、报告或登记Qwen原始/量化权重。实际删除7864文件，逻辑34049027676 bytes（31.71 GiB），分区可用由354155212800升至388219510784 bytes，df约330G→362G（共享盘同期写入会影响差值）。
+
+精确清单与删除流水账：/users/fotile/work/storage-cleanup-20261016-autoai-vad/{manifest.json,deletion-journal.jsonl,completed.json}；本地回执work/storage-cleanup-20261016-autoai-vad/completed.json。node2/node3未见候选文件的本用户进程/打开文件引用；清理前后四个正式提取PID11922/20824/27794/28618及start_ticks一致，两个既有LLM服务11616/26335继续。没有停止/重启实验，没有改campaign/head/源/输出/Swan身份；/data2当前约75GiB输出未触碰。/users下历史大头实际为checkpoint而非旧特征，未以“旧”名义删可追溯特征、失败记录或上游权重。已删中间epoch无法再用于对应轮恢复；最终模型和最后一轮恢复点仍在。未commit/push；仅记录运维，不运行ML实验。

@@ -12,6 +12,7 @@ STAGES = {
     "extract": "_extract_runtime",
     "score": "_score_runtime",
     "quality": "_quality_runtime",
+    "quality-one": "_quality_single_runtime",
 }
 
 
@@ -25,7 +26,9 @@ def stage_parser(stage: str) -> argparse.ArgumentParser:
         parser.add_argument("--weights", type=Path, required=True)
         parser.add_argument("--output", type=Path, required=True)
         parser.add_argument("--gpu", type=int, required=True)
-        parser.add_argument("--keep-ratio", type=float, choices=[0.8, 0.6, 0.4])
+        parser.add_argument("--keep-ratio", type=float, choices=[0.8, 0.6, 0.4, 0.5, 0.3])
+        parser.add_argument("--method", choices=["pairselect", "attention_topk", "visionzip_internal", "uniform"], default="pairselect")
+        parser.add_argument("--block", type=int, choices=[6, 9, 12], help="One-based post-attention block; relation methods only")
         parser.add_argument("--batch-size", type=int, default=128)
         parser.add_argument("--workers", type=int, default=2)
         parser.add_argument("--limit-train-videos", type=int, default=0)
@@ -49,6 +52,12 @@ def stage_parser(stage: str) -> argparse.ArgumentParser:
         parser.add_argument("--seed", type=int)
         parser.add_argument("--checkpoint-origin", choices=["published", "local_full_train"], required=True)
         parser.add_argument("--tiers", nargs="+", choices=["0.8", "0.6", "0.4"], default=["0.8", "0.6", "0.4"])
+    elif stage == "quality-one":
+        parser.description = "Compare one sealed frozen task with dense; never replay the full matrix."
+        parser.add_argument("--campaign", type=Path, required=True)
+        parser.add_argument("--task", required=True)
+        parser.add_argument("--output", type=Path, required=True)
+        parser.add_argument("--dense-cache", type=Path, required=True)
     else:
         raise ValueError(f"unknown DSANet stage: {stage}")
     return parser
